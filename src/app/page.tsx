@@ -346,23 +346,26 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {categories.map((category, index) => {
               const Icon = category.icon;
+              const categoryId = category.name.toLowerCase();
+
               return (
-                <motion.div
-                  key={category.name}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ scale: 1.05, y: -5 }}
-                  className="group relative cursor-pointer"
-                >
-                  <div className="relative bg-gradient-to-br from-white/10 to-white/5 border border-white/15 rounded-2xl p-6 hover:border-violet-500/60 transition-all">
-                    <div className="bg-violet-600/25 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:bg-violet-600/40 transition-colors">
-                      <Icon className="w-7 h-7 text-violet-200" />
+                <a key={category.name} href={`/discover?category=${categoryId}`}>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ scale: 1.05, y: -5 }}
+                    className="group relative cursor-pointer"
+                  >
+                    <div className="relative bg-gradient-to-br from-white/10 to-white/5 border border-white/15 rounded-2xl p-6 hover:border-violet-500/60 transition-all">
+                      <div className="bg-violet-600/25 w-14 h-14 rounded-xl flex items-center justify-center mb-4 group-hover:bg-violet-600/40 transition-colors">
+                        <Icon className="w-7 h-7 text-violet-200" />
+                      </div>
+                      <h3 className="font-semibold text-lg">{category.name}</h3>
                     </div>
-                    <h3 className="font-semibold text-lg">{category.name}</h3>
-                  </div>
-                </motion.div>
+                  </motion.div>
+                </a>
               );
             })}
           </div>

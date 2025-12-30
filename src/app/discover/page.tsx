@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, X } from "lucide-react";
 import { mockTalents, skillCategories, cities } from "@/lib/mockData";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import TalentCard from "@/components/talent/TalentCard";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
@@ -12,10 +12,20 @@ import Button from "@/components/ui/Button";
 
 export default function DiscoverPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Lire le paramètre category depuis l'URL
+  useEffect(() => {
+    const categoryParam = searchParams.get("category");
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+      setShowFilters(true);
+    }
+  }, [searchParams]);
 
   // Filtrage des talents
   const filteredTalents = useMemo(() => {
@@ -52,8 +62,19 @@ export default function DiscoverPage() {
   return (
     <div className="min-h-screen bg-black text-white pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-black backdrop-blur-lg border-b border-white/10 px-4 sm:px-6 lg:px-8 pt-20 pb-6 shadow-xl">
+      <div className="sticky top-0 z-40 bg-black backdrop-blur-lg border-b border-white/10 px-4 sm:px-6 lg:px-8 pt-6 pb-6 shadow-xl">
         <div className="max-w-7xl mx-auto">
+          {/* Back Button */}
+          <button
+            onClick={() => router.push("/")}
+            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>Retour à l&apos;accueil</span>
+          </button>
+
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}

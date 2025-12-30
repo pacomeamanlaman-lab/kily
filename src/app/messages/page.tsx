@@ -1,9 +1,11 @@
 "use client";
 
-import { MessageCircle, Search, Send } from "lucide-react";
+import { MessageCircle, Search, Send, ArrowLeft } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function MessagesPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 
   return (
@@ -11,6 +13,13 @@ export default function MessagesPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-black border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Retour</span>
+          </button>
           <h1 className="text-3xl font-bold">Messages</h1>
         </div>
       </div>

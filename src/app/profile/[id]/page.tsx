@@ -349,7 +349,7 @@ export default function ProfilePage() {
         </motion.div>
       )}
 
-      {/* Modal contact (simple pour l'instant) */}
+      {/* Modal contact */}
       {showContactModal && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -358,22 +358,51 @@ export default function ProfilePage() {
           className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
         >
           <motion.div
-            initial={{ scale: 0.9 }}
-            animate={{ scale: 1 }}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-gradient-to-b from-white/10 to-white/5 border border-white/20 rounded-2xl p-8 max-w-md w-full"
+            className="bg-gradient-to-b from-white/10 to-white/5 border border-white/20 rounded-2xl p-6 sm:p-8 max-w-md w-full"
           >
-            <h2 className="text-2xl font-bold mb-4">Contacter {talent.name}</h2>
-            <p className="text-gray-400 mb-6">
-              Cette fonctionnalité sera bientôt disponible ! 🚀
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-full overflow-hidden">
+                <img src={talent.avatar} alt={talent.name} className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Contacter {talent.name}</h2>
+                <p className="text-sm text-gray-400">{talent.location.city}</p>
+              </div>
+            </div>
+
+            <p className="text-gray-300 mb-6">
+              Envoyez un message à {talent.name.split(" ")[0]} pour discuter de votre projet.
             </p>
-            <Button
-              variant="primary"
-              className="w-full"
-              onClick={() => setShowContactModal(false)}
-            >
-              Fermer
-            </Button>
+
+            <textarea
+              placeholder="Bonjour, je suis intéressé(e) par vos services..."
+              rows={4}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all resize-none mb-4"
+            />
+
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setShowContactModal(false)}
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1"
+                onClick={() => {
+                  setShowContactModal(false);
+                  router.push("/messages");
+                }}
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Envoyer
+              </Button>
+            </div>
           </motion.div>
         </motion.div>
       )}
