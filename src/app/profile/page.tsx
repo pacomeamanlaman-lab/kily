@@ -2,7 +2,7 @@
 
 import { Camera, Edit, MapPin, Mail, Phone, Star, Award, Users, TrendingUp } from "lucide-react";
 import { useState } from "react";
-import SkillBadge from "@/components/ui/SkillBadge";
+import SkillBadge from "@/components/talent/SkillBadge";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 
