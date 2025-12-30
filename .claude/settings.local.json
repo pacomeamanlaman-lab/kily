@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/OMEN/Documents/video/**)",
+      "Read(//c/Users/OMEN/Documents/video/src/**)",
+      "Bash(npm install:*)",
+      "Bash(cat:*)",
+      "Bash(del tailwind.config.ts)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: initial MVP landing page with dark theme\n\n- Setup Next.js 14 with TypeScript\n- Install Tailwind CSS v4 with custom violet theme\n- Install Framer Motion for animations\n- Install Lucide React for icons\n- Create landing page with:\n  * Hero section with parallax effects\n  * Popular talents showcase (4 cards)\n  * Skills categories grid (6 categories)\n  * Features section (4 key features)\n  * CTA section and footer\n  * Mobile bottom navigation\n- Dark mode theme (#000000) with violet accents (#8b5cf6)\n- Fully responsive design (mobile-first)\n- Smooth animations and hover effects\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
