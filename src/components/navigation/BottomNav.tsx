@@ -8,15 +8,15 @@ export default function BottomNav() {
   const router = useRouter();
 
   const tabs = [
-    { id: "home", label: "Accueil", icon: Home, path: "/" },
+    { id: "home", label: "Accueil", icon: Home, path: "/feed" },
     { id: "discover", label: "Découvrir", icon: Compass, path: "/discover" },
     { id: "messages", label: "Messages", icon: MessageCircle, path: "/messages" },
     { id: "profile", label: "Profil", icon: User, path: "/profile" },
   ];
 
   const isActive = (path: string) => {
-    if (path === "/") {
-      return pathname === "/";
+    if (path === "/feed") {
+      return pathname === "/feed" || pathname === "/";
     }
     return pathname.startsWith(path);
   };

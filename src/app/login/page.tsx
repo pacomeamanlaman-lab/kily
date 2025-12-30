@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Sparkles } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { login, isLoggedIn } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +18,13 @@ export default function LoginPage() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isLoggedIn()) {
+      router.push("/feed");
+    }
+  }, [router]);
 
   // Validation temps réel
   const validateField = (field: string, value: string) => {
@@ -72,9 +80,8 @@ export default function LoginPage() {
 
       // Simulation de connexion (2 secondes)
       setTimeout(() => {
-        // Sauvegarder état de connexion simulé
-        localStorage.setItem("kily_logged_in", "true");
-        localStorage.setItem("kily_user_email", formData.email);
+        // Sauvegarder état de connexion avec helper
+        login(formData.email);
 
         setIsLoading(false);
         router.push("/feed");

@@ -121,21 +121,23 @@ export default function Home() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
+            <a href="/" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
               <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5" />
               </div>
               <span className="text-xl font-bold">Kily</span>
-            </div>
+            </a>
             <div className="hidden md:flex items-center gap-8">
               <a href="#talents" className="hover:text-violet-500 transition-colors">Talents</a>
               <a href="#categories" className="hover:text-violet-500 transition-colors">Catégories</a>
               <a href="#features" className="hover:text-violet-500 transition-colors">Fonctionnalités</a>
             </div>
             <div className="flex items-center gap-4">
-              <button className="hidden sm:block hover:text-violet-500 transition-colors">
-                Connexion
-              </button>
+              <a href="/login">
+                <button className="hidden sm:block hover:text-violet-500 transition-colors">
+                  Connexion
+                </button>
+              </a>
               <a href="/register">
                 <button className="bg-violet-600 hover:bg-violet-700 px-6 py-2 rounded-full font-medium transition-all hover:scale-105">
                   S'inscrire
@@ -464,20 +466,20 @@ export default function Home() {
             <div className="hidden sm:block">
               <h4 className="font-semibold mb-4">Plateforme</h4>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-violet-500 transition-colors">Talents</a></li>
-                <li><a href="#" className="hover:text-violet-500 transition-colors">Catégories</a></li>
-                <li><a href="#" className="hover:text-violet-500 transition-colors">Recruteurs</a></li>
-                <li><a href="#" className="hover:text-violet-500 transition-colors">À propos</a></li>
+                <li><a href="/discover" className="hover:text-violet-500 transition-colors">Talents</a></li>
+                <li><a href="/discover" className="hover:text-violet-500 transition-colors">Catégories</a></li>
+                <li><a href="/recruiter/dashboard" className="hover:text-violet-500 transition-colors">Recruteurs</a></li>
+                <li><a href="#features" className="hover:text-violet-500 transition-colors">À propos</a></li>
               </ul>
             </div>
 
             <div className="hidden sm:block">
               <h4 className="font-semibold mb-4">Devenir Talent</h4>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-violet-500 transition-colors">S'inscrire</a></li>
-                <li><a href="#" className="hover:text-violet-500 transition-colors">Créer son profil</a></li>
-                <li><a href="#" className="hover:text-violet-500 transition-colors">Ressources</a></li>
-                <li><a href="#" className="hover:text-violet-500 transition-colors">Support</a></li>
+                <li><a href="/register" className="hover:text-violet-500 transition-colors">S'inscrire</a></li>
+                <li><a href="/register" className="hover:text-violet-500 transition-colors">Créer son profil</a></li>
+                <li><a href="/login" className="hover:text-violet-500 transition-colors">Connexion</a></li>
+                <li><a href="/settings" className="hover:text-violet-500 transition-colors">Paramètres</a></li>
               </ul>
             </div>
 
