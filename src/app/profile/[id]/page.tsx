@@ -33,16 +33,8 @@ export default function ProfilePage() {
   const talent = mockTalents.find((t) => t.id === params.id);
 
   if (!talent) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">Talent introuvable</h1>
-          <Button onClick={() => router.push("/discover")}>
-            Retour à la découverte
-          </Button>
-        </div>
-      </div>
-    );
+    router.push("/not-found");
+    return null;
   }
 
   const formatDate = (dateString: string) => {

@@ -36,6 +36,7 @@ export default function RegisterPage() {
     selectedSkills: [],
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const steps = [
     { title: "Type de compte", description: "Choisissez votre profil" },
@@ -83,21 +84,75 @@ export default function RegisterPage() {
 
     if (!formData.name.trim()) {
       newErrors.name = "Le nom est requis";
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = "Le nom doit contenir au moins 2 caractères";
     }
+
     if (!formData.email.trim()) {
       newErrors.email = "L'email est requis";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Email invalide";
+      newErrors.email = "Format d'email invalide";
     }
+
     if (!formData.phone.trim()) {
       newErrors.phone = "Le téléphone est requis";
+    } else if (!/^[\d\s\+\-\(\)]{8,}$/.test(formData.phone)) {
+      newErrors.phone = "Numéro de téléphone invalide";
     }
+
     if (!formData.city.trim()) {
       newErrors.city = "La ville est requise";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Real-time validation for individual fields
+  const validateField = (field: string, value: string) => {
+    const newErrors = { ...errors };
+
+    switch (field) {
+      case "name":
+        if (!value.trim()) {
+          newErrors.name = "Le nom est requis";
+        } else if (value.trim().length < 2) {
+          newErrors.name = "Le nom doit contenir au moins 2 caractères";
+        } else {
+          delete newErrors.name;
+        }
+        break;
+
+      case "email":
+        if (!value.trim()) {
+          newErrors.email = "L'email est requis";
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          newErrors.email = "Format d'email invalide";
+        } else {
+          delete newErrors.email;
+        }
+        break;
+
+      case "phone":
+        if (!value.trim()) {
+          newErrors.phone = "Le téléphone est requis";
+        } else if (!/^[\d\s\+\-\(\)]{8,}$/.test(value)) {
+          newErrors.phone = "Numéro de téléphone invalide";
+        } else {
+          delete newErrors.phone;
+        }
+        break;
+
+      case "city":
+        if (!value.trim()) {
+          newErrors.city = "La ville est requise";
+        } else {
+          delete newErrors.city;
+        }
+        break;
+    }
+
+    setErrors(newErrors);
   };
 
   // Validation Step 3
@@ -254,24 +309,51 @@ export default function RegisterPage() {
                 label="Nom complet"
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                error={errors.name}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                  if (touched.name) {
+                    validateField("name", e.target.value);
+                  }
+                }}
+                onBlur={() => {
+                  setTouched({ ...touched, name: true });
+                  validateField("name", formData.name);
+                }}
+                error={touched.name ? errors.name : undefined}
                 placeholder="Ex: Amina Koné"
               />
               <Input
                 label="Email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                error={errors.email}
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  if (touched.email) {
+                    validateField("email", e.target.value);
+                  }
+                }}
+                onBlur={() => {
+                  setTouched({ ...touched, email: true });
+                  validateField("email", formData.email);
+                }}
+                error={touched.email ? errors.email : undefined}
                 placeholder="exemple@email.com"
               />
               <Input
                 label="Téléphone"
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                error={errors.phone}
+                onChange={(e) => {
+                  setFormData({ ...formData, phone: e.target.value });
+                  if (touched.phone) {
+                    validateField("phone", e.target.value);
+                  }
+                }}
+                onBlur={() => {
+                  setTouched({ ...touched, phone: true });
+                  validateField("phone", formData.phone);
+                }}
+                error={touched.phone ? errors.phone : undefined}
                 placeholder="+225 XX XX XX XX XX"
               />
               <div>
@@ -280,9 +362,18 @@ export default function RegisterPage() {
                 </label>
                 <select
                   value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, city: e.target.value });
+                    if (touched.city) {
+                      validateField("city", e.target.value);
+                    }
+                  }}
+                  onBlur={() => {
+                    setTouched({ ...touched, city: true });
+                    validateField("city", formData.city);
+                  }}
                   className={`w-full px-4 py-3 bg-white/5 border ${
-                    errors.city ? "border-red-500" : "border-white/10"
+                    touched.city && errors.city ? "border-red-500" : "border-white/10"
                   } rounded-xl text-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all`}
                 >
                   <option value="">Sélectionnez une ville</option>
@@ -292,7 +383,7 @@ export default function RegisterPage() {
                     </option>
                   ))}
                 </select>
-                {errors.city && <p className="text-red-400 text-sm mt-1">{errors.city}</p>}
+                {touched.city && errors.city && <p className="text-red-400 text-sm mt-1">{errors.city}</p>}
               </div>
               {formData.userType === "talent" && (
                 <div>
