@@ -1,5 +1,33 @@
 # Architecture Kily (anciennement NeighborNet)
 
+## 📊 État Actuel du Projet
+
+**Dernière mise à jour : 30 Décembre 2024**
+
+### Statistiques
+- **Commits :** 4 (main branch)
+- **Avancement MVP :** 75%
+- **Pages complètes :** 3/4
+- **Composants créés :** 11
+- **Lignes de code :** ~3500+
+
+### Fonctionnalités Opérationnelles
+✅ Landing page complète avec animations
+✅ Système de découverte de talents avec filtres
+✅ Pages profils talents détaillées
+✅ Navigation mobile globale
+✅ Bottom sheets pour mobile
+✅ Design system violet dark mode
+
+### En Développement
+🚧 Page d'inscription
+🚧 Authentification
+
+### URL GitHub
+https://github.com/pacomeamanlaman-lab/kily
+
+---
+
 ## 0. Concept & Vision
 
 ### 0.1 Mission
@@ -256,31 +284,52 @@ src/
 
 ## 7. Roadmap de Développement
 
-### 7.1 Phase 1 - MVP (Prioritaire)
+### 7.1 Phase 1 - MVP (En cours - 75% complété)
 **Objectif : Lancement rapide avec fonctionnalités essentielles**
 
-#### Features
-* ✅ Landing page avec animations (style stars2babi)
-* ✅ Auth basique (email uniquement)
-* ✅ Profils talents (avatar, bio, compétences)
-* ✅ Système de réputation simple (score + badges)
-* ✅ Découverte de talents (grille + filtres basiques)
-* ✅ Navigation bottom mobile
-* ✅ Dark mode uniquement
-* ✅ Données mockées (pas de Supabase encore)
+#### Features Complétées ✅
+* ✅ Landing page avec animations (Hero, parallax, Framer Motion)
+* ✅ Dark mode avec thème violet (#8b5cf6)
+* ✅ Profils talents complets (avatar, bio, compétences, portfolio, avis)
+* ✅ Système de réputation avec étoiles (score + reviews détaillés)
+* ✅ Découverte de talents (grille responsive + filtres avancés)
+* ✅ Navigation bottom mobile globale avec routing
+* ✅ Bottom Sheets mobiles (Portfolio + Avis)
+* ✅ Données mockées (12 talents africains variés)
+* ✅ SEO basique (metadata, lang fr)
 
-#### Pages MVP
-1. Landing page (/)
-2. Feed découverte (/discover)
-3. Profil talent (/profile/[id])
-4. Page d'inscription (/register)
+#### Features En Cours 🚧
+* 🚧 Auth basique (email uniquement) - À faire
+* 🚧 Page d'inscription (/register) - À faire
 
-#### Composants MVP
-* BottomNav
-* TalentCard
-* SkillBadge
-* ReputationScore
-* Button, Card, Modal (UI basiques)
+#### Pages Complétées
+1. ✅ Landing page (/) - Hero, Talents, Catégories, Features, Footer
+2. ✅ Feed découverte (/discover) - Recherche, filtres, grille talents
+3. ✅ Profil talent (/profile/[id]) - Header immersif, portfolio, avis, sidebar
+
+#### Pages À Faire
+4. 🚧 Page d'inscription (/register) - Formulaire multi-étapes
+
+#### Composants Créés
+**UI de base :**
+* Button (4 variants)
+* Card (3 variants)
+* Badge (5 variants)
+* Input (avec label/error)
+* BottomSheet (drawer mobile)
+
+**Navigation :**
+* BottomNav (global, 4 tabs)
+* TopNav (landing page)
+
+**Composants Métier :**
+* TalentCard (card talent avec hover)
+* SkillBadge (compétence + niveau)
+* ReputationScore (rating avec étoiles)
+
+#### Types & Data
+* Types TypeScript complets (Talent, Skill, Review, etc.)
+* Mock data : 12 talents, 10+ skills, reviews, villes africaines
 
 ---
 
