@@ -136,9 +136,11 @@ export default function Home() {
               <button className="hidden sm:block hover:text-violet-500 transition-colors">
                 Connexion
               </button>
-              <button className="bg-violet-600 hover:bg-violet-700 px-6 py-2 rounded-full font-medium transition-all hover:scale-105">
-                S'inscrire
-              </button>
+              <a href="/register">
+                <button className="bg-violet-600 hover:bg-violet-700 px-6 py-2 rounded-full font-medium transition-all hover:scale-105">
+                  S'inscrire
+                </button>
+              </a>
             </div>
           </div>
         </div>
@@ -192,11 +194,13 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.6 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <button className="group bg-violet-600 hover:bg-violet-700 px-8 py-4 rounded-full font-semibold text-lg transition-all hover:scale-105 flex items-center gap-2 w-full sm:w-auto justify-center">
-              <Zap className="w-5 h-5" />
-              Commencer maintenant
-              <TrendingUp className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
+            <a href="/register">
+              <button className="group bg-violet-600 hover:bg-violet-700 px-8 py-4 rounded-full font-semibold text-lg transition-all hover:scale-105 flex items-center gap-2 w-full sm:w-auto justify-center">
+                <Zap className="w-5 h-5" />
+                Commencer maintenant
+                <TrendingUp className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </a>
             <button className="border-2 border-white/20 hover:border-violet-500 px-8 py-4 rounded-full font-semibold text-lg transition-all hover:scale-105 w-full sm:w-auto">
               En savoir plus
             </button>
@@ -262,15 +266,15 @@ export default function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {popularTalents.map((talent, index) => (
-              <motion.div
-                key={talent.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -10 }}
-                className="group relative bg-gradient-to-b from-white/5 to-white/0 border border-white/10 rounded-2xl overflow-hidden cursor-pointer"
-              >
+              <a key={talent.id} href={`/profile/${talent.id}`}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ y: -10 }}
+                  className="group relative bg-gradient-to-b from-white/5 to-white/0 border border-white/10 rounded-2xl overflow-hidden cursor-pointer"
+                >
                 <div className="relative h-64 overflow-hidden">
                   <img
                     src={talent.image}
@@ -301,6 +305,7 @@ export default function Home() {
                   </div>
                 </div>
               </motion.div>
+              </a>
             ))}
           </div>
 
@@ -310,9 +315,11 @@ export default function Home() {
             viewport={{ once: true }}
             className="text-center mt-12"
           >
-            <button className="border-2 border-violet-500 hover:bg-violet-600 px-8 py-3 rounded-full font-medium transition-all hover:scale-105">
-              Voir tous les talents
-            </button>
+            <a href="/discover">
+              <button className="border-2 border-violet-500 hover:bg-violet-600 px-8 py-3 rounded-full font-medium transition-all hover:scale-105">
+                Voir tous les talents
+              </button>
+            </a>
           </motion.div>
         </div>
       </section>
@@ -425,11 +432,13 @@ export default function Home() {
           <p className="text-xl text-gray-400 mb-10">
             Rejoignez des milliers de talents et trouvez des opportunités
           </p>
-          <button className="bg-violet-600 hover:bg-violet-700 px-10 py-4 rounded-full font-semibold text-lg transition-all hover:scale-105 inline-flex items-center gap-2">
-            <Zap className="w-5 h-5" />
-            Commencer maintenant
-            <TrendingUp className="w-5 h-5" />
-          </button>
+          <a href="/register">
+            <button className="bg-violet-600 hover:bg-violet-700 px-10 py-4 rounded-full font-semibold text-lg transition-all hover:scale-105 inline-flex items-center gap-2">
+              <Zap className="w-5 h-5" />
+              Commencer maintenant
+              <TrendingUp className="w-5 h-5" />
+            </button>
+          </a>
         </motion.div>
       </section>
 
