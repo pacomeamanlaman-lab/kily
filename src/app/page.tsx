@@ -10,10 +10,6 @@ import {
   CheckCircle,
   Zap,
   Globe,
-  Home as HomeIcon,
-  Compass,
-  MessageCircle,
-  User,
   Hammer,
   ChefHat,
   Code,
@@ -21,7 +17,7 @@ import {
   Wrench,
   Camera
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
 // Mock data pour les talents populaires
 const popularTalents = [
@@ -107,7 +103,6 @@ const features = [
 
 export default function Home() {
   const ref = useRef(null);
-  const [activeTab, setActiveTab] = useState<"home" | "discover" | "messages" | "profile">("home");
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
@@ -495,51 +490,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-
-      {/* Menu bottom mobile */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-lg border-t border-white/10">
-        <div className="flex items-center justify-around px-2 py-2">
-          <button
-            onClick={() => setActiveTab("home")}
-            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors ${
-              activeTab === "home" ? "text-violet-400" : "text-gray-400"
-            }`}
-          >
-            <HomeIcon className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Accueil</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("discover")}
-            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors ${
-              activeTab === "discover" ? "text-violet-400" : "text-gray-400"
-            }`}
-          >
-            <Compass className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Découvrir</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("messages")}
-            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors ${
-              activeTab === "messages" ? "text-violet-400" : "text-gray-400"
-            }`}
-          >
-            <MessageCircle className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Messages</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("profile")}
-            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-colors ${
-              activeTab === "profile" ? "text-violet-400" : "text-gray-400"
-            }`}
-          >
-            <User className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Profil</span>
-          </button>
-        </div>
-      </nav>
     </div>
   );
 }
