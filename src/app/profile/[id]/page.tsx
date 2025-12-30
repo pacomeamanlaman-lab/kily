@@ -17,6 +17,7 @@ import { mockTalents, mockReviews } from "@/lib/mockData";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
+import BottomSheet from "@/components/ui/BottomSheet";
 import SkillBadge from "@/components/talent/SkillBadge";
 import ReputationScore from "@/components/talent/ReputationScore";
 
@@ -25,6 +26,8 @@ export default function ProfilePage() {
   const params = useParams();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showReviewsDrawer, setShowReviewsDrawer] = useState(false);
+  const [showPortfolioDrawer, setShowPortfolioDrawer] = useState(false);
 
   // Récupérer le talent depuis les données mockées
   const talent = mockTalents.find((t) => t.id === params.id);
@@ -53,7 +56,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-black text-white pb-20">
       {/* Header avec image de fond */}
-      <div className="relative h-80 overflow-hidden">
+      <div className="relative h-96 sm:h-80 overflow-hidden">
         <img
           src={talent.avatar}
           alt={talent.name}
@@ -64,9 +67,9 @@ export default function ProfilePage() {
         {/* Bouton retour */}
         <button
           onClick={() => router.back()}
-          className="absolute top-6 left-6 p-3 bg-black/50 backdrop-blur-lg rounded-full hover:bg-black/70 transition-all"
+          className="absolute top-6 left-4 sm:top-6 sm:left-6 p-2.5 sm:p-3 bg-black/50 backdrop-blur-lg rounded-full hover:bg-black/70 transition-all z-10"
         >
-          <ArrowLeft className="w-6 h-6" />
+          <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
 
         {/* Avatar et info principale */}
@@ -164,9 +167,17 @@ export default function ProfilePage() {
             {/* Portfolio */}
             {talent.portfolio.length > 0 && (
               <Card variant="default" className="p-6">
-                <h2 className="text-2xl font-bold mb-6">Portfolio</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold">Portfolio</h2>
+                  <button
+                    onClick={() => setShowPortfolioDrawer(true)}
+                    className="sm:hidden text-violet-400 text-sm font-medium hover:text-violet-300 transition-colors"
+                  >
+                    Voir tout ({talent.portfolio.length})
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
-                  {talent.portfolio.map((item) => (
+                  {talent.portfolio.slice(0, 4).map((item) => (
                     <motion.div
                       key={item.id}
                       whileHover={{ scale: 1.05 }}
@@ -186,16 +197,33 @@ export default function ProfilePage() {
                     </motion.div>
                   ))}
                 </div>
+                {/* Bouton voir plus desktop */}
+                {talent.portfolio.length > 4 && (
+                  <button
+                    onClick={() => setShowPortfolioDrawer(true)}
+                    className="hidden sm:block w-full mt-4 text-violet-400 text-sm font-medium hover:text-violet-300 transition-colors"
+                  >
+                    Voir les {talent.portfolio.length - 4} autres images
+                  </button>
+                )}
               </Card>
             )}
 
             {/* Avis */}
             <Card variant="default" className="p-6">
-              <h2 className="text-2xl font-bold mb-6">
-                Avis ({mockReviews.length})
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">
+                  Avis ({mockReviews.length})
+                </h2>
+                <button
+                  onClick={() => setShowReviewsDrawer(true)}
+                  className="sm:hidden text-violet-400 text-sm font-medium hover:text-violet-300 transition-colors"
+                >
+                  Voir tous
+                </button>
+              </div>
               <div className="space-y-6">
-                {mockReviews.map((review) => (
+                {mockReviews.slice(0, 2).map((review) => (
                   <div
                     key={review.id}
                     className="flex gap-4 pb-6 border-b border-white/10 last:border-0"
@@ -229,6 +257,15 @@ export default function ProfilePage() {
                   </div>
                 ))}
               </div>
+              {/* Bouton voir plus desktop */}
+              {mockReviews.length > 2 && (
+                <button
+                  onClick={() => setShowReviewsDrawer(true)}
+                  className="hidden sm:block w-full mt-6 text-violet-400 text-sm font-medium hover:text-violet-300 transition-colors"
+                >
+                  Voir les {mockReviews.length - 2} autres avis
+                </button>
+              )}
             </Card>
           </div>
 
@@ -348,6 +385,84 @@ export default function ProfilePage() {
           </motion.div>
         </motion.div>
       )}
+
+      {/* Bottom Sheet - Portfolio */}
+      <BottomSheet
+        isOpen={showPortfolioDrawer}
+        onClose={() => setShowPortfolioDrawer(false)}
+        title="Portfolio complet"
+      >
+        <div className="grid grid-cols-2 gap-4">
+          {talent.portfolio.map((item) => (
+            <motion.div
+              key={item.id}
+              whileHover={{ scale: 1.05 }}
+              className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group"
+              onClick={() => {
+                setSelectedImage(item.url);
+                setShowPortfolioDrawer(false);
+              }}
+            >
+              <img
+                src={item.url}
+                alt={item.title}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <p className="text-sm font-medium">{item.title}</p>
+                  {item.description && (
+                    <p className="text-xs text-gray-400 mt-1">{item.description}</p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </BottomSheet>
+
+      {/* Bottom Sheet - Avis */}
+      <BottomSheet
+        isOpen={showReviewsDrawer}
+        onClose={() => setShowReviewsDrawer(false)}
+        title={`Tous les avis (${mockReviews.length})`}
+      >
+        <div className="space-y-6">
+          {mockReviews.map((review) => (
+            <div
+              key={review.id}
+              className="flex gap-4 pb-6 border-b border-white/10 last:border-0"
+            >
+              <img
+                src={review.fromUserAvatar}
+                alt={review.fromUserName}
+                className="w-12 h-12 rounded-full object-cover"
+              />
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold text-white">{review.fromUserName}</h4>
+                  <span className="text-sm text-gray-400">
+                    {new Date(review.date).toLocaleDateString("fr-FR")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 mb-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`w-4 h-4 ${
+                        i < review.rating
+                          ? "fill-yellow-500 text-yellow-500"
+                          : "text-gray-600"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-gray-300">{review.comment}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </BottomSheet>
     </div>
   );
 }
