@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import PostCard from "@/components/feed/PostCard";
 import StoryCarousel from "@/components/feed/StoryCarousel";
+import CreatePostButton from "@/components/feed/CreatePostButton";
 import { mockPosts, mockStories } from "@/lib/feedData";
 import { mockVideos } from "@/lib/videoData";
 import VideoCard from "@/components/video/VideoCard";
@@ -456,6 +457,9 @@ export default function FeedPage() {
               );
             })}
           </div>
+
+          {/* Create Post Button */}
+          <CreatePostButton />
 
           {/* Stories */}
           <motion.div
