@@ -23,7 +23,7 @@ import StoryCarousel from "@/components/feed/StoryCarousel";
 import { mockPosts, mockStories } from "@/lib/feedData";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function FeedPage() {
@@ -38,6 +38,9 @@ export default function FeedPage() {
   });
 
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const lastPostElementRefDesktop = useRef<HTMLDivElement | null>(null);
+  const lastPostElementRefMobile = useRef<HTMLDivElement | null>(null);
+  const [observerKey, setObserverKey] = useState(0);
 
   const filterOptions = [
     { value: "all" as const, label: "Tous", icon: Sparkles },
@@ -96,24 +99,86 @@ export default function FeedPage() {
     return mockPosts;
   }, [filter, followedTalents]);
 
-  const lastPostRef = useCallback((node: HTMLDivElement | null) => {
-    if (observerRef.current) observerRef.current.disconnect();
+  // Reset visible posts when filter changes
+  useEffect(() => {
+    setVisiblePosts(3);
+  }, [filter]);
 
-    observerRef.current = new IntersectionObserver((entries) => {
+  // Set up and manage intersection observer
+  useEffect(() => {
+    // Clean up previous observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+
+    // Create observer callback
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
       if (entries[0].isIntersecting) {
         setVisiblePosts((prev) => {
-          if (prev < filteredPosts.length) {
-            return Math.min(prev + 2, filteredPosts.length);
+          const currentLength = filteredPosts.length;
+          if (prev < currentLength) {
+            return Math.min(prev + 2, currentLength);
           }
           return prev;
         });
       }
-    }, {
-      rootMargin: '200px'
-    });
+    };
 
-    if (node) observerRef.current.observe(node);
-  }, [filteredPosts.length]);
+    // Only set up observer if there are more posts to load
+    if (visiblePosts < filteredPosts.length) {
+      // Set up observer
+      observerRef.current = new IntersectionObserver(observerCallback, {
+        rootMargin: "200px",
+        threshold: 0.1,
+      });
+
+      // Observe both desktop and mobile elements (only the visible one will trigger)
+      if (lastPostElementRefDesktop.current) {
+        observerRef.current.observe(lastPostElementRefDesktop.current);
+      }
+      if (lastPostElementRefMobile.current) {
+        observerRef.current.observe(lastPostElementRefMobile.current);
+      }
+    } else {
+      // All posts loaded, ensure observer is cleaned up
+      observerRef.current = null;
+    }
+
+    // Cleanup function
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+    };
+  }, [visiblePosts, filteredPosts.length, observerKey]);
+
+  // Handle window resize to update observer when switching between mobile/desktop
+  useEffect(() => {
+    const handleResize = () => {
+      setObserverKey((prev) => prev + 1);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const lastPostRefDesktop = useCallback((node: HTMLDivElement | null) => {
+    lastPostElementRefDesktop.current = node;
+    // Trigger observer re-setup when ref changes
+    if (node) {
+      setObserverKey((prev) => prev + 1);
+    }
+  }, []);
+
+  const lastPostRefMobile = useCallback((node: HTMLDivElement | null) => {
+    lastPostElementRefMobile.current = node;
+    // Trigger observer re-setup when ref changes
+    if (node) {
+      setObserverKey((prev) => prev + 1);
+    }
+  }, []);
 
   const handleFollow = (talentId: number, talentName: string) => {
     const isFollowing = followedTalents.has(talentId);
@@ -285,15 +350,23 @@ export default function FeedPage() {
             ))}
 
             {/* Infinite Scroll Trigger */}
-            {visiblePosts < filteredPosts.length && (
-              <div ref={lastPostRef} className="h-20 flex items-center justify-center">
+            {visiblePosts < filteredPosts.length ? (
+              <div 
+                ref={lastPostRefDesktop} 
+                className="h-20 flex items-center justify-center"
+                key="infinite-scroll-trigger-desktop"
+              >
                 <div className="flex items-center gap-2 text-gray-400">
                   <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
                   <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
                   <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-150" />
                 </div>
               </div>
-            )}
+            ) : filteredPosts.length > 0 ? (
+              <div className="h-20 flex items-center justify-center">
+                <p className="text-sm text-gray-500">Vous avez vu tous les posts</p>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -412,15 +485,23 @@ export default function FeedPage() {
           ))}
 
           {/* Infinite Scroll Trigger */}
-          {visiblePosts < filteredPosts.length && (
-            <div ref={lastPostRef} className="h-20 flex items-center justify-center">
+          {visiblePosts < filteredPosts.length ? (
+            <div 
+              ref={lastPostRefMobile} 
+              className="h-20 flex items-center justify-center"
+              key="infinite-scroll-trigger-mobile"
+            >
               <div className="flex items-center gap-2 text-gray-400">
                 <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
                 <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
                 <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-150" />
               </div>
             </div>
-          )}
+          ) : filteredPosts.length > 0 ? (
+            <div className="h-20 flex items-center justify-center">
+              <p className="text-sm text-gray-500">Vous avez vu tous les posts</p>
+            </div>
+          ) : null}
         </div>
 
         {/* Suggestions */}
