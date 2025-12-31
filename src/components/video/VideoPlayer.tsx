@@ -653,8 +653,8 @@ export default function VideoPlayer({
             )}
           </div>
 
-          {/* Progress indicator */}
-          <div className="fixed right-2 top-1/2 transform -translate-y-1/2 flex flex-col gap-1 z-40">
+          {/* Progress indicator - Hidden */}
+          {/* <div className="fixed right-2 top-1/2 transform -translate-y-1/2 flex flex-col gap-1 z-40">
             {videos.map((video, index) => (
               <button
                 key={video.id}
@@ -673,7 +673,7 @@ export default function VideoPlayer({
                 }`}
               />
             ))}
-          </div>
+          </div> */}
         </motion.div>
         )}
       </AnimatePresence>
