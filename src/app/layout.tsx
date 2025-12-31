@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import BottomNav from "@/components/navigation/BottomNav";
+import BottomNavWrapper from "@/components/navigation/BottomNavWrapper";
 import ConditionalDesktopHeader from "@/components/navigation/ConditionalDesktopHeader";
 
 export const metadata: Metadata = {
@@ -18,7 +18,7 @@ export default function RootLayout({
       <body>
         <ConditionalDesktopHeader />
         {children}
-        <BottomNav />
+        <BottomNavWrapper />
       </body>
     </html>
   );
