@@ -23,7 +23,7 @@ import StoryCarousel from "@/components/feed/StoryCarousel";
 import { mockPosts, mockStories } from "@/lib/feedData";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 export default function FeedPage() {
@@ -36,6 +36,8 @@ export default function FeedPage() {
     type: "success",
     visible: false,
   });
+
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const filterOptions = [
     { value: "all" as const, label: "Tous", icon: Sparkles },
@@ -93,6 +95,28 @@ export default function FeedPage() {
 
     return mockPosts;
   }, [filter, followedTalents]);
+
+  // Infinite scroll with Intersection Observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visiblePosts < filteredPosts.length) {
+          setVisiblePosts((prev) => prev + 2);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
+    };
+  }, [visiblePosts, filteredPosts.length]);
 
   const handleFollow = (talentId: number, talentName: string) => {
     const isFollowing = followedTalents.has(talentId);
@@ -263,16 +287,14 @@ export default function FeedPage() {
               </motion.div>
             ))}
 
-            {/* Load More */}
+            {/* Infinite Scroll Trigger */}
             {visiblePosts < filteredPosts.length && (
-              <div className="flex justify-center pt-6">
-                <Button
-                  variant="secondary"
-                  className="w-full sm:w-auto"
-                  onClick={() => setVisiblePosts((prev) => prev + 2)}
-                >
-                  Charger plus de contenu
-                </Button>
+              <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
+                <div className="flex items-center gap-2 text-gray-400">
+                  <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+                  <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
+                  <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-150" />
+                </div>
               </div>
             )}
           </div>
@@ -392,16 +414,14 @@ export default function FeedPage() {
             </motion.div>
           ))}
 
-          {/* Load More */}
+          {/* Infinite Scroll Trigger */}
           {visiblePosts < filteredPosts.length && (
-            <div className="flex justify-center pt-6">
-              <Button
-                variant="secondary"
-                className="w-full sm:w-auto"
-                onClick={() => setVisiblePosts((prev) => prev + 2)}
-              >
-                Charger plus de contenu
-              </Button>
+            <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
+              <div className="flex items-center gap-2 text-gray-400">
+                <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+                <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
+                <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-150" />
+              </div>
             </div>
           )}
         </div>
