@@ -23,7 +23,7 @@ import StoryCarousel from "@/components/feed/StoryCarousel";
 import { mockPosts, mockStories } from "@/lib/feedData";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 export default function FeedPage() {
@@ -37,7 +37,26 @@ export default function FeedPage() {
     visible: false,
   });
 
-  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const lastPostRef = useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) observerRef.current.disconnect();
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setVisiblePosts((prev) => {
+          if (prev < filteredPosts.length) {
+            return Math.min(prev + 2, filteredPosts.length);
+          }
+          return prev;
+        });
+      }
+    }, {
+      rootMargin: '200px'
+    });
+
+    if (node) observerRef.current.observe(node);
+  }, [filteredPosts.length]);
 
   const filterOptions = [
     { value: "all" as const, label: "Tous", icon: Sparkles },
@@ -95,36 +114,6 @@ export default function FeedPage() {
 
     return mockPosts;
   }, [filter, followedTalents]);
-
-  // Infinite scroll with Intersection Observer
-  useEffect(() => {
-    const currentRef = loadMoreRef.current;
-    if (!currentRef) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisiblePosts((prev) => {
-            if (prev < filteredPosts.length) {
-              return Math.min(prev + 2, filteredPosts.length);
-            }
-            return prev;
-          });
-        }
-      },
-      {
-        root: null,
-        rootMargin: '400px',
-        threshold: 0
-      }
-    );
-
-    observer.observe(currentRef);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [filteredPosts.length, visiblePosts]);
 
   const handleFollow = (talentId: number, talentName: string) => {
     const isFollowing = followedTalents.has(talentId);
@@ -297,7 +286,7 @@ export default function FeedPage() {
 
             {/* Infinite Scroll Trigger */}
             {visiblePosts < filteredPosts.length && (
-              <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
+              <div ref={lastPostRef} className="h-20 flex items-center justify-center">
                 <div className="flex items-center gap-2 text-gray-400">
                   <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
                   <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
@@ -424,7 +413,7 @@ export default function FeedPage() {
 
           {/* Infinite Scroll Trigger */}
           {visiblePosts < filteredPosts.length && (
-            <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
+            <div ref={lastPostRef} className="h-20 flex items-center justify-center">
               <div className="flex items-center gap-2 text-gray-400">
                 <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
                 <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
