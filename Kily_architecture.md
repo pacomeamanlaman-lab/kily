@@ -392,14 +392,14 @@ src/
 ### 7.2 Phase 1.5 - Interactions Frontend (EN COURS - 90%)
 **Objectif : Finaliser toutes les interactions avant l'intégration backend**
 
-#### 🎯 Feed Interactions
+#### 🎯 Feed Interactions ✅ TERMINÉ
 * ✅ Follow/Unfollow talents
 * ✅ Likes sur posts (toggle cœur + compteur)
 * ✅ Commentaires (modal avec 19 commentaires mockés + ajout)
 * ✅ Partage de posts (bouton share avec toast)
 * ✅ Filtres fonctionnels (Tous/Abonnements/Tendances qui filtrent vraiment)
 * ✅ Stories cliquables (modal plein écran avec navigation et progress bars)
-* ✅ Bouton "Load more" fonctionnel (affiche 3 posts initialement, charge +2 par clic)
+* ✅ Infinite scroll (charge +2 posts automatiquement, message fin de feed)
 
 #### 💬 Messaging Interactions
 * ✅ Liste conversations avec recherche
