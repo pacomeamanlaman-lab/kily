@@ -230,20 +230,34 @@ export default function ProfilePage() {
                 </Button>
               </div>
 
+              {/* Bio */}
+              <p className="text-white/80 text-base mb-6 leading-relaxed">{user.bio}</p>
+
               {/* Contact Info */}
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-white/80">
-                  <Mail className="w-4 h-4" />
-                  <span>{user.email}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 hover:bg-white/10 transition-colors group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-500/30 transition-colors">
+                      <Mail className="w-5 h-5 text-violet-400" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-white/50 mb-0.5">Email</p>
+                      <p className="text-sm text-white/90 truncate font-medium">{user.email}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-white/80">
-                  <Phone className="w-4 h-4" />
-                  <span>{user.phone}</span>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 hover:bg-white/10 transition-colors group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-500/30 transition-colors">
+                      <Phone className="w-5 h-5 text-violet-400" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-white/50 mb-0.5">Téléphone</p>
+                      <p className="text-sm text-white/90 truncate font-medium">{user.phone}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* Bio */}
-              <p className="text-white/70 mb-6">{user.bio}</p>
 
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4">
