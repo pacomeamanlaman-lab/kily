@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, User, Users, Briefcase, ChevronRight, Plus, Check, Search, X } from "lucide-react";
+import { ArrowLeft, User, Users, Briefcase, ChevronRight, Plus, Check, Search, X, Sparkles } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
@@ -179,6 +179,14 @@ export default function RegisterPage() {
         setCurrentStep(2);
       }
     } else if (currentStep === 2) {
+      // Marquer tous les champs comme touchés pour afficher les erreurs
+      setTouched({
+        name: true,
+        email: true,
+        phone: true,
+        city: true,
+      });
+      
       isValid = validateStep2();
       if (isValid) {
         if (formData.userType === "talent") {
@@ -188,6 +196,9 @@ export default function RegisterPage() {
         }
       }
     } else if (currentStep === 3) {
+      // Marquer le champ skills comme touché pour afficher l'erreur
+      setTouched({ ...touched, skills: true });
+      
       isValid = validateStep3();
       if (isValid) {
         handleSubmit();
@@ -207,8 +218,8 @@ export default function RegisterPage() {
     // Sauvegarder dans localStorage (temporaire)
     localStorage.setItem("kily_user_data", JSON.stringify(formData));
 
-    // Rediriger vers discover
-    router.push("/discover");
+    // Rediriger vers feed
+    router.push("/feed");
   };
 
   // Compétences prédéfinies par catégorie (même que profile)
@@ -272,18 +283,32 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white pb-20 pt-20">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Retour</span>
-          </button>
+    <div className="min-h-screen bg-black text-white flex flex-col">
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-black/95 backdrop-blur-lg border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleBack}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-lg flex items-center justify-center">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <span className="text-xl font-bold">Kily</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
+      <div className="flex-1 max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+        {/* Title Section */}
+        <div className="mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold mb-2">
             Créer un <span className="text-violet-500">compte</span>
           </h1>
@@ -357,6 +382,26 @@ export default function RegisterPage() {
             exit={{ opacity: 0, x: -20 }}
           >
             <h2 className="text-2xl font-bold mb-6">Vos informations</h2>
+            
+            {/* Message d'erreur global si des champs sont invalides */}
+            {Object.keys(errors).length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl"
+              >
+                <p className="text-red-400 font-semibold mb-2">
+                  Veuillez corriger les erreurs suivantes :
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm text-red-300">
+                  {errors.name && <li>{errors.name}</li>}
+                  {errors.email && <li>{errors.email}</li>}
+                  {errors.phone && <li>{errors.phone}</li>}
+                  {errors.city && <li>{errors.city}</li>}
+                </ul>
+              </motion.div>
+            )}
+            
             <div className="space-y-4">
               <Input
                 label="Nom complet"
@@ -467,6 +512,22 @@ export default function RegisterPage() {
             <p className="text-gray-400 mb-6">
               Sélectionnez ou ajoutez les compétences que vous maîtrisez
             </p>
+
+            {/* Message d'erreur global si aucune compétence n'est sélectionnée */}
+            {errors.skills && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl"
+              >
+                <p className="text-red-400 font-semibold">
+                  {errors.skills}
+                </p>
+                <p className="text-red-300 text-sm mt-2">
+                  Veuillez sélectionner au moins une compétence dans la liste ci-dessous ou en ajouter une personnalisée.
+                </p>
+              </motion.div>
+            )}
 
             <div className="space-y-6">
               {/* Barre de recherche */}
@@ -581,10 +642,6 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {errors.skills && (
-              <p className="text-red-400 text-sm mt-4">{errors.skills}</p>
-            )}
-
             {formData.selectedSkills.length > 0 && (
               <div className="mt-6 p-4 bg-violet-600/10 border border-violet-500/30 rounded-xl">
                 <p className="text-sm text-violet-400 mb-2">
@@ -601,17 +658,21 @@ export default function RegisterPage() {
             )}
           </motion.div>
         )}
+      </div>
 
-        {/* Buttons */}
-        <div className="flex gap-4 mt-8">
-          <Button variant="secondary" onClick={handleBack} className="flex-1">
-            Retour
-          </Button>
-          <Button variant="primary" onClick={handleNext} className="flex-1">
-            {currentStep === 3 || (currentStep === 2 && formData.userType !== "talent")
-              ? "Terminer"
-              : "Continuer"}
-          </Button>
+      {/* Buttons - Sticky en bas */}
+      <div className="sticky bottom-0 z-30 bg-black/95 backdrop-blur-lg border-t border-white/10">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex gap-4">
+            <Button variant="secondary" onClick={handleBack} className="flex-1">
+              Retour
+            </Button>
+            <Button variant="primary" onClick={handleNext} className="flex-1">
+              {currentStep === 3 || (currentStep === 2 && formData.userType !== "talent")
+                ? "Terminer"
+                : "Continuer"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

@@ -411,7 +411,7 @@ export default function DiscoverPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto horizontal-scrollbar pb-1">
             <button
               onClick={() => setActiveTab("talents")}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all whitespace-nowrap ${
@@ -491,7 +491,7 @@ export default function DiscoverPage() {
                     </button>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto categories-scrollbar pr-1">
                   {skillCategories.map((category) => (
                     <Badge
                       key={category.id}
@@ -677,7 +677,7 @@ export default function DiscoverPage() {
                     </button>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto categories-scrollbar pr-1">
                   {skillCategories.map((category) => (
                     <Badge
                       key={category.id}

@@ -383,7 +383,7 @@ export default function FeedPage() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-2 overflow-x-auto horizontal-scrollbar pb-1">
             {filterOptions.map((option) => {
               const Icon = option.icon;
               const isActive = filter === option.value;
@@ -436,7 +436,7 @@ export default function FeedPage() {
         {/* Main Feed */}
         <div className="flex-1 max-w-2xl">
           {/* Filter Tabs */}
-          <div className="flex items-center gap-2 mb-6 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-2 mb-6 overflow-x-auto horizontal-scrollbar pb-1">
             {filterOptions.map((option) => {
               const Icon = option.icon;
               const isActive = filter === option.value;

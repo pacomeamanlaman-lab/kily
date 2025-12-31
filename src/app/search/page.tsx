@@ -81,7 +81,7 @@ function SearchContent() {
           </div>
 
           {/* Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-2 overflow-x-auto horizontal-scrollbar pb-1">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.value;
 

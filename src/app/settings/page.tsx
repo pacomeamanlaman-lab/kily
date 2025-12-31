@@ -237,7 +237,7 @@ export default function SettingsPage() {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {/* Tabs */}
-        <div className="flex gap-2 mb-8 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-2 mb-8 overflow-x-auto horizontal-scrollbar pb-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.value;

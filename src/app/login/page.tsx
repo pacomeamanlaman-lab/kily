@@ -90,16 +90,31 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-20">
-      <div className="w-full max-w-md">
-        {/* Back Button */}
-        <button
-          onClick={() => router.push("/")}
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-8"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span>Retour</span>
-        </button>
+    <div className="min-h-screen bg-black text-white flex flex-col">
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-black/95 backdrop-blur-lg border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => router.push("/")}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-lg flex items-center justify-center">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <span className="text-xl font-bold">Kily</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-md">
 
         {/* Logo & Title */}
         <motion.div
@@ -270,6 +285,7 @@ export default function LoginPage() {
             Créer un compte
           </button>
         </motion.div>
+        </div>
       </div>
     </div>
   );

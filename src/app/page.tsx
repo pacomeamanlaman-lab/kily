@@ -15,9 +15,11 @@ import {
   Code,
   Palette,
   Wrench,
-  Camera
+  Camera,
+  Menu,
+  X
 } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 // Mock data pour les talents populaires
 const popularTalents = [
@@ -103,6 +105,7 @@ const features = [
 
 export default function Home() {
   const ref = useRef(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
@@ -117,7 +120,7 @@ export default function Home() {
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-lg border-b border-white/10"
+        className="fixed top-0 w-full z-50 bg-black/95 backdrop-blur-lg border-b border-white/10"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -127,14 +130,18 @@ export default function Home() {
               </div>
               <span className="text-xl font-bold">Kily</span>
             </a>
+            
+            {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8">
               <a href="#talents" className="hover:text-violet-500 transition-colors">Talents</a>
               <a href="#categories" className="hover:text-violet-500 transition-colors">Catégories</a>
               <a href="#features" className="hover:text-violet-500 transition-colors">Fonctionnalités</a>
             </div>
-            <div className="flex items-center gap-4">
+            
+            {/* Desktop Actions */}
+            <div className="hidden md:flex items-center gap-4">
               <a href="/login">
-                <button className="hidden sm:block hover:text-violet-500 transition-colors">
+                <button className="hover:text-violet-500 transition-colors">
                   Connexion
                 </button>
               </a>
@@ -144,7 +151,67 @@ export default function Home() {
                 </button>
               </a>
             </div>
+
+            {/* Mobile Actions */}
+            <div className="flex md:hidden items-center gap-3">
+              <a href="/register">
+                <button className="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-full text-sm font-medium transition-all">
+                  S'inscrire
+                </button>
+              </a>
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                {mobileMenuOpen ? (
+                  <X className="w-6 h-6" />
+                ) : (
+                  <Menu className="w-6 h-6" />
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden border-t border-white/10 py-4"
+            >
+              <div className="flex flex-col gap-4">
+                <a
+                  href="#talents"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-4 py-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  Talents
+                </a>
+                <a
+                  href="#categories"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-4 py-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  Catégories
+                </a>
+                <a
+                  href="#features"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-4 py-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  Fonctionnalités
+                </a>
+                <a
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-4 py-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  Connexion
+                </a>
+              </div>
+            </motion.div>
+          )}
         </div>
       </motion.nav>
 
@@ -203,7 +270,7 @@ export default function Home() {
                 <TrendingUp className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
             </a>
-            <button className="border-2 border-white/20 hover:border-violet-500 px-8 py-4 rounded-full font-semibold text-lg transition-all hover:scale-105 w-full sm:w-auto">
+            <button className="hidden sm:block border-2 border-white/20 hover:border-violet-500 px-8 py-4 rounded-full font-semibold text-lg transition-all hover:scale-105">
               En savoir plus
             </button>
           </motion.div>

@@ -51,7 +51,7 @@ export default function StoryCarousel({ stories }: StoryCarouselProps) {
   };
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-      <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide">
+      <div className="flex items-center gap-4 overflow-x-auto horizontal-scrollbar pb-1">
         {/* Add Story */}
         <button
           onClick={() => setShowCreateStoryModal(true)}

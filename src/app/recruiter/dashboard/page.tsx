@@ -163,7 +163,7 @@ export default function RecruiterDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Tabs */}
-        <div className="flex gap-2 mb-8 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-2 mb-8 overflow-x-auto horizontal-scrollbar pb-1">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.value;
 
@@ -324,7 +324,7 @@ export default function RecruiterDashboard() {
                 </div>
 
                 {/* Filtre par catégorie */}
-                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                <div className="flex items-center gap-2 overflow-x-auto horizontal-scrollbar pb-1">
                   <Filter className="w-5 h-5 text-white/60 flex-shrink-0" />
                   {categories.map((cat) => (
                     <button
@@ -452,7 +452,7 @@ export default function RecruiterDashboard() {
                 </div>
 
                 {/* Filtre par catégorie */}
-                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                <div className="flex items-center gap-2 overflow-x-auto horizontal-scrollbar pb-1">
                   <Filter className="w-5 h-5 text-white/60 flex-shrink-0" />
                   {categories.map((cat) => (
                     <button
