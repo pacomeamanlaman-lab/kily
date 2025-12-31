@@ -394,12 +394,12 @@ src/
 
 #### 🎯 Feed Interactions
 * ✅ Follow/Unfollow talents
-* ⏳ Likes sur posts (toggle cœur + compteur)
-* ⏳ Commentaires (modal/drawer pour commenter)
-* ⏳ Partage de posts (bouton share)
-* ⏳ Filtres fonctionnels (Tous/Abonnements/Tendances qui filtrent vraiment)
-* ⏳ Stories cliquables (modal plein écran)
-* ⏳ Bouton "Load more" fonctionnel
+* ✅ Likes sur posts (toggle cœur + compteur)
+* ✅ Commentaires (modal avec 19 commentaires mockés + ajout)
+* ✅ Partage de posts (bouton share avec toast)
+* ✅ Filtres fonctionnels (Tous/Abonnements/Tendances qui filtrent vraiment)
+* ✅ Stories cliquables (modal plein écran avec navigation et progress bars)
+* ✅ Bouton "Load more" fonctionnel (affiche 3 posts initialement, charge +2 par clic)
 
 #### 💬 Messaging Interactions
 * ✅ Liste conversations avec recherche
