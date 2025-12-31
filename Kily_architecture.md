@@ -527,10 +527,17 @@ src/
   * Badge rouge avec compteur (3 non lus)
   * Support pour 9+ messages
   * Position absolute top-right sur l'icône
-- Badge de notifications sur icône Bell (header feed) :
-  * Badge rouge avec compteur (5 notifications)
+- Badge de notifications sur icône Bell (mobile + desktop) :
+  * Mobile : Badge dans header feed (5 notifications)
+  * Desktop : Badge dans DesktopHeader global (5 notifications)
   * Support pour 9+ notifications
-  * Visible sur mobile dans le header
+  * Visible sur Feed, Discover, Messages en desktop
+- Header desktop global (nouveau) :
+  * Composant DesktopHeader conditionnel
+  * Affiché sur : /feed, /discover, /messages
+  * Contient : Logo + Search bar + Bell icon (badge) + Avatar
+  * Sticky top, bg-black/95, backdrop-blur
+  * Hidden sur mobile (lg:block)
 - Pull to refresh sur mobile :
   * Détection du swipe down au top de la page
   * Indicateur visuel avec rotation d'icône

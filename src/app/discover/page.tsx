@@ -201,7 +201,7 @@ export default function DiscoverPage() {
         onClose={() => setToast({ ...toast, visible: false })}
       />
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-black backdrop-blur-lg border-b border-white/10 px-4 sm:px-6 lg:px-8 pt-6 pb-6 shadow-xl">
+      <div className="lg:hidden sticky top-0 z-40 bg-black backdrop-blur-lg border-b border-white/10 px-4 sm:px-6 pt-6 pb-6 shadow-xl">
         <div className="max-w-7xl mx-auto">
           {/* Back Button */}
           <button
@@ -397,6 +397,176 @@ export default function DiscoverPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Desktop Content Section */}
+      <div className="hidden lg:block max-w-7xl mx-auto px-6 pt-8">
+        <h1 className="text-5xl font-bold mb-2">
+          Découvrir <span className="text-violet-500">Kily</span>
+        </h1>
+        <p className="text-gray-400 mb-8">
+          {activeTab === "talents" && `${filteredTalents.length} talent${filteredTalents.length > 1 ? "s" : ""}`}
+          {activeTab === "posts" && `${filteredPosts.length} post${filteredPosts.length > 1 ? "s" : ""}`}
+          {activeTab === "users" && `${filteredUsers.length} utilisateur${filteredUsers.length > 1 ? "s" : ""}`}
+          {" "}trouvé{(activeTab === "talents" && filteredTalents.length > 1) || (activeTab === "posts" && filteredPosts.length > 1) || (activeTab === "users" && filteredUsers.length > 1) ? "s" : ""}
+        </p>
+
+        {/* Tabs + Filter Button */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab("talents")}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all ${
+                activeTab === "talents"
+                  ? "bg-violet-600 text-white"
+                  : "bg-white/5 text-gray-400 hover:bg-white/10"
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span className="font-medium">Talents</span>
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                {filteredTalents.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("posts")}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all ${
+                activeTab === "posts"
+                  ? "bg-violet-600 text-white"
+                  : "bg-white/5 text-gray-400 hover:bg-white/10"
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span className="font-medium">Posts</span>
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                {filteredPosts.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("users")}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all ${
+                activeTab === "users"
+                  ? "bg-violet-600 text-white"
+                  : "bg-white/5 text-gray-400 hover:bg-white/10"
+              }`}
+            >
+              <User className="w-4 h-4" />
+              <span className="font-medium">Utilisateurs</span>
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                {filteredUsers.length}
+              </span>
+            </button>
+          </div>
+
+          <Button
+            variant={showFilters || hasActiveFilters ? "primary" : "secondary"}
+            onClick={() => setShowFilters(!showFilters)}
+            className="relative"
+          >
+            <Filter className="w-5 h-5" />
+            {hasActiveFilters && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-violet-400 rounded-full" />
+            )}
+          </Button>
+        </div>
+
+        {/* Filters Panel */}
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10"
+          >
+            <div className="grid grid-cols-2 gap-6">
+              {/* Catégories */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-sm text-gray-300">Catégories</h3>
+                  {selectedCategory && (
+                    <button
+                      onClick={() => setSelectedCategory(null)}
+                      className="text-xs text-violet-400 hover:text-violet-300"
+                    >
+                      Effacer
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {skillCategories.map((category) => (
+                    <Badge
+                      key={category.id}
+                      variant={selectedCategory === category.id ? "primary" : "secondary"}
+                      className="cursor-pointer hover:scale-105 transition-transform"
+                      onClick={() =>
+                        setSelectedCategory(
+                          selectedCategory === category.id ? null : category.id
+                        )
+                      }
+                    >
+                      {category.name}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Villes */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-sm text-gray-300">Villes</h3>
+                  {selectedCity && (
+                    <button
+                      onClick={() => setSelectedCity(null)}
+                      className="text-xs text-violet-400 hover:text-violet-300"
+                    >
+                      Effacer
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {cities.map((city) => (
+                    <Badge
+                      key={city}
+                      variant={selectedCity === city ? "primary" : "secondary"}
+                      className="cursor-pointer hover:scale-105 transition-transform"
+                      onClick={() => setSelectedCity(selectedCity === city ? null : city)}
+                    >
+                      {city}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {hasActiveFilters && (
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <Button variant="ghost" size="sm" onClick={resetFilters}>
+                  <X className="w-4 h-4" />
+                  Réinitialiser les filtres
+                </Button>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Active Filters */}
+        {hasActiveFilters && !showFilters && (
+          <div className="mb-6 flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-gray-400">Filtres actifs:</span>
+            {selectedCategory && (
+              <Badge variant="primary" className="cursor-pointer" onClick={() => setSelectedCategory(null)}>
+                {skillCategories.find((c) => c.id === selectedCategory)?.name}
+                <X className="w-3 h-3 ml-1" />
+              </Badge>
+            )}
+            {selectedCity && (
+              <Badge variant="primary" className="cursor-pointer" onClick={() => setSelectedCity(null)}>
+                {selectedCity}
+                <X className="w-3 h-3 ml-1" />
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Contenu selon le tab actif */}
