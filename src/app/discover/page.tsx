@@ -2,10 +2,12 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, Users, FileText, User } from "lucide-react";
 import { mockTalents, skillCategories, cities } from "@/lib/mockData";
+import { mockPosts } from "@/lib/feedData";
 import { useRouter, useSearchParams } from "next/navigation";
 import TalentCard from "@/components/talent/TalentCard";
+import PostCard from "@/components/feed/PostCard";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -17,6 +19,7 @@ export default function DiscoverPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState<"talents" | "posts" | "users">("talents");
 
   // Lire le paramètre category depuis l'URL
   useEffect(() => {
@@ -50,6 +53,53 @@ export default function DiscoverPage() {
     });
   }, [searchQuery, selectedCategory, selectedCity]);
 
+  // Filtrage des posts
+  const filteredPosts = useMemo(() => {
+    return mockPosts.filter((post) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.author.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchesSearch;
+    });
+  }, [searchQuery]);
+
+  // Filtrage des utilisateurs (tous les auteurs de posts + talents)
+  const filteredUsers = useMemo(() => {
+    const users = [
+      ...mockTalents.map(t => ({
+        id: t.id,
+        name: t.name,
+        avatar: t.avatar,
+        type: "talent" as const,
+        info: t.skills[0]?.name || "",
+        location: t.location.city,
+      })),
+      ...mockPosts.map(p => ({
+        id: p.author.id,
+        name: p.author.name,
+        avatar: p.author.avatar,
+        type: "user" as const,
+        info: "Utilisateur",
+        location: "",
+      }))
+    ];
+
+    // Retirer les doublons par ID
+    const uniqueUsers = Array.from(
+      new Map(users.map(u => [u.id, u])).values()
+    );
+
+    return uniqueUsers.filter((user) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        user.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchesSearch;
+    });
+  }, [searchQuery]);
+
   // Réinitialiser les filtres
   const resetFilters = () => {
     setSearchQuery("");
@@ -81,16 +131,18 @@ export default function DiscoverPage() {
             className="mb-6"
           >
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-2">
-              Découvrir les <span className="text-violet-500">talents</span>
+              Découvrir <span className="text-violet-500">Kily</span>
             </h1>
             <p className="text-gray-400">
-              {filteredTalents.length} talent{filteredTalents.length > 1 ? "s" : ""} disponible
-              {filteredTalents.length > 1 ? "s" : ""}
+              {activeTab === "talents" && `${filteredTalents.length} talent${filteredTalents.length > 1 ? "s" : ""}`}
+              {activeTab === "posts" && `${filteredPosts.length} post${filteredPosts.length > 1 ? "s" : ""}`}
+              {activeTab === "users" && `${filteredUsers.length} utilisateur${filteredUsers.length > 1 ? "s" : ""}`}
+              {" "}trouvé{(activeTab === "talents" && filteredTalents.length > 1) || (activeTab === "posts" && filteredPosts.length > 1) || (activeTab === "users" && filteredUsers.length > 1) ? "s" : ""}
             </p>
           </motion.div>
 
           {/* Barre de recherche */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 mb-6">
             <div className="flex-1 relative">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
@@ -111,6 +163,52 @@ export default function DiscoverPage() {
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-violet-500 rounded-full" />
               )}
             </Button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            <button
+              onClick={() => setActiveTab("talents")}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all whitespace-nowrap ${
+                activeTab === "talents"
+                  ? "bg-violet-600 text-white"
+                  : "bg-white/5 text-gray-400 hover:bg-white/10"
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span className="font-medium">Talents</span>
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                {filteredTalents.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("posts")}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all whitespace-nowrap ${
+                activeTab === "posts"
+                  ? "bg-violet-600 text-white"
+                  : "bg-white/5 text-gray-400 hover:bg-white/10"
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span className="font-medium">Posts</span>
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                {filteredPosts.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("users")}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all whitespace-nowrap ${
+                activeTab === "users"
+                  ? "bg-violet-600 text-white"
+                  : "bg-white/5 text-gray-400 hover:bg-white/10"
+              }`}
+            >
+              <User className="w-4 h-4" />
+              <span className="font-medium">Utilisateurs</span>
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                {filteredUsers.length}
+              </span>
+            </button>
           </div>
 
           {/* Panneau de filtres */}
@@ -212,43 +310,140 @@ export default function DiscoverPage() {
         </div>
       </div>
 
-      {/* Grille de talents */}
+      {/* Contenu selon le tab actif */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {filteredTalents.length > 0 ? (
-          <motion.div
-            layout
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-          >
-            {filteredTalents.map((talent, index) => (
+        {/* Tab Talents */}
+        {activeTab === "talents" && (
+          <>
+            {filteredTalents.length > 0 ? (
               <motion.div
-                key={talent.id}
                 layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.05 }}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
               >
-                <TalentCard
-                  talent={talent}
-                  onClick={() => router.push(`/profile/${talent.id}`)}
-                />
+                {filteredTalents.map((talent, index) => (
+                  <motion.div
+                    key={talent.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <TalentCard
+                      talent={talent}
+                      onClick={() => router.push(`/profile/${talent.id}`)}
+                    />
+                  </motion.div>
+                ))}
               </motion.div>
-            ))}
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20"
-          >
-            <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold mb-2">Aucun talent trouvé</h3>
-            <p className="text-gray-400 mb-6">
-              Essayez de modifier vos critères de recherche
-            </p>
-            <Button variant="outline" onClick={resetFilters}>
-              Réinitialiser les filtres
-            </Button>
-          </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-20"
+              >
+                <div className="text-6xl mb-4">🔍</div>
+                <h3 className="text-xl font-semibold mb-2">Aucun talent trouvé</h3>
+                <p className="text-gray-400 mb-6">
+                  Essayez de modifier vos critères de recherche
+                </p>
+                <Button variant="outline" onClick={resetFilters}>
+                  Réinitialiser les filtres
+                </Button>
+              </motion.div>
+            )}
+          </>
+        )}
+
+        {/* Tab Posts */}
+        {activeTab === "posts" && (
+          <>
+            {filteredPosts.length > 0 ? (
+              <motion.div
+                layout
+                className="max-w-2xl mx-auto space-y-6"
+              >
+                {filteredPosts.map((post, index) => (
+                  <motion.div
+                    key={post.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <PostCard post={post} />
+                  </motion.div>
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-20"
+              >
+                <div className="text-6xl mb-4">📝</div>
+                <h3 className="text-xl font-semibold mb-2">Aucun post trouvé</h3>
+                <p className="text-gray-400 mb-6">
+                  Essayez une autre recherche
+                </p>
+                <Button variant="outline" onClick={() => setSearchQuery("")}>
+                  Réinitialiser la recherche
+                </Button>
+              </motion.div>
+            )}
+          </>
+        )}
+
+        {/* Tab Users */}
+        {activeTab === "users" && (
+          <>
+            {filteredUsers.length > 0 ? (
+              <motion.div
+                layout
+                className="max-w-2xl mx-auto space-y-3"
+              >
+                {filteredUsers.map((user, index) => (
+                  <motion.div
+                    key={user.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() => router.push(`/profile/${user.id}`)}
+                    className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer"
+                  >
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg">{user.name}</h3>
+                      <p className="text-sm text-gray-400">
+                        {user.info}
+                        {user.location && ` • ${user.location}`}
+                      </p>
+                    </div>
+                    <Badge variant={user.type === "talent" ? "primary" : "secondary"}>
+                      {user.type === "talent" ? "Talent" : "Utilisateur"}
+                    </Badge>
+                  </motion.div>
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-20"
+              >
+                <div className="text-6xl mb-4">👤</div>
+                <h3 className="text-xl font-semibold mb-2">Aucun utilisateur trouvé</h3>
+                <p className="text-gray-400 mb-6">
+                  Essayez une autre recherche
+                </p>
+                <Button variant="outline" onClick={() => setSearchQuery("")}>
+                  Réinitialiser la recherche
+                </Button>
+              </motion.div>
+            )}
+          </>
         )}
       </div>
     </div>
