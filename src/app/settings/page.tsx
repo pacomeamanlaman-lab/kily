@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import Toast from "@/components/ui/Toast";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -48,6 +49,28 @@ export default function SettingsPage() {
     showLocation: true,
   });
 
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const [emailForm, setEmailForm] = useState({
+    newEmail: "",
+    password: "",
+  });
+
+  const [phoneForm, setPhoneForm] = useState({
+    newPhone: "",
+    password: "",
+  });
+
+  const [toast, setToast] = useState({
+    message: "",
+    type: "success" as "success" | "error" | "info",
+    visible: false,
+  });
+
   const tabs = [
     { value: "profile" as const, label: "Profil", icon: User },
     { value: "notifications" as const, label: "Notifications", icon: Bell },
@@ -61,8 +84,143 @@ export default function SettingsPage() {
     router.push("/login");
   };
 
+  const handleSaveProfile = () => {
+    setToast({
+      message: "Profil mis à jour avec succès !",
+      type: "success",
+      visible: true,
+    });
+  };
+
+  const handleChangePassword = () => {
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setToast({
+        message: "Veuillez remplir tous les champs",
+        type: "error",
+        visible: true,
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      setToast({
+        message: "Le mot de passe doit contenir au moins 8 caractères",
+        type: "error",
+        visible: true,
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setToast({
+        message: "Les mots de passe ne correspondent pas",
+        type: "error",
+        visible: true,
+      });
+      return;
+    }
+
+    setToast({
+      message: "Mot de passe modifié avec succès !",
+      type: "success",
+      visible: true,
+    });
+
+    setPasswordForm({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+  };
+
+  const handleChangeEmail = () => {
+    if (!emailForm.newEmail || !emailForm.password) {
+      setToast({
+        message: "Veuillez remplir tous les champs",
+        type: "error",
+        visible: true,
+      });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailForm.newEmail)) {
+      setToast({
+        message: "Veuillez entrer une adresse email valide",
+        type: "error",
+        visible: true,
+      });
+      return;
+    }
+
+    setFormData({ ...formData, email: emailForm.newEmail });
+    setToast({
+      message: "Email modifié avec succès !",
+      type: "success",
+      visible: true,
+    });
+
+    setEmailForm({ newEmail: "", password: "" });
+  };
+
+  const handleChangePhone = () => {
+    if (!phoneForm.newPhone || !phoneForm.password) {
+      setToast({
+        message: "Veuillez remplir tous les champs",
+        type: "error",
+        visible: true,
+      });
+      return;
+    }
+
+    const phoneRegex = /^\+?[0-9\s-]{10,}$/;
+    if (!phoneRegex.test(phoneForm.newPhone)) {
+      setToast({
+        message: "Veuillez entrer un numéro de téléphone valide",
+        type: "error",
+        visible: true,
+      });
+      return;
+    }
+
+    setFormData({ ...formData, phone: phoneForm.newPhone });
+    setToast({
+      message: "Numéro de téléphone modifié avec succès !",
+      type: "success",
+      visible: true,
+    });
+
+    setPhoneForm({ newPhone: "", password: "" });
+  };
+
+  const handleToggleNotification = (key: keyof typeof notifications) => {
+    setNotifications({ ...notifications, [key]: !notifications[key] });
+    setToast({
+      message: "Préférences de notification mises à jour",
+      type: "success",
+      visible: true,
+    });
+  };
+
+  const handleTogglePrivacy = (key: keyof typeof privacy) => {
+    setPrivacy({ ...privacy, [key]: !privacy[key] });
+    setToast({
+      message: "Paramètres de confidentialité mis à jour",
+      type: "success",
+      visible: true,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-black text-white pb-20">
+      {/* Toast */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.visible}
+        onClose={() => setToast({ ...toast, visible: false })}
+      />
+
       {/* Header */}
       <div className="sticky top-0 z-40 bg-black border-b border-white/10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
@@ -179,7 +337,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="mt-6">
-                <Button variant="primary">Sauvegarder les modifications</Button>
+                <Button variant="primary" onClick={handleSaveProfile}>Sauvegarder les modifications</Button>
               </div>
             </div>
           </motion.div>
@@ -213,9 +371,7 @@ export default function SettingsPage() {
                     <input
                       type="checkbox"
                       checked={notifications[item.key as keyof typeof notifications]}
-                      onChange={(e) =>
-                        setNotifications({ ...notifications, [item.key]: e.target.checked })
-                      }
+                      onChange={() => handleToggleNotification(item.key as keyof typeof notifications)}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-white/10 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-violet-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
@@ -290,9 +446,7 @@ export default function SettingsPage() {
                         <input
                           type="checkbox"
                           checked={privacy[item.key as keyof typeof privacy] as boolean}
-                          onChange={(e) =>
-                            setPrivacy({ ...privacy, [item.key]: e.target.checked })
-                          }
+                          onChange={() => handleTogglePrivacy(item.key as keyof typeof privacy)}
                           className="sr-only peer"
                         />
                         <div className="w-11 h-6 bg-white/10 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-violet-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
@@ -319,23 +473,79 @@ export default function SettingsPage() {
                   label="Mot de passe actuel"
                   type="password"
                   placeholder="••••••••"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
                   icon={<Lock className="w-5 h-5" />}
                 />
                 <Input
                   label="Nouveau mot de passe"
                   type="password"
                   placeholder="••••••••"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
                   icon={<Lock className="w-5 h-5" />}
                 />
                 <Input
                   label="Confirmer le mot de passe"
                   type="password"
                   placeholder="••••••••"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
                   icon={<Lock className="w-5 h-5" />}
                 />
               </div>
               <div className="mt-6">
-                <Button variant="primary">Changer le mot de passe</Button>
+                <Button variant="primary" onClick={handleChangePassword}>Changer le mot de passe</Button>
+              </div>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h2 className="text-xl font-bold mb-6">Changer l'email</h2>
+              <div className="space-y-4">
+                <Input
+                  label="Nouvel email"
+                  type="email"
+                  placeholder="nouveau@email.com"
+                  value={emailForm.newEmail}
+                  onChange={(e) => setEmailForm({ ...emailForm, newEmail: e.target.value })}
+                  icon={<Mail className="w-5 h-5" />}
+                />
+                <Input
+                  label="Mot de passe (pour confirmer)"
+                  type="password"
+                  placeholder="••••••••"
+                  value={emailForm.password}
+                  onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
+                  icon={<Lock className="w-5 h-5" />}
+                />
+              </div>
+              <div className="mt-6">
+                <Button variant="primary" onClick={handleChangeEmail}>Changer l'email</Button>
+              </div>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h2 className="text-xl font-bold mb-6">Changer le téléphone</h2>
+              <div className="space-y-4">
+                <Input
+                  label="Nouveau numéro"
+                  type="tel"
+                  placeholder="+225 07 00 00 00 00"
+                  value={phoneForm.newPhone}
+                  onChange={(e) => setPhoneForm({ ...phoneForm, newPhone: e.target.value })}
+                  icon={<Phone className="w-5 h-5" />}
+                />
+                <Input
+                  label="Mot de passe (pour confirmer)"
+                  type="password"
+                  placeholder="••••••••"
+                  value={phoneForm.password}
+                  onChange={(e) => setPhoneForm({ ...phoneForm, password: e.target.value })}
+                  icon={<Lock className="w-5 h-5" />}
+                />
+              </div>
+              <div className="mt-6">
+                <Button variant="primary" onClick={handleChangePhone}>Changer le téléphone</Button>
               </div>
             </div>
 

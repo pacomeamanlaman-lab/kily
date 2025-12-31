@@ -493,10 +493,30 @@ src/
   - Section "Compétences personnalisées" dédiée
   - Même UX que l'édition de profil
 
-#### ⚙️ Settings
-* ⏳ Toggle notifications (switches fonctionnels)
-* ⏳ Changer mot de passe (formulaire)
-* ⏳ Changer email/phone (formulaire)
+#### ⚙️ Settings ✅
+* ✅ Toggle notifications (switches fonctionnels avec Toast)
+* ✅ Changer mot de passe (formulaire avec validation et Toast)
+* ✅ Changer email/phone (formulaires avec validation et Toast)
+
+**Détails de l'implémentation :**
+- Toggles fonctionnels pour notifications (5 options)
+- Toggles fonctionnels pour confidentialité (3 options)
+- Formulaire changement mot de passe avec :
+  * Validation longueur minimum 8 caractères
+  * Vérification correspondance confirmation
+  * Reset automatique après succès
+  * Toast feedback
+- Formulaire changement email avec :
+  * Validation regex email
+  * Confirmation par mot de passe
+  * Mise à jour du profil
+  * Toast feedback
+- Formulaire changement téléphone avec :
+  * Validation regex téléphone
+  * Confirmation par mot de passe
+  * Mise à jour du profil
+  * Toast feedback
+- Toast notifications globales pour tous les retours utilisateur
 
 #### ✨ Micro-interactions
 * ⏳ Notifications badge (compteur sur icône notifs)
