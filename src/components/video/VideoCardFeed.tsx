@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Video } from "@/lib/videoData";
 import { mockComments } from "@/lib/feedData";
 import Toast from "@/components/ui/Toast";
+import { isVideoLiked, getVideoLikesCount, toggleVideoLike, initVideoLikesCount } from "@/lib/videoLikes";
 
 interface VideoCardFeedProps {
   video: Video;
@@ -33,16 +34,24 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
     visible: false,
   });
 
-  // Load existing comments on mount
+  // Load existing comments and likes on mount
   useEffect(() => {
     const existingComments = mockComments[video.id] || [];
     setComments(existingComments);
-  }, [video.id]);
+    
+    // Initialize likes count in localStorage
+    initVideoLikesCount(video.id, video.likes);
+    
+    // Load liked state and count from localStorage
+    setLiked(isVideoLiked(video.id));
+    setLikesCount(getVideoLikesCount(video.id, video.likes));
+  }, [video.id, video.likes]);
 
   const handleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setLiked(!liked);
-    setLikesCount(liked ? likesCount - 1 : likesCount + 1);
+    const result = toggleVideoLike(video.id, likesCount);
+    setLiked(result.liked);
+    setLikesCount(result.likesCount);
   };
 
   const handleShare = (e: React.MouseEvent) => {

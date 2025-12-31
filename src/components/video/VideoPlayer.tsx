@@ -19,6 +19,10 @@ import {
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Video } from "@/lib/videoData";
+import { mockComments, Comment } from "@/lib/feedData";
+import Toast from "@/components/ui/Toast";
+import { Send, X } from "lucide-react";
+import { isVideoLiked, getVideoLikesCount, toggleVideoLike, initVideoLikesCount } from "@/lib/videoLikes";
 
 interface VideoPlayerProps {
   videos: Video[];
@@ -45,6 +49,16 @@ export default function VideoPlayer({
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [liked, setLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
+    message: "",
+    type: "success",
+    visible: false,
+  });
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -119,6 +133,58 @@ export default function VideoPlayer({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const formatNumber = (num: number | string): string => {
+    if (typeof num === 'string') return num;
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toString();
+  };
+
+  const getTimeAgo = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+
+    if (diffInMinutes < 60) return `Il y a ${diffInMinutes} min`;
+    if (diffInMinutes < 1440) return `Il y a ${Math.floor(diffInMinutes / 60)}h`;
+    return `Il y a ${Math.floor(diffInMinutes / 1440)}j`;
+  };
+
+  const handleLike = () => {
+    if (!currentVideo) return;
+    const result = toggleVideoLike(currentVideo.id, likesCount);
+    setLiked(result.liked);
+    setLikesCount(result.likesCount);
+  };
+
+  const handleAddComment = () => {
+    if (!commentText.trim()) return;
+
+    const newComment: Comment = {
+      id: Date.now().toString(),
+      author: "Vous",
+      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+      content: commentText,
+      timestamp: new Date().toISOString(),
+    };
+
+    setComments([...comments, newComment]);
+    setCommentText("");
+    setToast({
+      message: "Commentaire ajouté !",
+      type: "success",
+      visible: true,
+    });
+  };
+
+  const handleShare = () => {
+    setToast({
+      message: "Lien copié dans le presse-papiers",
+      type: "success",
+      visible: true,
+    });
+  };
+
   // Gestion du swipe tactile
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientY);
@@ -190,6 +256,21 @@ export default function VideoPlayer({
     }
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, currentVideoIndex, videos.length, onClose]);
+
+  // Load comments and likes when video changes
+  useEffect(() => {
+    if (currentVideo) {
+      const existingComments = mockComments[currentVideo.id] || [];
+      setComments(existingComments);
+      
+      // Initialize likes count in localStorage
+      initVideoLikesCount(currentVideo.id, currentVideo.likes);
+      
+      // Load liked state and count from localStorage
+      setLiked(isVideoLiked(currentVideo.id));
+      setLikesCount(getVideoLikesCount(currentVideo.id, currentVideo.likes));
+    }
+  }, [currentVideo?.id]);
 
   // Update currentVideoIndex when initialIndex changes (when clicking a different video)
   useEffect(() => {
@@ -503,26 +584,29 @@ export default function VideoPlayer({
             <div className="absolute right-4 bottom-32 flex flex-col gap-6">
               <motion.button
                 whileTap={{ scale: 0.9 }}
+                onClick={handleLike}
                 className="flex flex-col items-center gap-1"
               >
-                <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
-                  <Heart className="w-6 h-6 text-white" />
+                <div className={`w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors ${liked ? 'bg-red-500/20' : ''}`}>
+                  <Heart className={`w-6 h-6 ${liked ? 'fill-red-500 text-red-500' : 'text-white'}`} />
                 </div>
-                <span className="text-white text-xs font-medium">{currentVideo.likes}</span>
+                <span className="text-white text-xs font-medium">{formatNumber(likesCount)}</span>
               </motion.button>
 
               <motion.button
                 whileTap={{ scale: 0.9 }}
+                onClick={() => setShowComments(true)}
                 className="flex flex-col items-center gap-1"
               >
                 <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
                   <MessageCircle className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-white text-xs font-medium">{currentVideo.comments}</span>
+                <span className="text-white text-xs font-medium">{comments.length || currentVideo.comments}</span>
               </motion.button>
 
               <motion.button
                 whileTap={{ scale: 0.9 }}
+                onClick={handleShare}
                 className="flex flex-col items-center gap-1"
               >
                 <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
@@ -570,6 +654,109 @@ export default function VideoPlayer({
           </div>
         </motion.div>
       )}
+
+      {/* Comments Modal */}
+      <AnimatePresence>
+        {showComments && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowComments(false)}
+            className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+          >
+            <motion.div
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-gradient-to-b from-white/10 to-white/5 border border-white/20 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg max-h-[80vh] flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-white/10">
+                <h2 className="text-xl font-bold">Commentaires ({comments.length})</h2>
+                <button
+                  onClick={() => setShowComments(false)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Comments List */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {comments.length === 0 && (
+                  <div className="text-center py-8 text-gray-400">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>Aucun commentaire pour le moment</p>
+                    <p className="text-sm mt-1">Soyez le premier à commenter !</p>
+                  </div>
+                )}
+
+                {comments.map((comment) => (
+                  <motion.div
+                    key={comment.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex gap-3"
+                  >
+                    <img
+                      src={comment.avatar}
+                      alt={comment.author}
+                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                    />
+                    <div className="flex-1 bg-white/5 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold text-sm">{comment.author}</span>
+                        <span className="text-xs text-gray-500">
+                          {getTimeAgo(comment.timestamp)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-300">{comment.content}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Comment Input */}
+              <div className="p-4 border-t border-white/10">
+                <div className="flex gap-3">
+                  <img
+                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400"
+                    alt="Vous"
+                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                  />
+                  <div className="flex-1 flex gap-2">
+                    <input
+                      type="text"
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && handleAddComment()}
+                      placeholder="Écrire un commentaire..."
+                      className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-full text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500 transition-colors"
+                    />
+                    <button
+                      onClick={handleAddComment}
+                      disabled={!commentText.trim()}
+                      className="p-2 bg-violet-600 hover:bg-violet-700 disabled:bg-white/10 disabled:text-gray-600 rounded-full transition-colors"
+                    >
+                      <Send className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.visible}
+        onClose={() => setToast((prev) => ({ ...prev, visible: false }))}
+      />
     </AnimatePresence>
   );
 }
