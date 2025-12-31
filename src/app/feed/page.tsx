@@ -39,25 +39,6 @@ export default function FeedPage() {
 
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  const lastPostRef = useCallback((node: HTMLDivElement | null) => {
-    if (observerRef.current) observerRef.current.disconnect();
-
-    observerRef.current = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        setVisiblePosts((prev) => {
-          if (prev < filteredPosts.length) {
-            return Math.min(prev + 2, filteredPosts.length);
-          }
-          return prev;
-        });
-      }
-    }, {
-      rootMargin: '200px'
-    });
-
-    if (node) observerRef.current.observe(node);
-  }, [filteredPosts.length]);
-
   const filterOptions = [
     { value: "all" as const, label: "Tous", icon: Sparkles },
     { value: "following" as const, label: "Abonnements", icon: TrendingUp },
@@ -114,6 +95,25 @@ export default function FeedPage() {
 
     return mockPosts;
   }, [filter, followedTalents]);
+
+  const lastPostRef = useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) observerRef.current.disconnect();
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setVisiblePosts((prev) => {
+          if (prev < filteredPosts.length) {
+            return Math.min(prev + 2, filteredPosts.length);
+          }
+          return prev;
+        });
+      }
+    }, {
+      rootMargin: '200px'
+    });
+
+    if (node) observerRef.current.observe(node);
+  }, [filteredPosts.length]);
 
   const handleFollow = (talentId: number, talentName: string) => {
     const isFollowing = followedTalents.has(talentId);
