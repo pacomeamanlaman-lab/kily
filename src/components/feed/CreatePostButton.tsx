@@ -13,7 +13,10 @@ export default function CreatePostButton({
   userAvatar = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
   userName = "Vous"
 }: CreatePostButtonProps) {
-  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [modalState, setModalState] = useState<{ isOpen: boolean; type: "post" | "video" | null }>({
+    isOpen: false,
+    type: null
+  });
 
   return (
     <>
@@ -28,8 +31,8 @@ export default function CreatePostButton({
 
           {/* Fake Input - Opens Modal */}
           <button
-            onClick={() => setShowPublishModal(true)}
-            className="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-left text-gray-400 transition-colors"
+            onClick={() => setModalState({ isOpen: true, type: null })}
+            className="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-left text-gray-400 transition-colors cursor-pointer"
           >
             Quoi de neuf, {userName} ?
           </button>
@@ -37,16 +40,16 @@ export default function CreatePostButton({
           {/* Quick Actions */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowPublishModal(true)}
-              className="p-2 hover:bg-white/10 rounded-full transition-colors"
-              title="Photo/Vidéo"
+              onClick={() => setModalState({ isOpen: true, type: "post" })}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+              title="Publier un post"
             >
               <ImageIcon className="w-5 h-5 text-violet-400" />
             </button>
             <button
-              onClick={() => setShowPublishModal(true)}
-              className="p-2 hover:bg-white/10 rounded-full transition-colors"
-              title="Vidéo"
+              onClick={() => setModalState({ isOpen: true, type: "video" })}
+              className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+              title="Publier une vidéo"
             >
               <Video className="w-5 h-5 text-violet-400" />
             </button>
@@ -55,8 +58,9 @@ export default function CreatePostButton({
       </div>
 
       <PublishModal
-        isOpen={showPublishModal}
-        onClose={() => setShowPublishModal(false)}
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState({ isOpen: false, type: null })}
+        initialType={modalState.type}
       />
     </>
   );

@@ -2,19 +2,27 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { X, FileText, Video } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CreatePostForm from "./CreatePostForm";
 import CreateVideoForm from "./CreateVideoForm";
 
 interface PublishModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialType?: "post" | "video" | null;
 }
 
 type PublishType = "post" | "video" | null;
 
-export default function PublishModal({ isOpen, onClose }: PublishModalProps) {
-  const [publishType, setPublishType] = useState<PublishType>(null);
+export default function PublishModal({ isOpen, onClose, initialType = null }: PublishModalProps) {
+  const [publishType, setPublishType] = useState<PublishType>(initialType);
+
+  // Sync publishType with initialType when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setPublishType(initialType);
+    }
+  }, [isOpen, initialType]);
 
   const handleClose = () => {
     setPublishType(null);
@@ -66,7 +74,7 @@ export default function PublishModal({ isOpen, onClose }: PublishModalProps) {
                     {/* Post Option */}
                     <button
                       onClick={() => setPublishType("post")}
-                      className="w-full p-6 bg-gradient-to-br from-violet-500/20 to-violet-600/10 hover:from-violet-500/30 hover:to-violet-600/20 border border-violet-500/30 rounded-xl transition-all group"
+                      className="w-full p-6 bg-gradient-to-br from-violet-500/20 to-violet-600/10 hover:from-violet-500/30 hover:to-violet-600/20 border border-violet-500/30 rounded-xl transition-all group cursor-pointer"
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-violet-500/20 rounded-full flex items-center justify-center group-hover:bg-violet-500/30 transition-colors">
@@ -86,7 +94,7 @@ export default function PublishModal({ isOpen, onClose }: PublishModalProps) {
                     {/* Video Option */}
                     <button
                       onClick={() => setPublishType("video")}
-                      className="w-full p-6 bg-gradient-to-br from-violet-500/20 to-violet-600/10 hover:from-violet-500/30 hover:to-violet-600/20 border border-violet-500/30 rounded-xl transition-all group"
+                      className="w-full p-6 bg-gradient-to-br from-violet-500/20 to-violet-600/10 hover:from-violet-500/30 hover:to-violet-600/20 border border-violet-500/30 rounded-xl transition-all group cursor-pointer"
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-violet-500/20 rounded-full flex items-center justify-center group-hover:bg-violet-500/30 transition-colors">
@@ -106,7 +114,7 @@ export default function PublishModal({ isOpen, onClose }: PublishModalProps) {
                     {/* Cancel Button */}
                     <button
                       onClick={handleClose}
-                      className="w-full mt-4 py-3 text-gray-400 hover:text-white transition-colors"
+                      className="w-full mt-4 py-3 text-gray-400 hover:text-white transition-colors cursor-pointer"
                     >
                       Annuler
                     </button>
