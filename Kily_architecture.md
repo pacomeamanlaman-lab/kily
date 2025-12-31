@@ -407,12 +407,12 @@ src/
 * ✅ Indicateur "en train d'écrire..." (3 dots animés)
 * ✅ Marquer comme lu (badge unread disparaît au clic)
 
-#### 👤 Profile Interactions
+#### 👤 Profile Interactions ✅ TERMINÉ
 * ✅ Save/Unsave talent
-* ⏳ Éditer son profil (modal édition pour /profile)
-* ⏳ Ajouter portfolio item (upload simulé)
-* ⏳ Laisser un avis (formulaire review)
-* ⏳ Bouton "Recruter" fonctionnel
+* ✅ Éditer son profil (modal édition avec nom, bio, email, phone, ville)
+* ✅ Ajouter portfolio item (formulaire avec titre, description, image URL)
+* ✅ Laisser un avis (étoiles + commentaire)
+* ✅ Bouton "Recruter" (toast + redirect vers messages)
 
 #### 💼 Dashboard Recruteur
 * ⏳ Tabs fonctionnels (switcher entre Stats/Sauvegardés/Contactés)
