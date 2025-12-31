@@ -30,6 +30,7 @@ export default function FeedPage() {
   const router = useRouter();
   const [filter, setFilter] = useState<"all" | "following" | "trending">("all");
   const [followedTalents, setFollowedTalents] = useState<Set<number>>(new Set());
+  const [visiblePosts, setVisiblePosts] = useState(3);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
     type: "success",
@@ -251,7 +252,7 @@ export default function FeedPage() {
 
           {/* Feed Posts */}
           <div className="space-y-6">
-            {filteredPosts.map((post, index) => (
+            {filteredPosts.slice(0, visiblePosts).map((post, index) => (
               <motion.div
                 key={post.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -263,11 +264,17 @@ export default function FeedPage() {
             ))}
 
             {/* Load More */}
-            <div className="flex justify-center pt-6">
-              <Button variant="secondary" className="w-full sm:w-auto">
-                Charger plus de contenu
-              </Button>
-            </div>
+            {visiblePosts < filteredPosts.length && (
+              <div className="flex justify-center pt-6">
+                <Button
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                  onClick={() => setVisiblePosts((prev) => prev + 2)}
+                >
+                  Charger plus de contenu
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -374,7 +381,7 @@ export default function FeedPage() {
 
         {/* Feed Posts */}
         <div className="space-y-6">
-          {filteredPosts.map((post, index) => (
+          {filteredPosts.slice(0, visiblePosts).map((post, index) => (
             <motion.div
               key={post.id}
               initial={{ opacity: 0, y: 20 }}
@@ -386,11 +393,17 @@ export default function FeedPage() {
           ))}
 
           {/* Load More */}
-          <div className="flex justify-center pt-6">
-            <Button variant="secondary" className="w-full sm:w-auto">
-              Charger plus de contenu
-            </Button>
-          </div>
+          {visiblePosts < filteredPosts.length && (
+            <div className="flex justify-center pt-6">
+              <Button
+                variant="secondary"
+                className="w-full sm:w-auto"
+                onClick={() => setVisiblePosts((prev) => prev + 2)}
+              >
+                Charger plus de contenu
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Suggestions */}
