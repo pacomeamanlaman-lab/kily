@@ -470,10 +470,28 @@ src/
 * ✅ Bouton "Message" direct dans tab Contactés
 * ✅ Overlays d'actions au hover avec transitions
 
-#### 🔍 Discover/Search
+#### 🔍 Discover/Search ✅ TERMINÉ
 * ✅ Filtres catégories et villes
-* ⏳ Search en temps réel (recherche globale fonctionnelle)
-* ⏳ Tabs search (switcher entre Talents/Posts/Utilisateurs)
+* ✅ Search en temps réel (recherche globale fonctionnelle)
+  - Filtrage instantané par nom, compétence ou ville
+  - useMemo pour optimisation
+* ✅ Tabs search (switcher entre Talents/Posts/Utilisateurs)
+  - Tab "Talents" avec grille de TalentCard
+  - Tab "Posts" avec liste de PostCard (layout centré)
+  - Tab "Utilisateurs" avec liste stylisée + badges (Talent/Utilisateur)
+  - Compteurs dynamiques sur chaque tab (badges)
+  - Animations smooth entre tabs
+  - Empty states personnalisés par tab (🔍📝👤)
+  - Header compteur adaptatif selon tab actif
+
+#### 📝 Register/Inscription ✅ Amélioration
+* ✅ Uniformisation système de compétences (Step 3)
+  - Remplacement mockSkills par les mêmes 45+ compétences prédéfinies que profile
+  - Barre de recherche avec filtrage en temps réel
+  - Tags cliquables avec Check icon
+  - Saisie manuelle avec input + bouton Plus
+  - Section "Compétences personnalisées" dédiée
+  - Même UX que l'édition de profil
 
 #### ⚙️ Settings
 * ⏳ Toggle notifications (switches fonctionnels)
