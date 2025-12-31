@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import CreateStoryModal from "./CreateStoryModal";
 
 export interface Story {
   id: string;
@@ -22,6 +23,7 @@ interface StoryCarouselProps {
 export default function StoryCarousel({ stories }: StoryCarouselProps) {
   const [selectedStory, setSelectedStory] = useState<number | null>(null);
   const [viewedStories, setViewedStories] = useState<Set<string>>(new Set());
+  const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
 
   const handleStoryClick = (index: number, storyId: string) => {
     setSelectedStory(index);
@@ -51,7 +53,10 @@ export default function StoryCarousel({ stories }: StoryCarouselProps) {
     <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
       <div className="flex items-center gap-4 overflow-x-auto scrollbar-hide">
         {/* Add Story */}
-        <button className="flex-shrink-0 flex flex-col items-center gap-2 group">
+        <button
+          onClick={() => setShowCreateStoryModal(true)}
+          className="flex-shrink-0 flex flex-col items-center gap-2 group cursor-pointer"
+        >
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-600 to-violet-800 flex items-center justify-center group-hover:scale-110 transition-transform">
             <Plus className="w-8 h-8 text-white" />
           </div>
@@ -201,6 +206,12 @@ export default function StoryCarousel({ stories }: StoryCarouselProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Create Story Modal */}
+      <CreateStoryModal
+        isOpen={showCreateStoryModal}
+        onClose={() => setShowCreateStoryModal(false)}
+      />
     </div>
   );
 }
