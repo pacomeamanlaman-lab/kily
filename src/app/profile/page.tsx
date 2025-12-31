@@ -1,7 +1,7 @@
 "use client";
 
-import { Camera, Edit, MapPin, Mail, Phone, Star, Award, Users, TrendingUp, X } from "lucide-react";
-import { useState } from "react";
+import { Camera, Edit, MapPin, Mail, Phone, Star, Award, Users, TrendingUp, X, Upload, Image as ImageIcon, Pencil } from "lucide-react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import SkillBadge from "@/components/talent/SkillBadge";
 import Badge from "@/components/ui/Badge";
@@ -11,6 +11,10 @@ import Toast from "@/components/ui/Toast";
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingPortfolio, setIsAddingPortfolio] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "" });
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
     type: "success",
@@ -71,29 +75,99 @@ export default function ProfilePage() {
     });
   };
 
-  const [portfolioForm, setPortfolioForm] = useState({
-    title: "",
-    description: "",
-    imageUrl: "",
-  });
+  const processFiles = async (files: FileList) => {
+    if (!files || files.length === 0) return;
 
-  const handleAddPortfolio = (e: React.FormEvent) => {
-    e.preventDefault();
+    const newItems = [];
 
-    const newItem = {
-      id: Date.now().toString(),
-      title: portfolioForm.title,
-      description: portfolioForm.description,
-      imageUrl: portfolioForm.imageUrl || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800",
-    };
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      // Vérifier que c'est une image
+      if (!file.type.startsWith('image/')) continue;
+
+      const reader = new FileReader();
+
+      await new Promise((resolve) => {
+        reader.onloadend = () => {
+          const portfolioItemNumber = user.portfolio.length + newItems.length + 1;
+          newItems.push({
+            id: `${Date.now()}-${i}`,
+            title: `Portfolio item ${portfolioItemNumber}`,
+            description: "",
+            imageUrl: reader.result as string,
+          });
+          resolve(null);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    if (newItems.length === 0) return;
 
     setUser({
       ...user,
-      portfolio: [...user.portfolio, newItem],
+      portfolio: [...user.portfolio, ...newItems],
     });
 
-    setPortfolioForm({ title: "", description: "", imageUrl: "" });
     setIsAddingPortfolio(false);
+    setToast({
+      message: `${newItems.length} image(s) ajoutée(s) avec succès !`,
+      type: "success",
+      visible: true,
+    });
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      await processFiles(files);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files) {
+      await processFiles(files);
+    }
+  };
+
+  const handleEditItem = (item: { id: string; title: string; description: string }) => {
+    setEditingItemId(item.id);
+    setEditForm({ title: item.title, description: item.description });
+  };
+
+  const handleSaveEdit = () => {
+    setUser({
+      ...user,
+      portfolio: user.portfolio.map((item) =>
+        item.id === editingItemId
+          ? { ...item, title: editForm.title, description: editForm.description }
+          : item
+      ),
+    });
+    setEditingItemId(null);
     setToast({
       message: "Portfolio mis à jour avec succès !",
       type: "success",
@@ -244,15 +318,43 @@ export default function ProfilePage() {
                 {user.portfolio.map((item) => (
                   <div
                     key={item.id}
-                    className="aspect-square rounded-xl overflow-hidden bg-white/5 border border-white/10"
+                    className="group relative aspect-square rounded-xl overflow-hidden bg-white/5 border border-white/10 hover:border-violet-500/50 transition-all"
                   >
                     <img
                       src={item.imageUrl}
                       alt={item.title}
                       className="w-full h-full object-cover"
                     />
+                    {/* Overlay avec bouton edit */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button
+                        onClick={() => handleEditItem(item)}
+                        className="bg-violet-500 hover:bg-violet-600 text-white p-3 rounded-full transition-colors"
+                      >
+                        <Pencil className="w-5 h-5" />
+                      </button>
+                    </div>
+                    {/* Info en bas */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                      <p className="text-sm font-medium truncate">{item.title}</p>
+                      {item.description && (
+                        <p className="text-xs text-white/60 truncate">{item.description}</p>
+                      )}
+                    </div>
                   </div>
                 ))}
+                {/* Bouton pour ajouter plus de photos */}
+                <button
+                  onClick={() => setIsAddingPortfolio(true)}
+                  className="aspect-square rounded-xl bg-white/5 border-2 border-dashed border-white/20 hover:border-violet-500/50 hover:bg-white/10 transition-all flex flex-col items-center justify-center gap-3 group"
+                >
+                  <div className="w-12 h-12 rounded-full bg-violet-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Camera className="w-6 h-6 text-violet-500" />
+                  </div>
+                  <p className="text-sm text-white/60 group-hover:text-white/80 transition-colors">
+                    Ajouter plus
+                  </p>
+                </button>
               </div>
             ) : (
               <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
@@ -411,7 +513,7 @@ export default function ProfilePage() {
         )}
       </AnimatePresence>
 
-      {/* Add Portfolio Modal */}
+      {/* Add Portfolio Modal - Multi Upload */}
       <AnimatePresence>
         {isAddingPortfolio && (
           <motion.div
@@ -438,58 +540,132 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              <form onSubmit={handleAddPortfolio} className="space-y-6">
+              <div className="space-y-6">
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all group ${
+                    isDragging
+                      ? "border-violet-500 bg-violet-500/10 scale-105"
+                      : "border-white/20 hover:border-violet-500/50"
+                  }`}
+                >
+                  <Upload className={`w-16 h-16 text-violet-500 mx-auto mb-4 transition-transform ${
+                    isDragging ? "scale-125" : "group-hover:scale-110"
+                  }`} />
+                  <h3 className="text-xl font-semibold mb-2">
+                    {isDragging ? "Déposez vos images ici" : "Sélectionnez vos images"}
+                  </h3>
+                  <p className="text-white/60 mb-4">
+                    {isDragging
+                      ? "Relâchez pour ajouter les images"
+                      : "Cliquez ou glissez-déposez plusieurs images"}
+                  </p>
+                  <p className="text-sm text-white/40">
+                    PNG, JPG ou WEBP • Max 5MB par image
+                  </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </div>
+
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <ImageIcon className="w-5 h-5 text-violet-500 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="text-white/80 mb-2">
+                        <strong>Astuce :</strong> Les images seront ajoutées avec des titres automatiques.
+                      </p>
+                      <p className="text-white/60">
+                        Vous pourrez éditer le titre et la description de chaque image après l&apos;upload.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddingPortfolio(false)}
+                  className="w-full"
+                >
+                  Annuler
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Portfolio Item Modal */}
+      <AnimatePresence>
+        {editingItemId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setEditingItemId(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Modifier le portfolio</h2>
+                <button
+                  onClick={() => setEditingItemId(null)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium mb-2">Titre du projet</label>
                   <input
                     type="text"
-                    value={portfolioForm.title}
-                    onChange={(e) => setPortfolioForm({ ...portfolioForm, title: e.target.value })}
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
                     placeholder="Ex: Création site e-commerce"
-                    required
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Description</label>
                   <textarea
-                    value={portfolioForm.description}
-                    onChange={(e) => setPortfolioForm({ ...portfolioForm, description: e.target.value })}
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                     rows={4}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
                     placeholder="Décrivez votre projet..."
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">URL de l'image</label>
-                  <input
-                    type="url"
-                    value={portfolioForm.imageUrl}
-                    onChange={(e) => setPortfolioForm({ ...portfolioForm, imageUrl: e.target.value })}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                    placeholder="https://exemple.com/image.jpg (optionnel)"
-                  />
-                  <p className="text-xs text-white/40 mt-2">
-                    Laissez vide pour une image par défaut
-                  </p>
-                </div>
-
                 <div className="flex gap-3 pt-4">
                   <Button
-                    type="button"
                     variant="outline"
-                    onClick={() => setIsAddingPortfolio(false)}
+                    onClick={() => setEditingItemId(null)}
                     className="flex-1"
                   >
                     Annuler
                   </Button>
-                  <Button type="submit" variant="primary" className="flex-1">
-                    Ajouter
+                  <Button variant="primary" onClick={handleSaveEdit} className="flex-1">
+                    Enregistrer
                   </Button>
                 </div>
-              </form>
+              </div>
             </motion.div>
           </motion.div>
         )}

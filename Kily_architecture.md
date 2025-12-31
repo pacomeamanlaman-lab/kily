@@ -410,7 +410,16 @@ src/
 #### 👤 Profile Interactions ✅ TERMINÉ
 * ✅ Save/Unsave talent
 * ✅ Éditer son profil (modal édition avec nom, bio, email, phone, ville)
-* ✅ Ajouter portfolio item (formulaire avec titre, description, image URL)
+* ✅ Ajouter portfolio item - Multi-upload avec drag & drop
+  - Sélection multiple d'images (FileReader API)
+  - Glisser-déposer avec feedback visuel
+  - Génération automatique de titres numérotés ("Portfolio item 1, 2, 3...")
+  - Preview locale des images en base64
+  - Toast compteur d'images uploadées
+* ✅ Éditer portfolio item (modal avec titre + description modifiables)
+  - Bouton édition au hover sur chaque image
+  - Modal dédiée pour modification
+  - Affichage titre/description en bas de chaque image
 * ✅ Laisser un avis (étoiles + commentaire)
 * ✅ Bouton "Recruter" (toast + redirect vers messages)
 
