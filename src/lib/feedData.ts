@@ -136,6 +136,143 @@ export const mockPosts: Post[] = [
 ];
 
 export const mockComments: { [postId: string]: Comment[] } = {
+  // Comments for videos
+  "1": [
+    {
+      id: "v1-1",
+      author: "Kofi Mensah",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+      content: "Super recette ! Je vais essayer ça ce weekend 🍠",
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: "v1-2",
+      author: "Fatoumata Diallo",
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400",
+      content: "J'adore cette recette traditionnelle ! Merci pour le partage ✨",
+      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: "v1-3",
+      author: "Sarah Mensah",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+      content: "Parfait pour les occasions spéciales ! 👌",
+      timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+    },
+  ],
+  "2": [
+    {
+      id: "v2-1",
+      author: "Amina Koné",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+      content: "Trop rapide ! J'ai réussi à le faire en 3 minutes 💇🏾‍♀️",
+      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: "v2-2",
+      author: "Kouassi Tech",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400",
+      content: "Ma sœur va adorer cette coiffure ! Merci 🙏",
+      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    },
+  ],
+  "3": [
+    {
+      id: "v3-1",
+      author: "Fatoumata Diallo",
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400",
+      content: "Super tutoriel ! J'ai réussi à réparer mon iPhone 📱",
+      timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    },
+    {
+      id: "v3-2",
+      author: "Kofi Mensah",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+      content: "Merci pour les conseils de sécurité ! Très utile 💡",
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: "v3-3",
+      author: "Sarah Mensah",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+      content: "Je vais essayer sur mon iPhone 12, merci !",
+      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    },
+  ],
+  "4": [
+    {
+      id: "v4-1",
+      author: "Amina Koné",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+      content: "J'adore cette danse ! Les pas sont bien expliqués 🕺🏾",
+      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: "v4-2",
+      author: "Kouassi Tech",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400",
+      content: "Parfait pour la fête ce weekend ! 🎉",
+      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    },
+  ],
+  "5": [
+    {
+      id: "v5-1",
+      author: "Kofi Mensah",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+      content: "Très important ces conseils de sécurité ! Merci 💡",
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    },
+  ],
+  "6": [
+    {
+      id: "v6-1",
+      author: "Fatoumata Diallo",
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400",
+      content: "Cette recette est délicieuse ! Je l'ai faite hier 🍗",
+      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: "v6-2",
+      author: "Sarah Mensah",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+      content: "Mon plat préféré ! Merci pour la recette authentique 👌",
+      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    },
+  ],
+  "7": [
+    {
+      id: "v7-1",
+      author: "Kouassi Tech",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400",
+      content: "Super tutoriel ! Je commence mon site web demain 💻",
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: "v7-2",
+      author: "Amina Koné",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+      content: "Très bien expliqué, même pour les débutants !",
+      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    },
+  ],
+  "8": [
+    {
+      id: "v8-1",
+      author: "Kofi Mensah",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+      content: "Magnifique travail ! Le boubou est très élégant 👔",
+      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: "v8-2",
+      author: "Sarah Mensah",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+      content: "Je vais commander un pour mon mari ! Merci 💜",
+      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    },
+  ],
+  // Comments for posts
   p1: [
     {
       id: "c1-1",

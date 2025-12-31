@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, X, Users, FileText, User, RefreshCw, Video } from "lucide-react";
 import { mockTalents, skillCategories, cities } from "@/lib/mockData";
@@ -29,6 +29,18 @@ export default function DiscoverPage() {
   const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(false);
   const [selectedVideoIndex, setSelectedVideoIndex] = useState(0);
 
+  // Infinite scroll state
+  const [visibleItems, setVisibleItems] = useState({
+    talents: 8,
+    posts: 6,
+    videos: 8,
+    users: 10,
+  });
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const lastItemRefDesktop = useRef<HTMLDivElement | null>(null);
+  const lastItemRefMobile = useRef<HTMLDivElement | null>(null);
+  const [observerKey, setObserverKey] = useState(0);
+
   // Pull to refresh state
   const [isPulling, setIsPulling] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
@@ -39,6 +51,16 @@ export default function DiscoverPage() {
     type: "success" as "success" | "error" | "info",
     visible: false,
   });
+
+  // Reset visible items when tab or filters change
+  useEffect(() => {
+    setVisibleItems({
+      talents: 8,
+      posts: 6,
+      videos: 8,
+      users: 10,
+    });
+  }, [activeTab, searchQuery, selectedCategory, selectedCity]);
 
   // Lire le paramètre category depuis l'URL
   useEffect(() => {
@@ -192,6 +214,108 @@ export default function DiscoverPage() {
     setPullDistance(0);
     setIsPulling(false);
   };
+
+  // Get current filtered items based on active tab
+  const getCurrentFilteredItems = () => {
+    switch (activeTab) {
+      case "talents":
+        return filteredTalents;
+      case "posts":
+        return filteredPosts;
+      case "videos":
+        return filteredVideos;
+      case "users":
+        return filteredUsers;
+      default:
+        return [];
+    }
+  };
+
+  const currentFilteredItems = getCurrentFilteredItems();
+  const currentVisibleCount = visibleItems[activeTab];
+
+  // Set up and manage intersection observer for infinite scroll
+  useEffect(() => {
+    // Clean up previous observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+
+    // Create observer callback
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      if (entries[0].isIntersecting) {
+        setVisibleItems((prev) => {
+          const currentLength = currentFilteredItems.length;
+          const currentCount = prev[activeTab];
+          
+          if (currentCount < currentLength) {
+            // Load more items based on tab type
+            const increment = activeTab === "posts" ? 3 : activeTab === "users" ? 5 : 8;
+            return {
+              ...prev,
+              [activeTab]: Math.min(currentCount + increment, currentLength),
+            };
+          }
+          return prev;
+        });
+      }
+    };
+
+    // Only set up observer if there are more items to load
+    if (currentVisibleCount < currentFilteredItems.length) {
+      // Set up observer
+      observerRef.current = new IntersectionObserver(observerCallback, {
+        rootMargin: "200px",
+        threshold: 0.1,
+      });
+
+      // Observe both desktop and mobile elements
+      if (lastItemRefDesktop.current) {
+        observerRef.current.observe(lastItemRefDesktop.current);
+      }
+      if (lastItemRefMobile.current) {
+        observerRef.current.observe(lastItemRefMobile.current);
+      }
+    } else {
+      // All items loaded, ensure observer is cleaned up
+      observerRef.current = null;
+    }
+
+    // Cleanup function
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+    };
+  }, [currentVisibleCount, currentFilteredItems.length, activeTab, observerKey, filteredTalents.length, filteredPosts.length, filteredVideos.length, filteredUsers.length]);
+
+  // Handle window resize to update observer when switching between mobile/desktop
+  useEffect(() => {
+    const handleResize = () => {
+      setObserverKey((prev) => prev + 1);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const lastItemCallbackDesktop = useCallback((node: HTMLDivElement | null) => {
+    lastItemRefDesktop.current = node;
+    // Trigger observer re-setup when ref changes
+    if (node) {
+      setObserverKey((prev) => prev + 1);
+    }
+  }, []);
+
+  const lastItemCallbackMobile = useCallback((node: HTMLDivElement | null) => {
+    lastItemRefMobile.current = node;
+    // Trigger observer re-setup when ref changes
+    if (node) {
+      setObserverKey((prev) => prev + 1);
+    }
+  }, []);
 
   const hasActiveFilters = searchQuery || selectedCategory || selectedCity;
 
@@ -636,25 +760,57 @@ export default function DiscoverPage() {
         {activeTab === "talents" && (
           <>
             {filteredTalents.length > 0 ? (
-              <motion.div
-                layout
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-              >
-                {filteredTalents.map((talent, index) => (
-                  <motion.div
-                    key={talent.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.05 }}
+              <>
+                <motion.div
+                  layout
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                >
+                  {filteredTalents.slice(0, currentVisibleCount).map((talent, index) => (
+                    <motion.div
+                      key={talent.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <TalentCard
+                        talent={talent}
+                        onClick={() => router.push(`/profile/${talent.id}`)}
+                      />
+                    </motion.div>
+                  ))}
+                </motion.div>
+                {/* Infinite Scroll Trigger */}
+                {currentVisibleCount < filteredTalents.length ? (
+                  <div
+                    ref={lastItemCallbackDesktop}
+                    className="hidden lg:block h-20 flex items-center justify-center mt-6"
                   >
-                    <TalentCard
-                      talent={talent}
-                      onClick={() => router.push(`/profile/${talent.id}`)}
-                    />
-                  </motion.div>
-                ))}
-              </motion.div>
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-150" />
+                    </div>
+                  </div>
+                ) : filteredTalents.length > 0 ? (
+                  <div className="h-20 flex items-center justify-center mt-6">
+                    <p className="text-sm text-gray-500">Tous les talents ont été chargés</p>
+                  </div>
+                ) : null}
+                {/* Mobile trigger */}
+                {currentVisibleCount < filteredTalents.length && (
+                  <div
+                    ref={lastItemCallbackMobile}
+                    className="lg:hidden h-20 flex items-center justify-center mt-6"
+                  >
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-150" />
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -678,21 +834,53 @@ export default function DiscoverPage() {
         {activeTab === "posts" && (
           <>
             {filteredPosts.length > 0 ? (
-              <motion.div
-                layout
-                className="max-w-2xl mx-auto space-y-6"
-              >
-                {filteredPosts.map((post, index) => (
-                  <motion.div
-                    key={post.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
+              <>
+                <motion.div
+                  layout
+                  className="max-w-2xl mx-auto space-y-6"
+                >
+                  {filteredPosts.slice(0, currentVisibleCount).map((post, index) => (
+                    <motion.div
+                      key={post.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <PostCard post={post} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+                {/* Infinite Scroll Trigger */}
+                {currentVisibleCount < filteredPosts.length ? (
+                  <div
+                    ref={lastItemCallbackDesktop}
+                    className="hidden lg:block h-20 flex items-center justify-center mt-6"
                   >
-                    <PostCard post={post} />
-                  </motion.div>
-                ))}
-              </motion.div>
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-150" />
+                    </div>
+                  </div>
+                ) : filteredPosts.length > 0 ? (
+                  <div className="h-20 flex items-center justify-center mt-6">
+                    <p className="text-sm text-gray-500">Tous les posts ont été chargés</p>
+                  </div>
+                ) : null}
+                {/* Mobile trigger */}
+                {currentVisibleCount < filteredPosts.length && (
+                  <div
+                    ref={lastItemCallbackMobile}
+                    className="lg:hidden h-20 flex items-center justify-center mt-6"
+                  >
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-150" />
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -716,37 +904,69 @@ export default function DiscoverPage() {
         {activeTab === "users" && (
           <>
             {filteredUsers.length > 0 ? (
-              <motion.div
-                layout
-                className="max-w-2xl mx-auto space-y-3"
-              >
-                {filteredUsers.map((user, index) => (
-                  <motion.div
-                    key={user.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => router.push(`/profile/${user.id}`)}
-                    className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer"
+              <>
+                <motion.div
+                  layout
+                  className="max-w-2xl mx-auto space-y-3"
+                >
+                  {filteredUsers.slice(0, currentVisibleCount).map((user, index) => (
+                    <motion.div
+                      key={user.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => router.push(`/profile/${user.id}`)}
+                      className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer"
+                    >
+                      <img
+                        src={user.avatar}
+                        alt={user.name}
+                        className="w-16 h-16 rounded-full object-cover"
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg">{user.name}</h3>
+                        <p className="text-sm text-gray-400">
+                          {user.info}
+                          {user.location && ` • ${user.location}`}
+                        </p>
+                      </div>
+                      <Badge variant={user.type === "talent" ? "primary" : "secondary"}>
+                        {user.type === "talent" ? "Talent" : "Utilisateur"}
+                      </Badge>
+                    </motion.div>
+                  ))}
+                </motion.div>
+                {/* Infinite Scroll Trigger */}
+                {currentVisibleCount < filteredUsers.length ? (
+                  <div
+                    ref={lastItemCallbackDesktop}
+                    className="hidden lg:block h-20 flex items-center justify-center mt-6"
                   >
-                    <img
-                      src={user.avatar}
-                      alt={user.name}
-                      className="w-16 h-16 rounded-full object-cover"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-bold text-lg">{user.name}</h3>
-                      <p className="text-sm text-gray-400">
-                        {user.info}
-                        {user.location && ` • ${user.location}`}
-                      </p>
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-150" />
                     </div>
-                    <Badge variant={user.type === "talent" ? "primary" : "secondary"}>
-                      {user.type === "talent" ? "Talent" : "Utilisateur"}
-                    </Badge>
-                  </motion.div>
-                ))}
-              </motion.div>
+                  </div>
+                ) : filteredUsers.length > 0 ? (
+                  <div className="h-20 flex items-center justify-center mt-6">
+                    <p className="text-sm text-gray-500">Tous les utilisateurs ont été chargés</p>
+                  </div>
+                ) : null}
+                {/* Mobile trigger */}
+                {currentVisibleCount < filteredUsers.length && (
+                  <div
+                    ref={lastItemCallbackMobile}
+                    className="lg:hidden h-20 flex items-center justify-center mt-6"
+                  >
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-150" />
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -770,25 +990,57 @@ export default function DiscoverPage() {
         {activeTab === "videos" && (
           <>
             {filteredVideos.length > 0 ? (
-              <motion.div
-                layout
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-              >
-                {filteredVideos.map((video, index) => (
-                  <motion.div
-                    key={video.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.05 }}
+              <>
+                <motion.div
+                  layout
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                >
+                  {filteredVideos.slice(0, currentVisibleCount).map((video, index) => (
+                    <motion.div
+                      key={video.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <VideoCard
+                        video={video}
+                        onClick={() => handleVideoClick(video.id)}
+                      />
+                    </motion.div>
+                  ))}
+                </motion.div>
+                {/* Infinite Scroll Trigger */}
+                {currentVisibleCount < filteredVideos.length ? (
+                  <div
+                    ref={lastItemCallbackDesktop}
+                    className="hidden lg:block h-20 flex items-center justify-center mt-6"
                   >
-                    <VideoCard
-                      video={video}
-                      onClick={() => handleVideoClick(video.id)}
-                    />
-                  </motion.div>
-                ))}
-              </motion.div>
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-150" />
+                    </div>
+                  </div>
+                ) : filteredVideos.length > 0 ? (
+                  <div className="h-20 flex items-center justify-center mt-6">
+                    <p className="text-sm text-gray-500">Toutes les vidéos ont été chargées</p>
+                  </div>
+                ) : null}
+                {/* Mobile trigger */}
+                {currentVisibleCount < filteredVideos.length && (
+                  <div
+                    ref={lastItemCallbackMobile}
+                    className="lg:hidden h-20 flex items-center justify-center mt-6"
+                  >
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
+                      <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-150" />
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}
