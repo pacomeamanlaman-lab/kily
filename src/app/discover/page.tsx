@@ -220,7 +220,7 @@ export default function DiscoverPage() {
             className="mb-6"
           >
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-2">
-              Découvrir <span className="text-violet-500">Kily</span>
+              Découvrir <span className="text-violet-500">des talents</span>
             </h1>
             <p className="text-gray-400">
               {activeTab === "talents" && `${filteredTalents.length} talent${filteredTalents.length > 1 ? "s" : ""}`}
@@ -402,7 +402,7 @@ export default function DiscoverPage() {
       {/* Desktop Content Section */}
       <div className="hidden lg:block max-w-7xl mx-auto px-6 pt-8">
         <h1 className="text-5xl font-bold mb-2">
-          Découvrir <span className="text-violet-500">Kily</span>
+          Découvrir <span className="text-violet-500">des talents</span>
         </h1>
         <p className="text-gray-400 mb-8">
           {activeTab === "talents" && `${filteredTalents.length} talent${filteredTalents.length > 1 ? "s" : ""}`}
