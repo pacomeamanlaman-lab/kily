@@ -389,10 +389,56 @@ src/
 
 ---
 
-### 7.2 Phase 2 - Backend & Interactions (À VENIR)
+### 7.2 Phase 1.5 - Interactions Frontend (EN COURS - 90%)
+**Objectif : Finaliser toutes les interactions avant l'intégration backend**
+
+#### 🎯 Feed Interactions
+* ✅ Follow/Unfollow talents
+* ⏳ Likes sur posts (toggle cœur + compteur)
+* ⏳ Commentaires (modal/drawer pour commenter)
+* ⏳ Partage de posts (bouton share)
+* ⏳ Filtres fonctionnels (Tous/Abonnements/Tendances qui filtrent vraiment)
+* ⏳ Stories cliquables (modal plein écran)
+* ⏳ Bouton "Load more" fonctionnel
+
+#### 💬 Messaging Interactions
+* ✅ Liste conversations avec recherche
+* ⏳ Envoyer message (input + bouton send qui ajoute au chat)
+* ⏳ Indicateur "en train d'écrire..."
+* ⏳ Marquer comme lu (badge unread disparaît)
+
+#### 👤 Profile Interactions
+* ✅ Save/Unsave talent
+* ⏳ Éditer son profil (modal édition pour /profile)
+* ⏳ Ajouter portfolio item (upload simulé)
+* ⏳ Laisser un avis (formulaire review)
+* ⏳ Bouton "Recruter" fonctionnel
+
+#### 💼 Dashboard Recruteur
+* ⏳ Tabs fonctionnels (switcher entre Stats/Sauvegardés/Contactés)
+* ⏳ Actions sur talents (retirer des sauvegardés, contacter)
+* ⏳ Filtres et recherche
+
+#### 🔍 Discover/Search
+* ✅ Filtres catégories et villes
+* ⏳ Search en temps réel (recherche globale fonctionnelle)
+* ⏳ Tabs search (switcher entre Talents/Posts/Utilisateurs)
+
+#### ⚙️ Settings
+* ⏳ Toggle notifications (switches fonctionnels)
+* ⏳ Changer mot de passe (formulaire)
+* ⏳ Changer email/phone (formulaire)
+
+#### ✨ Micro-interactions
+* ⏳ Notifications badge (compteur sur icône notifs)
+* ⏳ Pull to refresh sur mobile
+
+---
+
+### 7.3 Phase 2 - Backend & Intégration
 **Objectif : Connexion backend + données réelles**
 
-#### Features Prévues
+#### Features Backend
 * ⏳ Setup Supabase complet
 * ⏳ Auth complète (email + phone + OAuth réels)
 * ⏳ Chat temps réel avec Supabase Realtime
