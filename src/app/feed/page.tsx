@@ -23,7 +23,7 @@ import StoryCarousel from "@/components/feed/StoryCarousel";
 import { mockPosts, mockStories } from "@/lib/feedData";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 export default function FeedPage() {
@@ -48,20 +48,50 @@ export default function FeedPage() {
       name: "Sarah Mensah",
       skill: "Designer graphique",
       avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+      postAuthorId: "1", // Amina Koné
     },
     {
       id: 2,
       name: "Ibrahim Diop",
       skill: "Plombier",
       avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+      postAuthorId: "2", // Kofi Mensah
     },
     {
       id: 3,
       name: "Aïcha Kamara",
       skill: "Pâtissière",
       avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400",
+      postAuthorId: "3", // Fatoumata Diallo
     },
   ];
+
+  // Filter posts based on selected filter
+  const filteredPosts = useMemo(() => {
+    if (filter === "all") {
+      return mockPosts;
+    }
+
+    if (filter === "following") {
+      // Show posts from followed talents only
+      const followedAuthorIds = suggestedTalents
+        .filter((talent) => followedTalents.has(talent.id))
+        .map((talent) => talent.postAuthorId);
+
+      const filtered = mockPosts.filter((post) =>
+        followedAuthorIds.includes(post.author.id)
+      );
+
+      return filtered.length > 0 ? filtered : mockPosts; // Fallback to all if no followed
+    }
+
+    if (filter === "trending") {
+      // Sort by likes (descending)
+      return [...mockPosts].sort((a, b) => b.likes - a.likes);
+    }
+
+    return mockPosts;
+  }, [filter, followedTalents]);
 
   const handleFollow = (talentId: number, talentName: string) => {
     const isFollowing = followedTalents.has(talentId);
@@ -221,7 +251,7 @@ export default function FeedPage() {
 
           {/* Feed Posts */}
           <div className="space-y-6">
-            {mockPosts.map((post, index) => (
+            {filteredPosts.map((post, index) => (
               <motion.div
                 key={post.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -344,7 +374,7 @@ export default function FeedPage() {
 
         {/* Feed Posts */}
         <div className="space-y-6">
-          {mockPosts.map((post, index) => (
+          {filteredPosts.map((post, index) => (
             <motion.div
               key={post.id}
               initial={{ opacity: 0, y: 20 }}
