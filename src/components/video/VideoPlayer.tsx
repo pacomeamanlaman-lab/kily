@@ -153,7 +153,7 @@ export default function VideoPlayer({
             <video
               ref={videoRef}
               src={currentVideo.videoUrl}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
               autoPlay
               muted={isMuted}
               loop
@@ -187,34 +187,37 @@ export default function VideoPlayer({
             </AnimatePresence>
 
             {/* Top controls */}
-            <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent">
+            <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent backdrop-blur-sm z-10">
               <div className="flex items-center justify-between">
                 <button
                   onClick={onClose}
-                  className="w-10 h-10 flex items-center justify-center bg-black/50 rounded-full hover:bg-black/70 transition-colors backdrop-blur-sm"
+                  className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-6 h-6 text-white" />
                 </button>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={toggleMute}
-                    className="w-10 h-10 flex items-center justify-center bg-black/50 rounded-full hover:bg-black/70 transition-colors backdrop-blur-sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleMute();
+                    }}
+                    className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors"
                   >
                     {isMuted ? (
-                      <VolumeX className="w-5 h-5" />
+                      <VolumeX className="w-5 h-5 text-white" />
                     ) : (
-                      <Volume2 className="w-5 h-5" />
+                      <Volume2 className="w-5 h-5 text-white" />
                     )}
                   </button>
-                  <button className="w-10 h-10 flex items-center justify-center bg-black/50 rounded-full hover:bg-black/70 transition-colors backdrop-blur-sm">
-                    <MoreVertical className="w-5 h-5" />
+                  <button className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors">
+                    <MoreVertical className="w-5 h-5 text-white" />
                   </button>
                 </div>
               </div>
             </div>
 
             {/* Right side actions */}
-            <div className="absolute right-4 bottom-24 flex flex-col items-center gap-6">
+            <div className="absolute right-4 bottom-32 flex flex-col items-center gap-6">
               {/* Author avatar */}
               <div className="relative">
                 <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white">
@@ -234,58 +237,73 @@ export default function VideoPlayer({
               </div>
 
               {/* Like */}
-              <button
+              <motion.button
+                whileTap={{ scale: 0.9 }}
                 onClick={handleLike}
                 className="flex flex-col items-center gap-1"
               >
-                <div className="w-12 h-12 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition-colors backdrop-blur-sm">
+                <div className="w-12 h-12 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition-colors backdrop-blur-md">
                   <Heart
-                    className={`w-7 h-7 ${
+                    className={`w-6 h-6 ${
                       isLiked
                         ? "fill-red-500 text-red-500"
                         : "text-white"
                     }`}
                   />
                 </div>
-                <span className="text-xs font-semibold">
+                <span className="text-white text-xs font-medium">
                   {formatNumber(isLiked ? currentVideo.likes + 1 : currentVideo.likes)}
                 </span>
-              </button>
+              </motion.button>
 
               {/* Comments */}
-              <button className="flex flex-col items-center gap-1">
-                <div className="w-12 h-12 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition-colors backdrop-blur-sm">
-                  <MessageCircle className="w-7 h-7" />
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                className="flex flex-col items-center gap-1"
+              >
+                <div className="w-12 h-12 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition-colors backdrop-blur-md">
+                  <MessageCircle className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xs font-semibold">
+                <span className="text-white text-xs font-medium">
                   {formatNumber(currentVideo.comments)}
                 </span>
-              </button>
+              </motion.button>
 
               {/* Share */}
-              <button className="flex flex-col items-center gap-1">
-                <div className="w-12 h-12 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition-colors backdrop-blur-sm">
-                  <Share2 className="w-7 h-7" />
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                className="flex flex-col items-center gap-1"
+              >
+                <div className="w-12 h-12 flex items-center justify-center bg-white/10 rounded-full hover:bg-white/20 transition-colors backdrop-blur-md">
+                  <Share2 className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xs font-semibold">
+                <span className="text-white text-xs font-medium">
                   {formatNumber(currentVideo.shares)}
                 </span>
-              </button>
+              </motion.button>
             </div>
 
             {/* Bottom info */}
-            <div className="absolute left-4 right-20 bottom-24 max-w-md">
-              <div className="flex items-center gap-2 mb-3">
-                <p className="font-bold text-lg">{currentVideo.author.name}</p>
-                {currentVideo.author.verified && (
-                  <CheckCircle className="w-5 h-5 text-violet-500 fill-violet-500" />
-                )}
-              </div>
-              <p className="text-sm mb-2 line-clamp-2">{currentVideo.description}</p>
-              <div className="flex items-center gap-2 text-sm text-gray-300">
-                <span className="bg-violet-600/80 px-3 py-1 rounded-full text-xs font-medium">
-                  #{currentVideo.category}
-                </span>
+            <div className="absolute left-4 right-20 bottom-0 p-6 bg-gradient-to-t from-black via-black/80 to-transparent">
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <p className="font-bold text-xl text-white">{currentVideo.author.name}</p>
+                  {currentVideo.author.verified && (
+                    <CheckCircle className="w-5 h-5 text-violet-500 fill-violet-500" />
+                  )}
+                </div>
+                <h2 className="text-white text-xl font-bold mb-2">{currentVideo.title}</h2>
+                <div className="flex items-center gap-4 text-sm text-gray-400 mb-2">
+                  <span>{formatNumber(currentVideo.views)} vues</span>
+                  <span>•</span>
+                  <span>{currentVideo.duration}</span>
+                </div>
+                <p className="text-sm text-gray-300 line-clamp-2 mb-2">{currentVideo.description}</p>
+                <div className="flex items-center gap-2 text-sm text-gray-300">
+                  <span className="bg-violet-600/80 px-3 py-1 rounded-full text-xs font-medium">
+                    #{currentVideo.category}
+                  </span>
+                </div>
               </div>
             </div>
 
