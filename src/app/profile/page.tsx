@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Edit, MapPin, Mail, Phone, Star, Award, Users, TrendingUp, X, Upload, Image as ImageIcon, Pencil } from "lucide-react";
+import { Camera, Edit, MapPin, Mail, Phone, Star, Award, Users, TrendingUp, X, Upload, Image as ImageIcon, Pencil, Plus, Check, Search } from "lucide-react";
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import SkillBadge from "@/components/talent/SkillBadge";
@@ -11,10 +11,16 @@ import Toast from "@/components/ui/Toast";
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingPortfolio, setIsAddingPortfolio] = useState(false);
+  const [isAddingSkill, setIsAddingSkill] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ title: "", description: "" });
+  const [selectedSkills, setSelectedSkills] = useState<Array<{name: string, category: string}>>([]);
+  const [customSkill, setCustomSkill] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
     type: "success",
@@ -175,6 +181,122 @@ export default function ProfilePage() {
     });
   };
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setUser({
+        ...user,
+        avatar: reader.result as string,
+      });
+      setToast({
+        message: "Photo de profil mise à jour !",
+        type: "success",
+        visible: true,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setUser({
+        ...user,
+        coverImage: reader.result as string,
+      });
+      setToast({
+        message: "Photo de couverture mise à jour !",
+        type: "success",
+        visible: true,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Compétences prédéfinies par catégorie
+  const predefinedSkills = {
+    cuisine: ["Pâtisserie", "Cuisine africaine", "Street food", "Traiteur", "Boulangerie"],
+    tech: ["Développement Web", "Design UI/UX", "Réparation téléphones", "Maintenance PC", "Photoshop"],
+    artisanat: ["Bijoux", "Sculpture", "Poterie", "Décoration", "Vannerie"],
+    bricolage: ["Plomberie", "Électricité", "Menuiserie", "Peinture", "Maçonnerie"],
+    mecanique: ["Réparation auto", "Mécanique moto", "Soudure", "Carrosserie", "Climatisation"],
+    photographie: ["Photo événementiel", "Portrait", "Retouche photo", "Vidéographie", "Drone"],
+    couture: ["Couture sur mesure", "Retouche vêtements", "Mode africaine", "Broderie", "Tapisserie"],
+    coiffure: ["Coiffure afro", "Barbier", "Tresses", "Mèches", "Maquillage"],
+    education: ["Cours particuliers", "Langues", "Musique", "Sport", "Informatique"],
+  };
+
+  const toggleSkill = (skillName: string, category: string) => {
+    const exists = selectedSkills.find(s => s.name === skillName);
+    if (exists) {
+      setSelectedSkills(selectedSkills.filter(s => s.name !== skillName));
+    } else {
+      setSelectedSkills([...selectedSkills, { name: skillName, category }]);
+    }
+  };
+
+  const addCustomSkill = () => {
+    if (!customSkill.trim()) return;
+
+    const exists = selectedSkills.find(s => s.name.toLowerCase() === customSkill.toLowerCase());
+    if (!exists) {
+      setSelectedSkills([...selectedSkills, { name: customSkill, category: "autre" }]);
+      setCustomSkill("");
+    }
+  };
+
+  const handleSaveSkills = () => {
+    if (selectedSkills.length === 0) return;
+
+    const newSkills = selectedSkills.map((skill, index) => ({
+      id: `${Date.now()}-${index}`,
+      name: skill.name,
+      category: skill.category as any,
+      level: "intermediate" as const,
+      verified: false,
+    }));
+
+    setUser({
+      ...user,
+      skills: [...user.skills, ...newSkills],
+    });
+
+    setSelectedSkills([]);
+    setCustomSkill("");
+    setSearchQuery("");
+    setIsAddingSkill(false);
+    setToast({
+      message: `${newSkills.length} compétence(s) ajoutée(s) avec succès !`,
+      type: "success",
+      visible: true,
+    });
+  };
+
+  // Filtrer les compétences selon la recherche
+  const getFilteredSkills = () => {
+    if (!searchQuery.trim()) return predefinedSkills;
+
+    const query = searchQuery.toLowerCase();
+    const filtered: any = {};
+
+    Object.entries(predefinedSkills).forEach(([category, skills]) => {
+      const matchingSkills = skills.filter(skill =>
+        skill.toLowerCase().includes(query)
+      );
+      if (matchingSkills.length > 0) {
+        filtered[category] = matchingSkills;
+      }
+    });
+
+    return filtered;
+  };
+
   return (
     <div className="min-h-screen bg-black text-white pb-20">
       {/* Cover Image */}
@@ -184,9 +306,19 @@ export default function ProfilePage() {
           alt="Cover"
           className="w-full h-full object-cover opacity-30"
         />
-        <button className="absolute bottom-4 right-4 bg-black/50 backdrop-blur-sm hover:bg-black/70 text-white p-2 rounded-full transition-colors">
+        <button
+          onClick={() => coverInputRef.current?.click()}
+          className="absolute bottom-4 right-4 bg-black/50 backdrop-blur-sm hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+        >
           <Camera className="w-5 h-5" />
         </button>
+        <input
+          ref={coverInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleCoverChange}
+          className="hidden"
+        />
       </div>
 
       {/* Profile Header */}
@@ -200,9 +332,19 @@ export default function ProfilePage() {
                 alt={user.name}
                 className="w-32 h-32 rounded-full border-4 border-black bg-white/5"
               />
-              <button className="absolute bottom-0 right-0 bg-violet-500 hover:bg-violet-600 text-white p-2 rounded-full transition-colors">
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute bottom-0 right-0 bg-violet-500 hover:bg-violet-600 text-white p-2 rounded-full transition-colors"
+              >
                 <Camera className="w-4 h-4" />
               </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
             </div>
 
             {/* Info */}
@@ -292,7 +434,7 @@ export default function ProfilePage() {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Compétences</h2>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={() => setIsAddingSkill(true)}>
                 <Edit className="w-4 h-4 mr-2" />
                 Modifier
               </Button>
@@ -309,7 +451,7 @@ export default function ProfilePage() {
                 <p className="text-white/60 mb-4">
                   Ajoutez vos compétences pour attirer plus d&apos;opportunités
                 </p>
-                <Button variant="primary">
+                <Button variant="primary" onClick={() => setIsAddingSkill(true)}>
                   Ajouter des compétences
                 </Button>
               </div>
@@ -677,6 +819,189 @@ export default function ProfilePage() {
                   </Button>
                   <Button variant="primary" onClick={handleSaveEdit} className="flex-1">
                     Enregistrer
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Skill Modal */}
+      <AnimatePresence>
+        {isAddingSkill && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setIsAddingSkill(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold">Ajouter des compétences</h2>
+                  {selectedSkills.length > 0 && (
+                    <p className="text-sm text-violet-400 mt-1">
+                      {selectedSkills.length} compétence(s) sélectionnée(s)
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setIsAddingSkill(false);
+                    setSelectedSkills([]);
+                    setCustomSkill("");
+                    setSearchQuery("");
+                  }}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Barre de recherche */}
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Rechercher une compétence..."
+                    className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <X className="w-4 h-4 text-white/60" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Compétences prédéfinies par catégorie */}
+                <div className="space-y-4 max-h-[35vh] overflow-y-auto pr-2">
+                  {/* Compétences personnalisées ajoutées manuellement */}
+                  {selectedSkills.filter(s => s.category === "autre").length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-white/70 mb-2">
+                        Compétences personnalisées
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedSkills
+                          .filter(s => s.category === "autre")
+                          .map((skill) => (
+                            <button
+                              key={skill.name}
+                              type="button"
+                              onClick={() => toggleSkill(skill.name, skill.category)}
+                              className="px-4 py-2 rounded-full text-sm font-medium transition-all bg-violet-500 text-white cursor-pointer"
+                            >
+                              <Check className="w-4 h-4 inline mr-1" />
+                              {skill.name}
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Compétences prédéfinies */}
+                  {Object.entries(getFilteredSkills()).length > 0 ? (
+                    Object.entries(getFilteredSkills()).map(([category, skills]) => (
+                    <div key={category}>
+                      <h3 className="text-sm font-semibold text-white/70 mb-2 capitalize">
+                        {category === "tech" ? "Technologie" : category}
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {skills.map((skillName) => {
+                          const isSelected = selectedSkills.some(s => s.name === skillName);
+                          return (
+                            <button
+                              key={skillName}
+                              type="button"
+                              onClick={() => toggleSkill(skillName, category)}
+                              className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                                isSelected
+                                  ? "bg-violet-500 text-white"
+                                  : "bg-white/5 text-white/80 hover:bg-white/10 border border-white/10"
+                              }`}
+                            >
+                              {isSelected && <Check className="w-4 h-4 inline mr-1" />}
+                              {skillName}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))
+                  ) : (
+                    searchQuery && (
+                      <div className="text-center py-8 text-white/60">
+                        <p>Aucune compétence trouvée pour "{searchQuery}"</p>
+                        <p className="text-sm mt-2">Essayez une autre recherche ou ajoutez-la manuellement ci-dessous</p>
+                      </div>
+                    )
+                  )}
+                </div>
+
+                {/* Input personnalisé */}
+                <div className="border-t border-white/10 pt-4">
+                  <label className="block text-sm font-medium mb-2">Autre compétence ?</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customSkill}
+                      onChange={(e) => setCustomSkill(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addCustomSkill();
+                        }
+                      }}
+                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      placeholder="Ex: Menuiserie d'art..."
+                    />
+                    <button
+                      type="button"
+                      onClick={addCustomSkill}
+                      className="px-4 py-3 bg-violet-500 hover:bg-violet-600 rounded-xl transition-colors"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsAddingSkill(false);
+                      setSelectedSkills([]);
+                      setCustomSkill("");
+                      setSearchQuery("");
+                    }}
+                    className="flex-1"
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={handleSaveSkills}
+                    disabled={selectedSkills.length === 0}
+                    className="flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Ajouter ({selectedSkills.length})
                   </Button>
                 </div>
               </div>
