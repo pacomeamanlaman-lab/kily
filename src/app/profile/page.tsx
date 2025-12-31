@@ -10,6 +10,7 @@ import Toast from "@/components/ui/Toast";
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
+  const [isAddingPortfolio, setIsAddingPortfolio] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
     type: "success",
@@ -65,6 +66,36 @@ export default function ProfilePage() {
     setIsEditing(false);
     setToast({
       message: "Profil mis à jour avec succès !",
+      type: "success",
+      visible: true,
+    });
+  };
+
+  const [portfolioForm, setPortfolioForm] = useState({
+    title: "",
+    description: "",
+    imageUrl: "",
+  });
+
+  const handleAddPortfolio = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const newItem = {
+      id: Date.now().toString(),
+      title: portfolioForm.title,
+      description: portfolioForm.description,
+      imageUrl: portfolioForm.imageUrl || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800",
+    };
+
+    setUser({
+      ...user,
+      portfolio: [...user.portfolio, newItem],
+    });
+
+    setPortfolioForm({ title: "", description: "", imageUrl: "" });
+    setIsAddingPortfolio(false);
+    setToast({
+      message: "Portfolio mis à jour avec succès !",
       type: "success",
       visible: true,
     });
@@ -203,9 +234,9 @@ export default function ProfilePage() {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Portfolio</h2>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={() => setIsAddingPortfolio(true)}>
                 <Edit className="w-4 h-4 mr-2" />
-                Modifier
+                Ajouter
               </Button>
             </div>
             {user.portfolio.length > 0 ? (
@@ -229,7 +260,7 @@ export default function ProfilePage() {
                 <p className="text-white/60 mb-4">
                   Montrez vos réalisations en ajoutant des photos à votre portfolio
                 </p>
-                <Button variant="primary">
+                <Button variant="primary" onClick={() => setIsAddingPortfolio(true)}>
                   Ajouter des photos
                 </Button>
               </div>
@@ -372,6 +403,90 @@ export default function ProfilePage() {
                   </Button>
                   <Button type="submit" variant="primary" className="flex-1">
                     Enregistrer
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Portfolio Modal */}
+      <AnimatePresence>
+        {isAddingPortfolio && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setIsAddingPortfolio(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Ajouter au portfolio</h2>
+                <button
+                  onClick={() => setIsAddingPortfolio(false)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAddPortfolio} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Titre du projet</label>
+                  <input
+                    type="text"
+                    value={portfolioForm.title}
+                    onChange={(e) => setPortfolioForm({ ...portfolioForm, title: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    placeholder="Ex: Création site e-commerce"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Description</label>
+                  <textarea
+                    value={portfolioForm.description}
+                    onChange={(e) => setPortfolioForm({ ...portfolioForm, description: e.target.value })}
+                    rows={4}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+                    placeholder="Décrivez votre projet..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">URL de l'image</label>
+                  <input
+                    type="url"
+                    value={portfolioForm.imageUrl}
+                    onChange={(e) => setPortfolioForm({ ...portfolioForm, imageUrl: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    placeholder="https://exemple.com/image.jpg (optionnel)"
+                  />
+                  <p className="text-xs text-white/40 mt-2">
+                    Laissez vide pour une image par défaut
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsAddingPortfolio(false)}
+                    className="flex-1"
+                  >
+                    Annuler
+                  </Button>
+                  <Button type="submit" variant="primary" className="flex-1">
+                    Ajouter
                   </Button>
                 </div>
               </form>
