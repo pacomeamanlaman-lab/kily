@@ -1,16 +1,23 @@
 "use client";
 
-import { Camera, Edit, MapPin, Mail, Phone, Star, Award, Users, TrendingUp } from "lucide-react";
+import { Camera, Edit, MapPin, Mail, Phone, Star, Award, Users, TrendingUp, X } from "lucide-react";
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import SkillBadge from "@/components/talent/SkillBadge";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import Toast from "@/components/ui/Toast";
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
+    message: "",
+    type: "success",
+    visible: false,
+  });
 
   // Mock user data - will be replaced with real user data from auth
-  const user = {
+  const [user, setUser] = useState({
     id: "current-user",
     name: "Utilisateur",
     email: "user@example.com",
@@ -30,6 +37,37 @@ export default function ProfilePage() {
     skills: [],
     portfolio: [],
     joinedDate: new Date().toISOString(),
+  });
+
+  const [formData, setFormData] = useState({
+    name: user.name,
+    bio: user.bio,
+    email: user.email,
+    phone: user.phone,
+    city: user.location.city,
+  });
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    setUser({
+      ...user,
+      name: formData.name,
+      bio: formData.bio,
+      email: formData.email,
+      phone: formData.phone,
+      location: {
+        ...user.location,
+        city: formData.city,
+      },
+    });
+
+    setIsEditing(false);
+    setToast({
+      message: "Profil mis à jour avec succès !",
+      type: "success",
+      visible: true,
+    });
   };
 
   return (
@@ -239,6 +277,116 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      <AnimatePresence>
+        {isEditing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setIsEditing(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Modifier le profil</h2>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveProfile} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Nom complet</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Bio</label>
+                  <textarea
+                    value={formData.bio}
+                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                    rows={4}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+                    placeholder="Parlez de vous et de vos compétences..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Téléphone</label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Ville</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsEditing(false)}
+                    className="flex-1"
+                  >
+                    Annuler
+                  </Button>
+                  <Button type="submit" variant="primary" className="flex-1">
+                    Enregistrer
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        visible={toast.visible}
+        onClose={() => setToast({ ...toast, visible: false })}
+      />
     </div>
   );
 }
