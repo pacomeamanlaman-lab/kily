@@ -410,16 +410,38 @@ src/
 #### 👤 Profile Interactions ✅ TERMINÉ
 * ✅ Save/Unsave talent
 * ✅ Éditer son profil (modal édition avec nom, bio, email, phone, ville)
+* ✅ Upload photo de profil (avatar)
+  - FileReader API pour preview locale en base64
+  - Toast de confirmation "Photo de profil mise à jour !"
+* ✅ Upload photo de couverture
+  - FileReader API pour preview locale en base64
+  - Toast de confirmation "Photo de couverture mise à jour !"
 * ✅ Ajouter portfolio item - Multi-upload avec drag & drop
   - Sélection multiple d'images (FileReader API)
   - Glisser-déposer avec feedback visuel
   - Génération automatique de titres numérotés ("Portfolio item 1, 2, 3...")
   - Preview locale des images en base64
   - Toast compteur d'images uploadées
+  - Bouton "Ajouter plus" toujours visible dans la grille
 * ✅ Éditer portfolio item (modal avec titre + description modifiables)
   - Bouton édition au hover sur chaque image
   - Modal dédiée pour modification
   - Affichage titre/description en bas de chaque image
+* ✅ Ajouter des compétences - Système interactif avec tags
+  - 45+ compétences prédéfinies organisées en 9 catégories
+  - Tags cliquables avec effet visuel (Check icon quand sélectionné)
+  - Barre de recherche avec filtrage en temps réel
+  - Saisie manuelle de compétences personnalisées (input + bouton Plus)
+  - Section "Compétences personnalisées" dédiée et cliquable
+  - Possibilité de désélectionner toute compétence (prédéfinie ou personnalisée)
+  - Compteur de sélections en temps réel dans le header
+  - Niveau par défaut "intermediate"
+  - Modal optimisé (hauteur 35vh) avec CTA footer toujours visibles
+* ✅ Amélioration UI contact info
+  - Cards stylisées avec icônes Mail/Phone
+  - Containers violets pour icônes avec hover effect
+  - Layout responsive (1 col mobile, 2 desktop)
+  - Labels au-dessus des valeurs
 * ✅ Laisser un avis (étoiles + commentaire)
 * ✅ Bouton "Recruter" (toast + redirect vers messages)
 
