@@ -99,31 +99,32 @@ export default function FeedPage() {
   // Infinite scroll with Intersection Observer
   useEffect(() => {
     const currentRef = loadMoreRef.current;
+    if (!currentRef) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
           setVisiblePosts((prev) => {
             if (prev < filteredPosts.length) {
-              return prev + 2;
+              return Math.min(prev + 2, filteredPosts.length);
             }
             return prev;
           });
         }
       },
-      { threshold: 0.1 }
+      {
+        root: null,
+        rootMargin: '400px',
+        threshold: 0
+      }
     );
 
-    if (currentRef) {
-      observer.observe(currentRef);
-    }
+    observer.observe(currentRef);
 
     return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
-      }
+      observer.disconnect();
     };
-  }, [filteredPosts.length]);
+  }, [filteredPosts.length, visiblePosts]);
 
   const handleFollow = (talentId: number, talentName: string) => {
     const isFollowing = followedTalents.has(talentId);
