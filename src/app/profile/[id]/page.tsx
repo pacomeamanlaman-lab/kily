@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   MapPin,
@@ -12,6 +12,7 @@ import {
   Star,
   User as UserIcon,
   Heart,
+  X,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { mockTalents, mockReviews } from "@/lib/mockData";
@@ -30,11 +31,17 @@ export default function ProfilePage() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showReviewsDrawer, setShowReviewsDrawer] = useState(false);
   const [showPortfolioDrawer, setShowPortfolioDrawer] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
     type: "success",
     visible: false,
+  });
+
+  const [reviewForm, setReviewForm] = useState({
+    rating: 5,
+    comment: "",
   });
 
   // Récupérer le talent depuis les données mockées
@@ -60,6 +67,18 @@ export default function ProfilePage() {
         ? `${talent.name} retiré des favoris`
         : `${talent.name} ajouté aux favoris`,
       type: isSaved ? "info" : "success",
+      visible: true,
+    });
+  };
+
+  const handleSubmitReview = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    setReviewForm({ rating: 5, comment: "" });
+    setShowReviewForm(false);
+    setToast({
+      message: "Avis publié avec succès !",
+      type: "success",
       visible: true,
     });
   };
@@ -242,12 +261,21 @@ export default function ProfilePage() {
                 <h2 className="text-2xl font-bold">
                   Avis ({mockReviews.length})
                 </h2>
-                <button
-                  onClick={() => setShowReviewsDrawer(true)}
-                  className="sm:hidden text-violet-400 text-sm font-medium hover:text-violet-300 transition-colors"
-                >
-                  Voir tous
-                </button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setShowReviewForm(true)}
+                  >
+                    Laisser un avis
+                  </Button>
+                  <button
+                    onClick={() => setShowReviewsDrawer(true)}
+                    className="sm:hidden text-violet-400 text-sm font-medium hover:text-violet-300 transition-colors"
+                  >
+                    Voir tous
+                  </button>
+                </div>
               </div>
               <div className="space-y-6">
                 {mockReviews.slice(0, 2).map((review) => (
@@ -519,6 +547,91 @@ export default function ProfilePage() {
           ))}
         </div>
       </BottomSheet>
+
+      {/* Review Form Modal */}
+      <AnimatePresence>
+        {showReviewForm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setShowReviewForm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-lg"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Laisser un avis</h2>
+                <button
+                  onClick={() => setShowReviewForm(false)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmitReview} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium mb-3">Note</label>
+                  <div className="flex items-center gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                        className="transition-transform hover:scale-110"
+                      >
+                        <Star
+                          className={`w-8 h-8 ${
+                            star <= reviewForm.rating
+                              ? "fill-yellow-500 text-yellow-500"
+                              : "text-gray-600"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Votre commentaire
+                  </label>
+                  <textarea
+                    value={reviewForm.comment}
+                    onChange={(e) =>
+                      setReviewForm({ ...reviewForm, comment: e.target.value })
+                    }
+                    rows={4}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+                    placeholder="Partagez votre expérience..."
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowReviewForm(false)}
+                    className="flex-1"
+                  >
+                    Annuler
+                  </Button>
+                  <Button type="submit" variant="primary" className="flex-1">
+                    Publier
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Toast */}
       <Toast
