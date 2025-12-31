@@ -9,13 +9,28 @@ import { mockConversations } from "@/lib/messagesData";
 export default function MessagesPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [conversations, setConversations] = useState(mockConversations);
 
   const filteredConversations = useMemo(() => {
-    if (!searchQuery) return mockConversations;
-    return mockConversations.filter((conv) =>
+    if (!searchQuery) return conversations;
+    return conversations.filter((conv) =>
       conv.participant.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery]);
+  }, [searchQuery, conversations]);
+
+  const handleConversationClick = (conversationId: string, participantId: string) => {
+    // Marquer comme lu
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.id === conversationId
+          ? { ...conv, lastMessage: { ...conv.lastMessage, unread: false } }
+          : conv
+      )
+    );
+
+    // Naviguer vers la conversation
+    router.push(`/messages/${participantId}`);
+  };
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -87,7 +102,7 @@ export default function MessagesPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                onClick={() => router.push(`/messages/${conversation.participant.id}`)}
+                onClick={() => handleConversationClick(conversation.id, conversation.participant.id)}
                 className="flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl cursor-pointer transition-all group"
               >
                 {/* Avatar */}
