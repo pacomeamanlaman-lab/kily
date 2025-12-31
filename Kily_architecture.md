@@ -5,11 +5,11 @@
 **Dernière mise à jour : 31 Décembre 2024**
 
 ### Statistiques
-- **Commits :** 16+ (main branch)
+- **Commits :** 20+ (main branch)
 - **Avancement MVP :** 100% ✅
 - **Pages complètes :** 13/13
-- **Composants créés :** 21+
-- **Lignes de code :** ~9000+
+- **Composants créés :** 28+
+- **Lignes de code :** ~10500+
 
 ### Fonctionnalités Opérationnelles ✅
 ✅ Landing page complète avec animations
@@ -568,32 +568,64 @@ Toutes les interactions frontend MVP sont complétées :
   - Stats (likes, commentaires)
   - Hover effects avec Framer Motion
 
-* ✅ **VideoPlayer.tsx** - Player modal TikTok-like
-  - Player vidéo plein écran
-  - Swipe vertical pour naviguer (up/down)
+* ✅ **VideoPlayer.tsx** - Player modal TikTok-like avancé
+  - Player vidéo plein écran responsive (desktop/mobile)
+  - Navigation multi-input :
+    * Swipe vertical tactile (up/down) pour mobile
+    * Molette souris pour desktop
+    * Clavier (flèches haut/bas, Espace)
   - Controls: Play/Pause, Mute/Unmute, Progress bar
   - Actions: Like, Comment, Share avec compteurs
+  - **Sidebar commentaires style TikTok** :
+    * Desktop : slide depuis la droite avec backdrop blur
+    * Mobile : drawer depuis le bas
+    * 15 commentaires mockés par vidéo
+    * Liste scrollable avec avatars
+  - **Synchronisation likes localStorage** :
+    * Likes partagés entre VideoCardFeed et VideoPlayer
+    * Persistance entre sessions
+    * Compteurs mis à jour en temps réel
   - Info auteur en overlay
   - Animations smooth avec Framer Motion
-  - Touch gestures pour mobile
+  - Touch gestures optimisés
+  - **Hook useIsMobile()** pour détection responsive
+  - Indicateurs de progression masqués (optimisation UX)
 
-* ✅ **videoData.ts** - 8 vidéos mockées
+* ✅ **VideoCardFeed.tsx** - Card vidéo pour le feed
+  - Composant dédié au feed (différent de VideoCard discover)
+  - Intégration popup commentaires (comme PostCard)
+  - Synchronisation likes avec VideoPlayer via localStorage
+  - Bouton play toujours visible sur thumbnail
+  - Animations conditionnelles desktop/mobile
+
+* ✅ **videoLikes.ts** - Gestion localStorage des likes vidéos
+  - Fonctions : `loadVideoLikes()`, `isVideoLiked()`, `getVideoLikesCount()`, `toggleVideoLike()`, `initVideoLikesCount()`
+  - Persistance état like + compteur
+  - Synchronisation entre tous les composants vidéo
+  - Interface TypeScript `VideoLikesState`
+
+* ✅ **videoData.ts** - 8 vidéos mockées + commentaires
   - Vidéos gratuites (isPremium: false)
   - Catégories variées (cuisine, tech, beauté, artisanat, etc.)
   - Auteurs avec avatars et badges vérifiés
   - Stats réalistes (vues, likes, comments, shares)
+  - **15 commentaires mockés par vidéo** avec auteur, timestamp, likes
 
 #### Intégrations
 * ✅ **Feed Page** - Feed mixte posts + vidéos
   - Alternance : 2 posts, 1 vidéo, 2 posts, 1 vidéo...
-  - VideoCard cliquable ouvrant VideoPlayer modal
+  - VideoCardFeed cliquable ouvrant VideoPlayer modal
   - Intégré mobile & desktop
+  - Likes synchronisés localStorage
 
-* ✅ **Discover Page** - Tab "Vidéos" dédié
+* ✅ **Discover Page** - Tab "Vidéos" dédié + infinite scroll
   - 4ème tab "Vidéos" avec compteur dynamique
   - Grid responsive (1-2-3-4 colonnes selon écran)
   - Filtres par catégorie fonctionnels
   - Search par titre, description, auteur
+  - **Infinite scroll sur tous les tabs** (Tous, Populaires, Récents, Vidéos)
+  - Charge +6 items automatiquement à l'approche du bas
+  - Message "Vous avez tout vu" en fin de scroll
   - Empty state avec emoji 🎥
 
 #### Features Vidéo
@@ -602,16 +634,141 @@ Toutes les interactions frontend MVP sont complétées :
 - Muted par défaut
 - Loop activé
 - Touch swipe pour next/prev vidéo (min 50px)
-- Like interactif (animation coeur rouge)
+- Like interactif (animation coeur rouge) synchronisé
 - Compteurs animés (formatage K/M)
 - Modal full-screen avec backdrop blur
 - Close button (X) en haut
 - Navigation hints (swipe indicators)
+- Commentaires TikTok-style (sidebar desktop, drawer mobile)
+- Système de likes persistant (localStorage)
+- Infinite scroll discover
 
 #### URLs Vidéos Utilisées
 - Google Test Videos (commondatastorage bucket)
 - Format: MP4, compatible tous navigateurs
 - Poids optimisé pour streaming
+
+---
+
+### 📝 Phase 1.8 - Système de Publication (Publish/Create) ✅
+**Objectif : Permettre aux utilisateurs de créer du contenu**
+
+#### Composants Créés
+
+* ✅ **PublishModal.tsx** - Modal de choix post/vidéo
+  - Modal centrée avec animations Framer Motion
+  - 2 options stylisées : "Publier un post" / "Publier une vidéo"
+  - Support `initialType` pour ouverture directe d'un formulaire
+  - Synchronisation état avec useEffect
+  - Bouton annuler et fermeture backdrop
+  - Design violet dark cohérent
+
+* ✅ **CreatePostForm.tsx** - Formulaire création de post
+  - Textarea avec compteur 500 caractères
+  - Upload image optionnel avec preview
+  - Sélecteur de catégorie (8 catégories)
+  - Validation côté client
+  - Mock API call avec délai 1s
+  - Toast confirmation succès
+  - Boutons "Retour" et "Publier"
+  - État submitting avec disable
+
+* ✅ **CreateVideoForm.tsx** - Formulaire upload vidéo
+  - Upload vidéo avec preview player
+  - Validation taille max 100MB
+  - Champ titre avec compteur 100 caractères
+  - Champ description optionnel 300 caractères
+  - Sélecteur de catégorie (8 catégories)
+  - Mock API call avec délai 2s
+  - Toast confirmation succès
+  - Preview vidéo avec controls
+  - Bouton supprimer vidéo
+
+* ✅ **CreatePostButton.tsx** - Composant "Quoi de neuf" Facebook-style
+  - Avatar utilisateur à gauche
+  - Input factice "Quoi de neuf, {Nom} ?" cliquable
+  - 2 boutons rapides : Photo (icône Image) et Vidéo (icône Video)
+  - **Icône Photo** : ouvre directement CreatePostForm
+  - **Icône Vidéo** : ouvre directement CreateVideoForm
+  - **Input principal** : ouvre modal de choix
+  - État modal géré avec objet {isOpen, type}
+  - Design card violet avec hover effects
+  - Cursor pointer sur tous les éléments cliquables
+
+* ✅ **CreateStoryModal.tsx** - Modal création de story
+  - Upload image avec preview
+  - Format 9:16 recommandé (aspect-ratio CSS)
+  - Validation type image + max 10MB
+  - Preview en taille story (mobile-like)
+  - Bouton supprimer image
+  - Mock API call avec délai 1s
+  - Toast confirmation succès
+  - Expiration 24h calculée
+  - Design cohérent avec autres modals
+
+* ✅ **toast.ts** - Utilitaire notifications
+  - Fonction `showToast(message, type)` avec 3 types : success, error, info
+  - Fallback alert navigateur pour MVP
+  - TODO : Remplacer par composant Toast personnalisé
+  - Support emoji selon type (✅ ❌ ℹ️)
+
+#### Intégrations Navigation
+
+* ✅ **BottomNav (Mobile)** - Bouton publish centré flottant
+  - Layout 2-1-2 (2 tabs gauche, bouton center, 2 tabs droite)
+  - Bouton "+" violet gradient, arrondi, flottant au-dessus nav (-top-4)
+  - Effet scale au hover (110%) et active (95%)
+  - Shadow violet pour effet 3D
+  - Ouvre PublishModal au clic
+  - BottomNavWrapper client component pour gestion état modal
+
+* ✅ **Feed Desktop** - CreatePostButton au-dessus stories
+  - Composant inséré entre filtres et stories
+  - Layout horizontal : avatar + input + 2 icônes
+  - Raccourcis directs : Photo → Post, Vidéo → Video
+  - Design cohérent avec cards feed
+  - Visible uniquement desktop (mobile = bouton bottom nav)
+
+* ✅ **StoryCarousel** - Bouton "Ajouter" fonctionnel
+  - Premier item du carousel = bouton "Créer story"
+  - Cercle violet gradient avec icône Plus
+  - onClick ouvre CreateStoryModal
+  - Cursor pointer avec hover scale
+  - Label "Ajouter" en dessous
+
+#### Features Publication
+- 📝 Posts : texte + image optionnelle + catégorie
+- 🎥 Vidéos : upload + titre + description + catégorie
+- 📖 Stories : image format 9:16, expiration 24h
+- ✅ Validation formulaires temps réel
+- ✅ Preview médias (image/vidéo) avant publication
+- ✅ Compteurs de caractères
+- ✅ Mock storage (console.log pour MVP)
+- ✅ Toast feedback utilisateur
+- ✅ États loading avec boutons disabled
+- ✅ Cursor pointer partout
+- ✅ Raccourcis directs (photo/vidéo icons)
+- ✅ Modal choice pour input principal
+
+#### Workflow Utilisateur
+**Mobile :**
+1. Clic bouton "+" bottom nav → Modal choix
+2. Clic icône Photo (feed desktop) → Formulaire post direct
+3. Clic icône Vidéo (feed desktop) → Formulaire vidéo direct
+4. Clic "Ajouter" stories → Modal story direct
+
+**Desktop :**
+1. Clic "Quoi de neuf" → Modal choix
+2. Clic icône Photo → Formulaire post direct
+3. Clic icône Vidéo → Formulaire vidéo direct
+4. Clic "Ajouter" stories → Modal story direct
+
+#### Données Mockées
+- Auteur par défaut : "Vous" (@vous)
+- Avatar par défaut : image placeholder
+- Timestamp : Date.now()
+- Stories : expiration calculée (+24h)
+- Sauvegarde : console.log (TODO: localStorage ou API)
 
 ---
 
