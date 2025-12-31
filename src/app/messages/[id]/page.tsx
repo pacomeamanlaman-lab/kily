@@ -27,6 +27,7 @@ export default function ConversationPage() {
   const params = useParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messageInput, setMessageInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
 
   // Trouver le talent pour cette conversation
   const talent = mockTalents.find((t) => t.id === params.id);
@@ -80,8 +81,13 @@ export default function ConversationPage() {
     setMessages([...messages, newMessage]);
     setMessageInput("");
 
-    // Simuler une réponse automatique après 2 secondes
+    // Simuler l'indicateur "en train d'écrire..." puis une réponse
     setTimeout(() => {
+      setIsTyping(true);
+    }, 1000);
+
+    setTimeout(() => {
+      setIsTyping(false);
       const autoReply: Message = {
         id: (Date.now() + 1).toString(),
         content: "Message reçu ! Je vous réponds dès que possible. 👍",
@@ -191,6 +197,21 @@ export default function ConversationPage() {
             </div>
           </motion.div>
         ))}
+
+        {/* Typing Indicator */}
+        {isTyping && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-start"
+          >
+            <div className="bg-white/10 rounded-2xl px-4 py-3 flex items-center gap-1">
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            </div>
+          </motion.div>
+        )}
 
         <div ref={messagesEndRef} />
       </div>
