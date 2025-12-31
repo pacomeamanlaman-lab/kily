@@ -24,6 +24,7 @@ import StoryCarousel from "@/components/feed/StoryCarousel";
 import { mockPosts, mockStories } from "@/lib/feedData";
 import { mockVideos } from "@/lib/videoData";
 import VideoCard from "@/components/video/VideoCard";
+import VideoCardFeed from "@/components/video/VideoCardFeed";
 import VideoPlayer from "@/components/video/VideoPlayer";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
@@ -477,7 +478,7 @@ export default function FeedPage() {
                 {item.type === "post" ? (
                   <PostCard post={item.data} />
                 ) : (
-                  <VideoCard
+                  <VideoCardFeed
                     video={item.data}
                     onClick={() => handleVideoClick(item.data.id)}
                   />
@@ -619,7 +620,7 @@ export default function FeedPage() {
               {item.type === "post" ? (
                 <PostCard post={item.data} />
               ) : (
-                <VideoCard
+                <VideoCardFeed
                   video={item.data}
                   onClick={() => handleVideoClick(item.data.id)}
                 />

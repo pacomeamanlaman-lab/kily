@@ -174,7 +174,7 @@ export const mockVideos: Video[] = [
     title: "Tailleur - Boubou traditionnel",
     description: "Tutoriel couture d'un boubou homme élégant 👔",
     thumbnail: "https://images.unsplash.com/photo-1558769132-cb1aea3c0ee1?w=400&h=700&fit=crop",
-    videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    videoUrl: "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
     duration: "3:56",
     views: "67K",
     likes: 4100,
