@@ -83,6 +83,18 @@ export default function ProfilePage() {
     });
   };
 
+  const handleRecruit = () => {
+    setToast({
+      message: `Demande de recrutement envoyée à ${talent.name} !`,
+      type: "success",
+      visible: true,
+    });
+
+    setTimeout(() => {
+      router.push(`/messages/${talent.id}`);
+    }, 1500);
+  };
+
   return (
     <div className="min-h-screen bg-black text-white pb-20">
       {/* Header avec image de fond */}
@@ -172,7 +184,7 @@ export default function ProfilePage() {
                     <MessageCircle className="w-5 h-5" />
                     Contacter
                   </Button>
-                  <Button variant="outline" size="lg">
+                  <Button variant="outline" size="lg" onClick={handleRecruit}>
                     <Briefcase className="w-5 h-5" />
                     Recruter
                   </Button>
