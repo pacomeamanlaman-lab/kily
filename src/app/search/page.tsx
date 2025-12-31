@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { motion } from "framer-motion";
 import { Search, ArrowLeft, Filter, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -9,7 +9,7 @@ import TalentCard from "@/components/talent/TalentCard";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
-export default function SearchPage() {
+function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
@@ -194,5 +194,22 @@ export default function SearchPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-violet-500/10 border border-violet-500/30 rounded-full mb-6 animate-pulse">
+            <Search className="w-10 h-10 text-violet-500" />
+          </div>
+          <p className="text-gray-400">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <SearchContent />
+    </Suspense>
   );
 }

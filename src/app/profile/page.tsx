@@ -7,6 +7,7 @@ import SkillBadge from "@/components/talent/SkillBadge";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
+import { Skill, SkillCategory } from "@/types";
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -21,14 +22,34 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; isVisible: boolean }>({
     message: "",
     type: "success",
-    visible: false,
+    isVisible: false,
   });
 
   // Mock user data - will be replaced with real user data from auth
-  const [user, setUser] = useState({
+  const [user, setUser] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    avatar: string;
+    coverImage: string;
+    bio: string;
+    userType: "talent" | "neighbor" | "recruiter";
+    location: {
+      city: string;
+      country: string;
+    };
+    verified: boolean;
+    rating: number;
+    reviewCount: number;
+    completedProjects: number;
+    skills: Skill[];
+    portfolio: Array<{ id: string; title: string; description: string; imageUrl: string }>;
+    joinedDate: string;
+  }>({
     id: "current-user",
     name: "Utilisateur",
     email: "user@example.com",
@@ -77,14 +98,14 @@ export default function ProfilePage() {
     setToast({
       message: "Profil mis à jour avec succès !",
       type: "success",
-      visible: true,
+      isVisible: true,
     });
   };
 
   const processFiles = async (files: FileList) => {
     if (!files || files.length === 0) return;
 
-    const newItems = [];
+    const newItems: Array<{ id: string; title: string; description: string; imageUrl: string }> = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -120,7 +141,7 @@ export default function ProfilePage() {
     setToast({
       message: `${newItems.length} image(s) ajoutée(s) avec succès !`,
       type: "success",
-      visible: true,
+      isVisible: true,
     });
 
     // Reset file input
@@ -174,11 +195,11 @@ export default function ProfilePage() {
       ),
     });
     setEditingItemId(null);
-    setToast({
-      message: "Portfolio mis à jour avec succès !",
-      type: "success",
-      visible: true,
-    });
+      setToast({
+        message: "Portfolio mis à jour avec succès !",
+        type: "success",
+        isVisible: true,
+      });
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,7 +215,7 @@ export default function ProfilePage() {
       setToast({
         message: "Photo de profil mise à jour !",
         type: "success",
-        visible: true,
+        isVisible: true,
       });
     };
     reader.readAsDataURL(file);
@@ -213,7 +234,7 @@ export default function ProfilePage() {
       setToast({
         message: "Photo de couverture mise à jour !",
         type: "success",
-        visible: true,
+        isVisible: true,
       });
     };
     reader.readAsDataURL(file);
@@ -254,10 +275,10 @@ export default function ProfilePage() {
   const handleSaveSkills = () => {
     if (selectedSkills.length === 0) return;
 
-    const newSkills = selectedSkills.map((skill, index) => ({
+    const newSkills: Skill[] = selectedSkills.map((skill, index) => ({
       id: `${Date.now()}-${index}`,
       name: skill.name,
-      category: skill.category as any,
+      category: skill.category as SkillCategory,
       level: "intermediate" as const,
       verified: false,
     }));
@@ -274,23 +295,23 @@ export default function ProfilePage() {
     setToast({
       message: `${newSkills.length} compétence(s) ajoutée(s) avec succès !`,
       type: "success",
-      visible: true,
+      isVisible: true,
     });
   };
 
   // Filtrer les compétences selon la recherche
-  const getFilteredSkills = () => {
+  const getFilteredSkills = (): typeof predefinedSkills => {
     if (!searchQuery.trim()) return predefinedSkills;
 
     const query = searchQuery.toLowerCase();
-    const filtered: any = {};
+    const filtered: typeof predefinedSkills = {} as typeof predefinedSkills;
 
     Object.entries(predefinedSkills).forEach(([category, skills]) => {
       const matchingSkills = skills.filter(skill =>
         skill.toLowerCase().includes(query)
       );
       if (matchingSkills.length > 0) {
-        filtered[category] = matchingSkills;
+        (filtered as any)[category] = matchingSkills;
       }
     });
 
@@ -915,13 +936,15 @@ export default function ProfilePage() {
 
                   {/* Compétences prédéfinies */}
                   {Object.entries(getFilteredSkills()).length > 0 ? (
-                    Object.entries(getFilteredSkills()).map(([category, skills]) => (
+                    Object.entries(getFilteredSkills()).map(([category, skills]) => {
+                      const skillsArray = skills as string[];
+                      return (
                     <div key={category}>
                       <h3 className="text-sm font-semibold text-white/70 mb-2 capitalize">
                         {category === "tech" ? "Technologie" : category}
                       </h3>
                       <div className="flex flex-wrap gap-2">
-                        {skills.map((skillName) => {
+                        {skillsArray.map((skillName) => {
                           const isSelected = selectedSkills.some(s => s.name === skillName);
                           return (
                             <button
@@ -941,7 +964,8 @@ export default function ProfilePage() {
                         })}
                       </div>
                     </div>
-                  ))
+                    );
+                    })
                   ) : (
                     searchQuery && (
                       <div className="text-center py-8 text-white/60">
@@ -1014,8 +1038,8 @@ export default function ProfilePage() {
       <Toast
         message={toast.message}
         type={toast.type}
-        visible={toast.visible}
-        onClose={() => setToast({ ...toast, visible: false })}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
       />
     </div>
   );

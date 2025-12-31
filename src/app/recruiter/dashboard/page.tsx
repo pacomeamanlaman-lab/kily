@@ -36,10 +36,10 @@ export default function RecruiterDashboard() {
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; isVisible: boolean }>({
     message: "",
     type: "success",
-    visible: false,
+    isVisible: false,
   });
 
   // Actions
@@ -48,7 +48,7 @@ export default function RecruiterDashboard() {
     setToast({
       message: "Talent retiré des sauvegardés",
       type: "success",
-      visible: true,
+      isVisible: true,
     });
   };
 
@@ -59,7 +59,7 @@ export default function RecruiterDashboard() {
     setToast({
       message: `Message envoyé à ${talentName} !`,
       type: "success",
-      visible: true,
+      isVisible: true,
     });
     setTimeout(() => {
       router.push(`/messages/${talentId}`);
@@ -558,8 +558,8 @@ export default function RecruiterDashboard() {
       <Toast
         message={toast.message}
         type={toast.type}
-        visible={toast.visible}
-        onClose={() => setToast({ ...toast, visible: false })}
+        isVisible={toast.isVisible}
+        onClose={() => setToast({ ...toast, isVisible: false })}
       />
     </div>
   );
