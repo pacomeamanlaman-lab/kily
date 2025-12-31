@@ -1,15 +1,33 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sparkles, TrendingUp, Filter, UserPlus, UserCheck } from "lucide-react";
+import {
+  Sparkles,
+  TrendingUp,
+  Filter,
+  UserPlus,
+  UserCheck,
+  Home,
+  Compass,
+  MessageCircle,
+  User,
+  BookMarked,
+  Users,
+  Calendar,
+  MapPin,
+  Code,
+  Flame,
+} from "lucide-react";
 import PostCard from "@/components/feed/PostCard";
 import StoryCarousel from "@/components/feed/StoryCarousel";
 import { mockPosts, mockStories } from "@/lib/feedData";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function FeedPage() {
+  const router = useRouter();
   const [filter, setFilter] = useState<"all" | "following" | "trending">("all");
   const [followedTalents, setFollowedTalents] = useState<Set<number>>(new Set());
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
@@ -69,10 +87,32 @@ export default function FeedPage() {
     }
   };
 
+  const leftMenuItems = [
+    { icon: Home, label: "Accueil", path: "/feed", active: true },
+    { icon: Compass, label: "Découvrir", path: "/discover" },
+    { icon: MessageCircle, label: "Messages", path: "/messages" },
+    { icon: User, label: "Profil", path: "/profile" },
+    { icon: BookMarked, label: "Sauvegardés", path: "/recruiter/dashboard?tab=saved" },
+    { icon: Users, label: "Communautés", path: "#" },
+  ];
+
+  const trendingSkills = [
+    { icon: Code, label: "Développement Web", count: 234 },
+    { icon: Sparkles, label: "Design Graphique", count: 189 },
+    { icon: Calendar, label: "Organisation Événements", count: 156 },
+  ];
+
+  const activeCities = [
+    { name: "Abidjan", flag: "🇨🇮", count: 456 },
+    { name: "Lagos", flag: "🇳🇬", count: 389 },
+    { name: "Accra", flag: "🇬🇭", count: 298 },
+    { name: "Dakar", flag: "🇸🇳", count: 267 },
+  ];
+
   return (
-    <div className="min-h-screen bg-black text-white pb-20">
+    <div className="min-h-screen bg-black text-white pb-20 lg:pb-0">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-black/95 backdrop-blur-lg border-b border-white/10">
+      <div className="sticky top-0 z-40 bg-black/95 backdrop-blur-lg border-b border-white/10 lg:hidden">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -111,8 +151,191 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+      {/* Desktop Layout - 3 Columns */}
+      <div className="hidden lg:flex max-w-[1400px] mx-auto gap-6 pt-6">
+        {/* Left Sidebar */}
+        <div className="w-64 flex-shrink-0">
+          <div className="sticky top-6 space-y-2">
+            {/* Logo */}
+            <div className="flex items-center gap-2 px-4 py-3 mb-4">
+              <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <span className="text-xl font-bold">Kily</span>
+            </div>
+
+            {/* Navigation */}
+            {leftMenuItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => router.push(item.path)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                    item.active
+                      ? "bg-violet-600 text-white"
+                      : "hover:bg-white/5 text-gray-300"
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Main Feed */}
+        <div className="flex-1 max-w-2xl">
+          {/* Filter Tabs */}
+          <div className="flex items-center gap-2 mb-6 overflow-x-auto scrollbar-hide">
+            {filterOptions.map((option) => {
+              const Icon = option.icon;
+              const isActive = filter === option.value;
+
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => setFilter(option.value)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all whitespace-nowrap ${
+                    isActive
+                      ? "bg-violet-600 text-white"
+                      : "bg-white/5 text-gray-400 hover:bg-white/10"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="text-sm font-medium">{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Stories */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <StoryCarousel stories={mockStories} />
+          </motion.div>
+
+          {/* Feed Posts */}
+          <div className="space-y-6">
+            {mockPosts.map((post, index) => (
+              <motion.div
+                key={post.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <PostCard post={post} />
+              </motion.div>
+            ))}
+
+            {/* Load More */}
+            <div className="flex justify-center pt-6">
+              <Button variant="secondary" className="w-full sm:w-auto">
+                Charger plus de contenu
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Sidebar */}
+        <div className="w-80 flex-shrink-0">
+          <div className="sticky top-6 space-y-6">
+            {/* Suggestions */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <h2 className="text-lg font-bold mb-4">Talents suggérés</h2>
+              <div className="space-y-4">
+                {suggestedTalents.map((talent) => {
+                  const isFollowing = followedTalents.has(talent.id);
+
+                  return (
+                    <div
+                      key={talent.id}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={talent.avatar}
+                          alt={talent.name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                        <div>
+                          <p className="font-semibold text-sm">{talent.name}</p>
+                          <p className="text-xs text-gray-400">{talent.skill}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant={isFollowing ? "secondary" : "primary"}
+                        size="sm"
+                        onClick={() => handleFollow(talent.id, talent.name)}
+                      >
+                        {isFollowing ? (
+                          <UserCheck className="w-4 h-4" />
+                        ) : (
+                          <UserPlus className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Trending Skills */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Flame className="w-5 h-5 text-orange-500" />
+                <h2 className="text-lg font-bold">Tendances</h2>
+              </div>
+              <div className="space-y-3">
+                {trendingSkills.map((skill, index) => {
+                  const Icon = skill.icon;
+                  return (
+                    <button
+                      key={index}
+                      className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4 h-4 text-violet-400" />
+                        <span className="text-sm font-medium">{skill.label}</span>
+                      </div>
+                      <span className="text-xs text-gray-400">{skill.count} talents</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Active Cities */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <MapPin className="w-5 h-5 text-violet-500" />
+                <h2 className="text-lg font-bold">Villes actives</h2>
+              </div>
+              <div className="space-y-2">
+                {activeCities.map((city, index) => (
+                  <button
+                    key={index}
+                    className="w-full flex items-center justify-between p-2 hover:bg-white/5 rounded-lg transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{city.flag}</span>
+                      <span className="text-sm font-medium">{city.name}</span>
+                    </div>
+                    <span className="text-xs text-gray-400">{city.count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Layout */}
+      <div className="lg:hidden max-w-3xl mx-auto px-4 sm:px-6 py-6">
         {/* Stories */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
