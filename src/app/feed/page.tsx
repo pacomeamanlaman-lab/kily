@@ -17,6 +17,7 @@ import {
   MapPin,
   Code,
   Flame,
+  Bell,
 } from "lucide-react";
 import PostCard from "@/components/feed/PostCard";
 import StoryCarousel from "@/components/feed/StoryCarousel";
@@ -31,6 +32,7 @@ export default function FeedPage() {
   const [filter, setFilter] = useState<"all" | "following" | "trending">("all");
   const [followedTalents, setFollowedTalents] = useState<Set<number>>(new Set());
   const [visiblePosts, setVisiblePosts] = useState(3);
+  const [unreadNotifications] = useState(5); // Mock notifications count
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
     type: "success",
@@ -41,6 +43,12 @@ export default function FeedPage() {
   const lastPostElementRefDesktop = useRef<HTMLDivElement | null>(null);
   const lastPostElementRefMobile = useRef<HTMLDivElement | null>(null);
   const [observerKey, setObserverKey] = useState(0);
+
+  // Pull to refresh state
+  const [isPulling, setIsPulling] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const touchStartY = useRef(0);
+  const scrollableRef = useRef<HTMLDivElement>(null);
 
   const filterOptions = [
     { value: "all" as const, label: "Tous", icon: Sparkles },
@@ -204,6 +212,50 @@ export default function FeedPage() {
     }
   };
 
+  // Pull to refresh handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (scrollableRef.current && scrollableRef.current.scrollTop === 0) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current === 0) return;
+
+    const touchY = e.touches[0].clientY;
+    const distance = touchY - touchStartY.current;
+
+    if (distance > 0 && scrollableRef.current && scrollableRef.current.scrollTop === 0) {
+      setPullDistance(Math.min(distance, 100));
+      if (distance > 80) {
+        setIsPulling(true);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isPulling) {
+      // Simulate refresh
+      setToast({
+        message: "Actualisation en cours...",
+        type: "info",
+        visible: true,
+      });
+
+      setTimeout(() => {
+        setToast({
+          message: "Contenu actualisé !",
+          type: "success",
+          visible: true,
+        });
+      }, 1000);
+    }
+
+    touchStartY.current = 0;
+    setPullDistance(0);
+    setIsPulling(false);
+  };
+
   const leftMenuItems = [
     { icon: Home, label: "Accueil", path: "/feed", active: true },
     { icon: Compass, label: "Découvrir", path: "/discover" },
@@ -227,7 +279,42 @@ export default function FeedPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white pb-20 lg:pb-0">
+    <div
+      className="min-h-screen bg-black text-white pb-20 lg:pb-0"
+      ref={scrollableRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull to Refresh Indicator */}
+      {pullDistance > 0 && (
+        <div
+          className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center lg:hidden"
+          style={{
+            height: `${pullDistance}px`,
+            opacity: pullDistance / 100,
+            transition: isPulling ? 'none' : 'all 0.3s ease-out'
+          }}
+        >
+          <div className="bg-violet-600 text-white rounded-full p-2">
+            <motion.div
+              animate={{ rotate: isPulling ? 360 : 0 }}
+              transition={{ duration: 0.5, repeat: isPulling ? Infinity : 0, ease: "linear" }}
+            >
+              <Sparkles className="w-5 h-5" />
+            </motion.div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.visible}
+        onClose={() => setToast({ ...toast, visible: false })}
+      />
+
       {/* Header */}
       <div className="sticky top-0 z-40 bg-black/95 backdrop-blur-lg border-b border-white/10 lg:hidden">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
@@ -238,8 +325,13 @@ export default function FeedPage() {
               </div>
               <h1 className="text-2xl font-bold">Kily</h1>
             </div>
-            <button className="text-sm text-violet-500 hover:text-violet-400 transition-colors">
-              Notifications
+            <button className="relative p-2 text-violet-400 hover:text-violet-300 transition-colors">
+              <Bell className="w-6 h-6" />
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-0 -right-0 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                </span>
+              )}
             </button>
           </div>
 
@@ -555,14 +647,6 @@ export default function FeedPage() {
           </div>
         </motion.div>
       </div>
-
-      {/* Toast */}
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        isVisible={toast.visible}
-        onClose={() => setToast((prev) => ({ ...prev, visible: false }))}
-      />
     </div>
   );
 }

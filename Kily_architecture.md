@@ -518,9 +518,36 @@ src/
   * Toast feedback
 - Toast notifications globales pour tous les retours utilisateur
 
-#### ✨ Micro-interactions
-* ⏳ Notifications badge (compteur sur icône notifs)
-* ⏳ Pull to refresh sur mobile
+#### ✨ Micro-interactions ✅
+* ✅ Notifications badge (compteur sur icône notifs)
+* ✅ Pull to refresh sur mobile
+
+**Détails de l'implémentation :**
+- Badge de notifications sur icône Messages (bottom nav mobile) :
+  * Badge rouge avec compteur (3 non lus)
+  * Support pour 9+ messages
+  * Position absolute top-right sur l'icône
+- Badge de notifications sur icône Bell (header feed) :
+  * Badge rouge avec compteur (5 notifications)
+  * Support pour 9+ notifications
+  * Visible sur mobile dans le header
+- Pull to refresh sur mobile :
+  * Détection du swipe down au top de la page
+  * Indicateur visuel avec rotation d'icône
+  * Feedback Toast pour actualisation
+  * Animation smooth avec Framer Motion
+  * Implémenté sur Feed et Discover pages
+  * Distance de pull: 80px minimum pour trigger
+  * Max distance: 100px
+
+### 🎉 Phase 1.5 - Frontend Interactions TERMINÉE
+Toutes les interactions frontend MVP sont complétées :
+- ✅ Profile interactions (avatar/cover upload, skills, portfolio)
+- ✅ Dashboard Recruteur (tabs, filters, actions)
+- ✅ Discover/Search (tabs, filtres multi-critères)
+- ✅ Register Skills uniformization
+- ✅ Settings (toggles, password/email/phone forms)
+- ✅ Micro-interactions (notifications badge, pull to refresh)
 
 ---
 

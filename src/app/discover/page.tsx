@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, X, Users, FileText, User } from "lucide-react";
+import { Search, Filter, X, Users, FileText, User, RefreshCw } from "lucide-react";
 import { mockTalents, skillCategories, cities } from "@/lib/mockData";
 import { mockPosts } from "@/lib/feedData";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -11,6 +11,7 @@ import PostCard from "@/components/feed/PostCard";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import Toast from "@/components/ui/Toast";
 
 export default function DiscoverPage() {
   const router = useRouter();
@@ -20,6 +21,17 @@ export default function DiscoverPage() {
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [activeTab, setActiveTab] = useState<"talents" | "posts" | "users">("talents");
+
+  // Pull to refresh state
+  const [isPulling, setIsPulling] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const touchStartY = useRef(0);
+  const scrollableRef = useRef<HTMLDivElement>(null);
+  const [toast, setToast] = useState({
+    message: "",
+    type: "success" as "success" | "error" | "info",
+    visible: false,
+  });
 
   // Lire le paramètre category depuis l'URL
   useEffect(() => {
@@ -107,10 +119,87 @@ export default function DiscoverPage() {
     setSelectedCity(null);
   };
 
+  // Pull to refresh handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (scrollableRef.current && scrollableRef.current.scrollTop === 0) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current === 0) return;
+
+    const touchY = e.touches[0].clientY;
+    const distance = touchY - touchStartY.current;
+
+    if (distance > 0 && scrollableRef.current && scrollableRef.current.scrollTop === 0) {
+      setPullDistance(Math.min(distance, 100));
+      if (distance > 80) {
+        setIsPulling(true);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isPulling) {
+      setToast({
+        message: "Actualisation en cours...",
+        type: "info",
+        visible: true,
+      });
+
+      setTimeout(() => {
+        setToast({
+          message: "Contenu actualisé !",
+          type: "success",
+          visible: true,
+        });
+      }, 1000);
+    }
+
+    touchStartY.current = 0;
+    setPullDistance(0);
+    setIsPulling(false);
+  };
+
   const hasActiveFilters = searchQuery || selectedCategory || selectedCity;
 
   return (
-    <div className="min-h-screen bg-black text-white pb-20">
+    <div
+      className="min-h-screen bg-black text-white pb-20"
+      ref={scrollableRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull to Refresh Indicator */}
+      {pullDistance > 0 && (
+        <div
+          className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center lg:hidden"
+          style={{
+            height: `${pullDistance}px`,
+            opacity: pullDistance / 100,
+            transition: isPulling ? 'none' : 'all 0.3s ease-out'
+          }}
+        >
+          <div className="bg-violet-600 text-white rounded-full p-2">
+            <motion.div
+              animate={{ rotate: isPulling ? 360 : 0 }}
+              transition={{ duration: 0.5, repeat: isPulling ? Infinity : 0, ease: "linear" }}
+            >
+              <RefreshCw className="w-5 h-5" />
+            </motion.div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.visible}
+        onClose={() => setToast({ ...toast, visible: false })}
+      />
       {/* Header */}
       <div className="sticky top-0 z-40 bg-black backdrop-blur-lg border-b border-white/10 px-4 sm:px-6 lg:px-8 pt-6 pb-6 shadow-xl">
         <div className="max-w-7xl mx-auto">
