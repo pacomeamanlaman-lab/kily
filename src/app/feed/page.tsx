@@ -364,15 +364,7 @@ export default function FeedPage() {
       <div className="hidden lg:flex max-w-[1400px] mx-auto gap-6 pt-6">
         {/* Left Sidebar */}
         <div className="w-64 flex-shrink-0">
-          <div className="sticky top-6 space-y-2">
-            {/* Logo */}
-            <div className="flex items-center gap-2 px-4 py-3 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <span className="text-xl font-bold">Kily</span>
-            </div>
-
+          <div className="sticky top-20 space-y-2">
             {/* Navigation */}
             {leftMenuItems.map((item) => {
               const Icon = item.icon;
