@@ -401,11 +401,11 @@ src/
 * ✅ Stories cliquables (modal plein écran avec navigation et progress bars)
 * ✅ Infinite scroll (charge +2 posts automatiquement, message fin de feed)
 
-#### 💬 Messaging Interactions
+#### 💬 Messaging Interactions ✅ TERMINÉ
 * ✅ Liste conversations avec recherche
-* ⏳ Envoyer message (input + bouton send qui ajoute au chat)
-* ⏳ Indicateur "en train d'écrire..."
-* ⏳ Marquer comme lu (badge unread disparaît)
+* ✅ Envoyer message (input + bouton send qui ajoute au chat)
+* ✅ Indicateur "en train d'écrire..." (3 dots animés)
+* ✅ Marquer comme lu (badge unread disparaît au clic)
 
 #### 👤 Profile Interactions
 * ✅ Save/Unsave talent
