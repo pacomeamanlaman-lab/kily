@@ -22,6 +22,9 @@ import {
 import PostCard from "@/components/feed/PostCard";
 import StoryCarousel from "@/components/feed/StoryCarousel";
 import { mockPosts, mockStories } from "@/lib/feedData";
+import { mockVideos } from "@/lib/videoData";
+import VideoCard from "@/components/video/VideoCard";
+import VideoPlayer from "@/components/video/VideoPlayer";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
@@ -38,6 +41,10 @@ export default function FeedPage() {
     type: "success",
     visible: false,
   });
+
+  // Video player state
+  const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(false);
+  const [selectedVideoIndex, setSelectedVideoIndex] = useState(0);
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const lastPostElementRefDesktop = useRef<HTMLDivElement | null>(null);
@@ -106,6 +113,44 @@ export default function FeedPage() {
 
     return mockPosts;
   }, [filter, followedTalents]);
+
+  // Create mixed feed of posts and videos
+  const mixedFeed = useMemo(() => {
+    const feed: Array<{ type: "post" | "video"; data: any; id: string }> = [];
+    let postIndex = 0;
+    let videoIndex = 0;
+
+    // Alternate: 2 posts, 1 video, 2 posts, 1 video...
+    for (let i = 0; i < Math.max(filteredPosts.length, mockVideos.length * 2); i++) {
+      if (i % 3 === 2 && videoIndex < mockVideos.length) {
+        // Every 3rd item is a video
+        feed.push({
+          type: "video",
+          data: mockVideos[videoIndex],
+          id: `video-${mockVideos[videoIndex].id}`,
+        });
+        videoIndex++;
+      } else if (postIndex < filteredPosts.length) {
+        // Otherwise, add a post
+        feed.push({
+          type: "post",
+          data: filteredPosts[postIndex],
+          id: `post-${filteredPosts[postIndex].id}`,
+        });
+        postIndex++;
+      }
+    }
+
+    return feed;
+  }, [filteredPosts]);
+
+  const handleVideoClick = (videoId: string) => {
+    const videoIndex = mockVideos.findIndex((v) => v.id === videoId);
+    if (videoIndex !== -1) {
+      setSelectedVideoIndex(videoIndex);
+      setIsVideoPlayerOpen(true);
+    }
+  };
 
   // Reset visible posts when filter changes
   useEffect(() => {
@@ -420,16 +465,23 @@ export default function FeedPage() {
             <StoryCarousel stories={mockStories} />
           </motion.div>
 
-          {/* Feed Posts */}
+          {/* Mixed Feed - Posts & Videos */}
           <div className="space-y-6">
-            {filteredPosts.slice(0, visiblePosts).map((post, index) => (
+            {mixedFeed.slice(0, visiblePosts).map((item, index) => (
               <motion.div
-                key={post.id}
+                key={item.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
               >
-                <PostCard post={post} />
+                {item.type === "post" ? (
+                  <PostCard post={item.data} />
+                ) : (
+                  <VideoCard
+                    video={item.data}
+                    onClick={() => handleVideoClick(item.data.id)}
+                  />
+                )}
               </motion.div>
             ))}
 
@@ -555,16 +607,23 @@ export default function FeedPage() {
           <StoryCarousel stories={mockStories} />
         </motion.div>
 
-        {/* Feed Posts */}
+        {/* Mixed Feed - Posts & Videos */}
         <div className="space-y-6">
-          {filteredPosts.slice(0, visiblePosts).map((post, index) => (
+          {mixedFeed.slice(0, visiblePosts).map((item, index) => (
             <motion.div
-              key={post.id}
+              key={item.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <PostCard post={post} />
+              {item.type === "post" ? (
+                <PostCard post={item.data} />
+              ) : (
+                <VideoCard
+                  video={item.data}
+                  onClick={() => handleVideoClick(item.data.id)}
+                />
+              )}
             </motion.div>
           ))}
 
@@ -639,6 +698,14 @@ export default function FeedPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Video Player Modal */}
+      <VideoPlayer
+        videos={mockVideos}
+        initialIndex={selectedVideoIndex}
+        isOpen={isVideoPlayerOpen}
+        onClose={() => setIsVideoPlayerOpen(false)}
+      />
     </div>
   );
 }

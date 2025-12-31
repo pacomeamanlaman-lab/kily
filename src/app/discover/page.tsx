@@ -2,12 +2,15 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, X, Users, FileText, User, RefreshCw } from "lucide-react";
+import { Search, Filter, X, Users, FileText, User, RefreshCw, Video } from "lucide-react";
 import { mockTalents, skillCategories, cities } from "@/lib/mockData";
 import { mockPosts } from "@/lib/feedData";
+import { mockVideos } from "@/lib/videoData";
 import { useRouter, useSearchParams } from "next/navigation";
 import TalentCard from "@/components/talent/TalentCard";
 import PostCard from "@/components/feed/PostCard";
+import VideoCard from "@/components/video/VideoCard";
+import VideoPlayer from "@/components/video/VideoPlayer";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -20,7 +23,11 @@ export default function DiscoverPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [activeTab, setActiveTab] = useState<"talents" | "posts" | "users">("talents");
+  const [activeTab, setActiveTab] = useState<"talents" | "posts" | "videos" | "users">("talents");
+
+  // Video player state
+  const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(false);
+  const [selectedVideoIndex, setSelectedVideoIndex] = useState(0);
 
   // Pull to refresh state
   const [isPulling, setIsPulling] = useState(false);
@@ -111,6 +118,30 @@ export default function DiscoverPage() {
       return matchesSearch;
     });
   }, [searchQuery]);
+
+  // Filtrage des vidéos
+  const filteredVideos = useMemo(() => {
+    return mockVideos.filter((video) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        video.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        video.author.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCategory =
+        !selectedCategory || video.category === selectedCategory;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchQuery, selectedCategory]);
+
+  const handleVideoClick = (videoId: string) => {
+    const videoIndex = mockVideos.findIndex((v) => v.id === videoId);
+    if (videoIndex !== -1) {
+      setSelectedVideoIndex(videoIndex);
+      setIsVideoPlayerOpen(true);
+    }
+  };
 
   // Réinitialiser les filtres
   const resetFilters = () => {
@@ -225,8 +256,9 @@ export default function DiscoverPage() {
             <p className="text-gray-400">
               {activeTab === "talents" && `${filteredTalents.length} talent${filteredTalents.length > 1 ? "s" : ""}`}
               {activeTab === "posts" && `${filteredPosts.length} post${filteredPosts.length > 1 ? "s" : ""}`}
+              {activeTab === "videos" && `${filteredVideos.length} vidéo${filteredVideos.length > 1 ? "s" : ""}`}
               {activeTab === "users" && `${filteredUsers.length} utilisateur${filteredUsers.length > 1 ? "s" : ""}`}
-              {" "}trouvé{(activeTab === "talents" && filteredTalents.length > 1) || (activeTab === "posts" && filteredPosts.length > 1) || (activeTab === "users" && filteredUsers.length > 1) ? "s" : ""}
+              {" "}trouvé{(activeTab === "talents" && filteredTalents.length > 1) || (activeTab === "posts" && filteredPosts.length > 1) || (activeTab === "videos" && filteredVideos.length > 1) || (activeTab === "users" && filteredUsers.length > 1) ? "s" : ""}
             </p>
           </motion.div>
 
@@ -282,6 +314,20 @@ export default function DiscoverPage() {
               <span className="font-medium">Posts</span>
               <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
                 {filteredPosts.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("videos")}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all whitespace-nowrap ${
+                activeTab === "videos"
+                  ? "bg-violet-600 text-white"
+                  : "bg-white/5 text-gray-400 hover:bg-white/10"
+              }`}
+            >
+              <Video className="w-4 h-4" />
+              <span className="font-medium">Vidéos</span>
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                {filteredVideos.length}
               </span>
             </button>
             <button
@@ -407,8 +453,9 @@ export default function DiscoverPage() {
         <p className="text-gray-400 mb-8">
           {activeTab === "talents" && `${filteredTalents.length} talent${filteredTalents.length > 1 ? "s" : ""}`}
           {activeTab === "posts" && `${filteredPosts.length} post${filteredPosts.length > 1 ? "s" : ""}`}
+          {activeTab === "videos" && `${filteredVideos.length} vidéo${filteredVideos.length > 1 ? "s" : ""}`}
           {activeTab === "users" && `${filteredUsers.length} utilisateur${filteredUsers.length > 1 ? "s" : ""}`}
-          {" "}trouvé{(activeTab === "talents" && filteredTalents.length > 1) || (activeTab === "posts" && filteredPosts.length > 1) || (activeTab === "users" && filteredUsers.length > 1) ? "s" : ""}
+          {" "}trouvé{(activeTab === "talents" && filteredTalents.length > 1) || (activeTab === "posts" && filteredPosts.length > 1) || (activeTab === "videos" && filteredVideos.length > 1) || (activeTab === "users" && filteredUsers.length > 1) ? "s" : ""}
         </p>
 
         {/* Tabs + Filter Button */}
@@ -440,6 +487,20 @@ export default function DiscoverPage() {
               <span className="font-medium">Posts</span>
               <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
                 {filteredPosts.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab("videos")}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all ${
+                activeTab === "videos"
+                  ? "bg-violet-600 text-white"
+                  : "bg-white/5 text-gray-400 hover:bg-white/10"
+              }`}
+            >
+              <Video className="w-4 h-4" />
+              <span className="font-medium">Vidéos</span>
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                {filteredVideos.length}
               </span>
             </button>
             <button
@@ -704,7 +765,57 @@ export default function DiscoverPage() {
             )}
           </>
         )}
+
+        {/* Tab Vidéos */}
+        {activeTab === "videos" && (
+          <>
+            {filteredVideos.length > 0 ? (
+              <motion.div
+                layout
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              >
+                {filteredVideos.map((video, index) => (
+                  <motion.div
+                    key={video.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <VideoCard
+                      video={video}
+                      onClick={() => handleVideoClick(video.id)}
+                    />
+                  </motion.div>
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-20"
+              >
+                <div className="text-6xl mb-4">🎥</div>
+                <h3 className="text-xl font-semibold mb-2">Aucune vidéo trouvée</h3>
+                <p className="text-gray-400 mb-6">
+                  Essayez une autre recherche ou catégorie
+                </p>
+                <Button variant="outline" onClick={resetFilters}>
+                  Réinitialiser les filtres
+                </Button>
+              </motion.div>
+            )}
+          </>
+        )}
       </div>
+
+      {/* Video Player Modal */}
+      <VideoPlayer
+        videos={mockVideos}
+        initialIndex={selectedVideoIndex}
+        isOpen={isVideoPlayerOpen}
+        onClose={() => setIsVideoPlayerOpen(false)}
+      />
     </div>
   );
 }

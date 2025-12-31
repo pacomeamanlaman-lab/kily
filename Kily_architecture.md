@@ -556,6 +556,63 @@ Toutes les interactions frontend MVP sont complétées :
 - ✅ Settings (toggles, password/email/phone forms)
 - ✅ Micro-interactions (notifications badge, pull to refresh)
 
+### 🎥 Phase 1.75 - Système Vidéo (TikTok-like) ✅
+**Objectif : Intégration de vidéos talents dans l'app**
+
+#### Composants Créés
+* ✅ **VideoCard.tsx** - Vignette vidéo avec thumbnail, durée, stats
+  - Thumbnail avec overlay gradient
+  - Play button animé au hover
+  - Badge durée et vues
+  - Info auteur avec badge vérifié
+  - Stats (likes, commentaires)
+  - Hover effects avec Framer Motion
+
+* ✅ **VideoPlayer.tsx** - Player modal TikTok-like
+  - Player vidéo plein écran
+  - Swipe vertical pour naviguer (up/down)
+  - Controls: Play/Pause, Mute/Unmute, Progress bar
+  - Actions: Like, Comment, Share avec compteurs
+  - Info auteur en overlay
+  - Animations smooth avec Framer Motion
+  - Touch gestures pour mobile
+
+* ✅ **videoData.ts** - 8 vidéos mockées
+  - Vidéos gratuites (isPremium: false)
+  - Catégories variées (cuisine, tech, beauté, artisanat, etc.)
+  - Auteurs avec avatars et badges vérifiés
+  - Stats réalistes (vues, likes, comments, shares)
+
+#### Intégrations
+* ✅ **Feed Page** - Feed mixte posts + vidéos
+  - Alternance : 2 posts, 1 vidéo, 2 posts, 1 vidéo...
+  - VideoCard cliquable ouvrant VideoPlayer modal
+  - Intégré mobile & desktop
+
+* ✅ **Discover Page** - Tab "Vidéos" dédié
+  - 4ème tab "Vidéos" avec compteur dynamique
+  - Grid responsive (1-2-3-4 colonnes selon écran)
+  - Filtres par catégorie fonctionnels
+  - Search par titre, description, auteur
+  - Empty state avec emoji 🎥
+
+#### Features Vidéo
+- Format vertical 9:16 (format mobile-first)
+- Auto-play au chargement
+- Muted par défaut
+- Loop activé
+- Touch swipe pour next/prev vidéo (min 50px)
+- Like interactif (animation coeur rouge)
+- Compteurs animés (formatage K/M)
+- Modal full-screen avec backdrop blur
+- Close button (X) en haut
+- Navigation hints (swipe indicators)
+
+#### URLs Vidéos Utilisées
+- Google Test Videos (commondatastorage bucket)
+- Format: MP4, compatible tous navigateurs
+- Poids optimisé pour streaming
+
 ---
 
 ### 7.3 Phase 2 - Backend & Intégration
