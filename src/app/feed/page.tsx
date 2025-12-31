@@ -321,10 +321,7 @@ export default function FeedPage() {
                     key={index}
                     className="w-full flex items-center justify-between p-2 hover:bg-white/5 rounded-lg transition-all"
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{city.flag}</span>
-                      <span className="text-sm font-medium">{city.name}</span>
-                    </div>
+                    <span className="text-sm font-medium">{city.name}</span>
                     <span className="text-xs text-gray-400">{city.count}</span>
                   </button>
                 ))}

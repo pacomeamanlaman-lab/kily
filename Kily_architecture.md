@@ -5,11 +5,11 @@
 **Dernière mise à jour : 31 Décembre 2024**
 
 ### Statistiques
-- **Commits :** 15+ (main branch)
+- **Commits :** 16+ (main branch)
 - **Avancement MVP :** 100% ✅
 - **Pages complètes :** 13/13
 - **Composants créés :** 21+
-- **Lignes de code :** ~8500+
+- **Lignes de code :** ~9000+
 
 ### Fonctionnalités Opérationnelles ✅
 ✅ Landing page complète avec animations
@@ -32,13 +32,17 @@
 ✅ Boutons Follow/Unfollow interactifs
 ✅ Bouton Save/Unsave sur profils
 ✅ Notifications Toast avec animations
+✅ Layout 3 colonnes desktop (sidebar gauche + feed + sidebar droite)
 
 ### MVP Phase 1 - TERMINÉ 🎉
-✅ Toutes les pages essentielles
+✅ Toutes les pages essentielles (13/13)
 ✅ Navigation complète et fonctionnelle
 ✅ Design responsive mobile-first
-✅ Interactions utilisateur (likes, follows, messages)
+✅ Layout desktop 3 colonnes façon Facebook
+✅ Interactions utilisateur (likes, follows, save, messages)
 ✅ Données mockées complètes
+✅ Toast notifications pour feedback utilisateur
+✅ Sidebars avec navigation, tendances, et suggestions
 
 ### URL GitHub
 https://github.com/pacomeamanlaman-lab/kily
@@ -374,6 +378,9 @@ src/
 * ✅ Système de messaging avec conversations mockées
 * ✅ Settings complets (4 sections)
 * ✅ Design responsive mobile-first
+* ✅ Layout desktop 3 colonnes (sidebar gauche + feed + sidebar droite)
+* ✅ Sidebar gauche avec navigation principale (6 items)
+* ✅ Sidebar droite avec suggestions, tendances, villes actives
 * ✅ Animations Framer Motion partout
 * ✅ Notifications Toast avec auto-dismiss
 * ✅ Follow/Unfollow talents avec feedback
