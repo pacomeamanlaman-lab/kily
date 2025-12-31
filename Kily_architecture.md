@@ -2,14 +2,14 @@
 
 ## 📊 État Actuel du Projet
 
-**Dernière mise à jour : 30 Décembre 2024**
+**Dernière mise à jour : 31 Décembre 2024**
 
 ### Statistiques
-- **Commits :** 12+ (main branch)
+- **Commits :** 15+ (main branch)
 - **Avancement MVP :** 100% ✅
 - **Pages complètes :** 13/13
-- **Composants créés :** 20+
-- **Lignes de code :** ~8000+
+- **Composants créés :** 21+
+- **Lignes de code :** ~8500+
 
 ### Fonctionnalités Opérationnelles ✅
 ✅ Landing page complète avec animations
@@ -21,7 +21,7 @@
 ✅ Authentification simulée (login/register)
 ✅ Feed d'actualité avec stories et posts
 ✅ Recherche globale avec filtres
-✅ Système de messaging 1-to-1
+✅ Système de messaging 1-to-1 avec conversations
 ✅ Dashboard recruteur avec statistiques
 ✅ Page paramètres complète (4 sections)
 ✅ Validation formulaires temps réel
@@ -29,6 +29,9 @@
 ✅ États de chargement (skeletons)
 ✅ Modal de contact interactif
 ✅ Filtres par catégorie depuis landing
+✅ Boutons Follow/Unfollow interactifs
+✅ Bouton Save/Unsave sur profils
+✅ Notifications Toast avec animations
 
 ### MVP Phase 1 - TERMINÉ 🎉
 ✅ Toutes les pages essentielles
@@ -317,7 +320,7 @@ src/
 9. ✅ Profile User (/profile) - Profil personnel éditable, stats, settings preview
 
 **Pages Messaging :**
-10. ✅ Messages List (/messages) - Liste conversations, état vide, recherche
+10. ✅ Messages List (/messages) - Liste conversations mockées, recherche, online status, unread badges
 11. ✅ Conversation (/messages/[id]) - Chat 1-to-1, messages temps réel mockés, auto-scroll
 
 **Pages Recruteur :**
@@ -336,6 +339,7 @@ src/
 * BottomSheet (drawer mobile animé)
 * Skeleton (3 variants pour loading states)
 * StepIndicator (progression multi-étapes)
+* Toast (notifications avec 3 types: success, error, info)
 
 **Navigation :**
 * BottomNav (global, 4 tabs avec routing)
@@ -360,17 +364,20 @@ src/
 * ✅ Navigation complète inter-pages
 * ✅ Filtres avancés (recherche, catégories, villes)
 * ✅ Validation formulaires temps réel
-* ✅ Interactions sociales (likes, follows, messages)
+* ✅ Interactions sociales (likes, follows avec toggle, save talents, messages)
 * ✅ Bottom sheets pour mobile UX
 * ✅ Loading states avec skeletons
 * ✅ Page 404 personnalisée
 * ✅ Modal de contact interactif
 * ✅ Stories et posts feed
 * ✅ Dashboard recruteur
-* ✅ Système de messaging
+* ✅ Système de messaging avec conversations mockées
 * ✅ Settings complets (4 sections)
 * ✅ Design responsive mobile-first
 * ✅ Animations Framer Motion partout
+* ✅ Notifications Toast avec auto-dismiss
+* ✅ Follow/Unfollow talents avec feedback
+* ✅ Save/Unsave profils (favoris)
 * ✅ SEO basique (metadata, lang fr)
 
 ---

@@ -11,6 +11,7 @@ import {
   Briefcase,
   Star,
   User as UserIcon,
+  Heart,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { mockTalents, mockReviews } from "@/lib/mockData";
@@ -20,6 +21,7 @@ import Card from "@/components/ui/Card";
 import BottomSheet from "@/components/ui/BottomSheet";
 import SkillBadge from "@/components/talent/SkillBadge";
 import ReputationScore from "@/components/talent/ReputationScore";
+import Toast from "@/components/ui/Toast";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -28,6 +30,12 @@ export default function ProfilePage() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showReviewsDrawer, setShowReviewsDrawer] = useState(false);
   const [showPortfolioDrawer, setShowPortfolioDrawer] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
+    message: "",
+    type: "success",
+    visible: false,
+  });
 
   // Récupérer le talent depuis les données mockées
   const talent = mockTalents.find((t) => t.id === params.id);
@@ -45,6 +53,17 @@ export default function ProfilePage() {
     });
   };
 
+  const handleSave = () => {
+    setIsSaved(!isSaved);
+    setToast({
+      message: isSaved
+        ? `${talent.name} retiré des favoris`
+        : `${talent.name} ajouté aux favoris`,
+      type: isSaved ? "info" : "success",
+      visible: true,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-black text-white pb-20">
       {/* Header avec image de fond */}
@@ -56,13 +75,29 @@ export default function ProfilePage() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/80 to-black" />
 
-        {/* Bouton retour */}
-        <button
-          onClick={() => router.back()}
-          className="absolute top-6 left-4 sm:top-6 sm:left-6 p-2.5 sm:p-3 bg-black/50 backdrop-blur-lg rounded-full hover:bg-black/70 transition-all z-10"
-        >
-          <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-        </button>
+        {/* Boutons header */}
+        <div className="absolute top-6 left-4 right-4 sm:top-6 sm:left-6 sm:right-6 flex items-center justify-between z-10">
+          <button
+            onClick={() => router.back()}
+            className="p-2.5 sm:p-3 bg-black/50 backdrop-blur-lg rounded-full hover:bg-black/70 transition-all"
+          >
+            <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+          <button
+            onClick={handleSave}
+            className={`p-2.5 sm:p-3 backdrop-blur-lg rounded-full transition-all ${
+              isSaved
+                ? "bg-violet-600 hover:bg-violet-700"
+                : "bg-black/50 hover:bg-black/70"
+            }`}
+          >
+            <Heart
+              className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                isSaved ? "fill-white text-white" : "text-white"
+              }`}
+            />
+          </button>
+        </div>
 
         {/* Avatar et info principale */}
         <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-6 lg:px-8 pb-6">
@@ -484,6 +519,14 @@ export default function ProfilePage() {
           ))}
         </div>
       </BottomSheet>
+
+      {/* Toast */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.visible}
+        onClose={() => setToast((prev) => ({ ...prev, visible: false }))}
+      />
     </div>
   );
 }

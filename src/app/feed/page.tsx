@@ -1,21 +1,73 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sparkles, TrendingUp, Filter } from "lucide-react";
+import { Sparkles, TrendingUp, Filter, UserPlus, UserCheck } from "lucide-react";
 import PostCard from "@/components/feed/PostCard";
 import StoryCarousel from "@/components/feed/StoryCarousel";
 import { mockPosts, mockStories } from "@/lib/feedData";
 import Button from "@/components/ui/Button";
+import Toast from "@/components/ui/Toast";
 import { useState } from "react";
 
 export default function FeedPage() {
   const [filter, setFilter] = useState<"all" | "following" | "trending">("all");
+  const [followedTalents, setFollowedTalents] = useState<Set<number>>(new Set());
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
+    message: "",
+    type: "success",
+    visible: false,
+  });
 
   const filterOptions = [
     { value: "all" as const, label: "Tous", icon: Sparkles },
     { value: "following" as const, label: "Abonnements", icon: TrendingUp },
     { value: "trending" as const, label: "Tendances", icon: Filter },
   ];
+
+  const suggestedTalents = [
+    {
+      id: 1,
+      name: "Sarah Mensah",
+      skill: "Designer graphique",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+    },
+    {
+      id: 2,
+      name: "Ibrahim Diop",
+      skill: "Plombier",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
+    },
+    {
+      id: 3,
+      name: "Aïcha Kamara",
+      skill: "Pâtissière",
+      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400",
+    },
+  ];
+
+  const handleFollow = (talentId: number, talentName: string) => {
+    const isFollowing = followedTalents.has(talentId);
+
+    if (isFollowing) {
+      setFollowedTalents((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(talentId);
+        return newSet;
+      });
+      setToast({
+        message: `Vous ne suivez plus ${talentName}`,
+        type: "info",
+        visible: true,
+      });
+    } else {
+      setFollowedTalents((prev) => new Set(prev).add(talentId));
+      setToast({
+        message: `Vous suivez maintenant ${talentName}`,
+        type: "success",
+        visible: true,
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black text-white pb-20">
@@ -100,46 +152,56 @@ export default function FeedPage() {
         >
           <h2 className="text-lg font-bold mb-4">Talents suggérés</h2>
           <div className="space-y-4">
-            {[
-              {
-                name: "Sarah Mensah",
-                skill: "Designer graphique",
-                avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
-              },
-              {
-                name: "Ibrahim Diop",
-                skill: "Plombier",
-                avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400",
-              },
-              {
-                name: "Aïcha Kamara",
-                skill: "Pâtissière",
-                avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400",
-              },
-            ].map((talent, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <img
-                    src={talent.avatar}
-                    alt={talent.name}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div>
-                    <p className="font-semibold text-sm">{talent.name}</p>
-                    <p className="text-xs text-gray-400">{talent.skill}</p>
+            {suggestedTalents.map((talent, index) => {
+              const isFollowing = followedTalents.has(talent.id);
+
+              return (
+                <div
+                  key={talent.id}
+                  className="flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={talent.avatar}
+                      alt={talent.name}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <div>
+                      <p className="font-semibold text-sm">{talent.name}</p>
+                      <p className="text-xs text-gray-400">{talent.skill}</p>
+                    </div>
                   </div>
+                  <Button
+                    variant={isFollowing ? "secondary" : "primary"}
+                    size="sm"
+                    onClick={() => handleFollow(talent.id, talent.name)}
+                  >
+                    {isFollowing ? (
+                      <>
+                        <UserCheck className="w-4 h-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Suivi</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Suivre</span>
+                      </>
+                    )}
+                  </Button>
                 </div>
-                <Button variant="primary" size="sm">
-                  Suivre
-                </Button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </motion.div>
       </div>
+
+      {/* Toast */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.visible}
+        onClose={() => setToast((prev) => ({ ...prev, visible: false }))}
+      />
     </div>
   );
 }
