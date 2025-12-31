@@ -1,6 +1,23 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+
+// Hook pour détecter si on est sur mobile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+};
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart,
@@ -38,6 +55,7 @@ export default function VideoPlayer({
   onClose,
 }: VideoPlayerProps) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [currentVideoIndex, setCurrentVideoIndex] = useState(initialIndex);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -346,27 +364,29 @@ export default function VideoPlayer({
   }, [isOpen]);
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          ref={containerRef}
-          className="fixed inset-0 z-[9999] bg-black overflow-hidden"
-          style={{ 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0,
-            width: '100vw',
-            height: '100vh',
-            position: 'fixed'
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
+    <>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            key="video-player-container"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            ref={containerRef}
+            className="fixed inset-0 z-[9999] bg-black overflow-hidden"
+            style={{ 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0,
+              width: '100vw',
+              height: '100vh',
+              position: 'fixed'
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
           {/* Header */}
           <motion.header
             initial={{ y: -100 }}
@@ -469,6 +489,7 @@ export default function VideoPlayer({
                   <AnimatePresence>
                     {(showControls || !isPlaying) && (
                       <motion.div
+                        key="play-pause-overlay"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -511,6 +532,7 @@ export default function VideoPlayer({
                       <AnimatePresence>
                         {showControls && (
                           <motion.div
+                            key="progress-bar-controls"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 20 }}
@@ -653,28 +675,44 @@ export default function VideoPlayer({
             ))}
           </div>
         </motion.div>
-      )}
+        )}
+      </AnimatePresence>
 
-      {/* Comments Modal */}
+      {/* Comments Sidebar/Drawer */}
       <AnimatePresence>
         {showComments && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowComments(false)}
-            className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
-          >
+          <>
+            {/* Overlay pour mobile */}
             <motion.div
-              initial={{ y: "100%", opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: "100%", opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-gradient-to-b from-white/10 to-white/5 border border-white/20 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg max-h-[80vh] flex flex-col"
+              key="comments-overlay-mobile"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowComments(false)}
+              className="lg:hidden fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm"
+            />
+
+            {/* Sidebar Desktop / Drawer Mobile */}
+            <motion.div
+              key="comments-sidebar"
+              initial={{ 
+                x: isMobile ? 0 : "100%", // Desktop: slide depuis la droite, Mobile: pas d'animation x
+                y: isMobile ? "100%" : 0, // Mobile: slide depuis le bas, Desktop: pas d'animation y
+              }}
+              animate={{ 
+                x: 0, // Visible
+                y: 0, // Visible
+              }}
+              exit={{ 
+                x: isMobile ? 0 : "100%", // Desktop: slide vers la droite, Mobile: pas d'animation x
+                y: isMobile ? "100%" : 0, // Mobile: slide vers le bas, Desktop: pas d'animation y
+              }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed right-0 lg:top-0 bottom-0 lg:bottom-0 lg:w-96 w-full lg:rounded-none rounded-t-3xl z-[10001] bg-gradient-to-b from-black via-black/95 to-black lg:border-l border-t lg:border-t-0 border-white/10 flex flex-col shadow-2xl"
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <h2 className="text-xl font-bold">Commentaires ({comments.length})</h2>
+              <div className="flex items-center justify-between p-4 lg:p-6 border-b border-white/10 flex-shrink-0">
+                <h2 className="text-lg lg:text-xl font-bold">Commentaires ({comments.length})</h2>
                 <button
                   onClick={() => setShowComments(false)}
                   className="p-2 hover:bg-white/10 rounded-full transition-colors"
@@ -684,7 +722,7 @@ export default function VideoPlayer({
               </div>
 
               {/* Comments List */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
                 {comments.length === 0 && (
                   <div className="text-center py-8 text-gray-400">
                     <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -719,7 +757,7 @@ export default function VideoPlayer({
               </div>
 
               {/* Comment Input */}
-              <div className="p-4 border-t border-white/10">
+              <div className="p-4 border-t border-white/10 flex-shrink-0">
                 <div className="flex gap-3">
                   <img
                     src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400"
@@ -746,7 +784,7 @@ export default function VideoPlayer({
                 </div>
               </div>
             </motion.div>
-          </motion.div>
+          </>
         )}
       </AnimatePresence>
 
@@ -757,6 +795,6 @@ export default function VideoPlayer({
         isVisible={toast.visible}
         onClose={() => setToast((prev) => ({ ...prev, visible: false }))}
       />
-    </AnimatePresence>
+    </>
   );
 }
