@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Edit, Trash2, MapPin, TrendingUp, Users, Building2 } from "lucide-react";
 import StatsCardsCarousel from "@/components/admin/StatsCardsCarousel";
+import { abidjanCommunes } from "@/lib/locationData";
 
 interface City {
   id: string;
@@ -13,6 +14,13 @@ interface City {
   talentsCount: number;
   postsCount: number;
   growth: number; // percentage
+}
+
+interface Commune {
+  name: string;
+  usersCount: number;
+  talentsCount: number;
+  postsCount: number;
 }
 
 export default function CitiesPage() {
@@ -27,7 +35,20 @@ export default function CitiesPage() {
     { id: "8", name: "Casablanca", country: "Maroc", flag: "🇲🇦", usersCount: 156, talentsCount: 76, postsCount: 198, growth: 9 },
   ]);
 
+  // Mock data pour les communes d'Abidjan
+  const [abidjanCommunesData] = useState<Commune[]>([
+    { name: "Cocody", usersCount: 98, talentsCount: 56, postsCount: 145 },
+    { name: "Yopougon", usersCount: 87, talentsCount: 45, postsCount: 132 },
+    { name: "Abobo", usersCount: 76, talentsCount: 42, postsCount: 118 },
+    { name: "Marcory", usersCount: 65, talentsCount: 38, postsCount: 103 },
+    { name: "Adjamé", usersCount: 54, talentsCount: 32, postsCount: 89 },
+    { name: "Le Plateau", usersCount: 48, talentsCount: 28, postsCount: 76 },
+    { name: "Treichville", usersCount: 34, talentsCount: 21, postsCount: 55 },
+  ]);
+
   const sortedCities = [...cities].sort((a, b) => b.usersCount - a.usersCount);
+  const abidjanCity = cities.find(c => c.name === "Abidjan");
+  const sortedCommunes = [...abidjanCommunesData].sort((a, b) => b.usersCount - a.usersCount);
 
   return (
     <div className="p-6">
@@ -92,7 +113,7 @@ export default function CitiesPage() {
       />
 
       {/* Cities Table */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden mb-6">
         <div className="overflow-x-auto horizontal-scrollbar">
           <table className="w-full min-w-[800px]">
           <thead className="bg-white/5 border-b border-white/10">
@@ -184,6 +205,90 @@ export default function CitiesPage() {
         </table>
         </div>
       </div>
+
+      {/* Communes d'Abidjan Section */}
+      {abidjanCity && (
+        <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+          <div className="p-6 border-b border-white/10">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-violet-500/20 rounded-lg flex items-center justify-center">
+                <MapPin className="w-5 h-5 text-violet-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Communes d'Abidjan</h2>
+                <p className="text-sm text-gray-400">
+                  Répartition des utilisateurs par commune ({abidjanCommunesData.length} communes actives)
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="overflow-x-auto horizontal-scrollbar">
+            <table className="w-full min-w-[700px]">
+              <thead className="bg-white/5 border-b border-white/10">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Classement</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Commune</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Utilisateurs</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Talents</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Posts</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">% d'Abidjan</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {sortedCommunes.map((commune, index) => {
+                  const percentage = abidjanCity ? ((commune.usersCount / abidjanCity.usersCount) * 100).toFixed(1) : "0";
+                  return (
+                    <tr key={commune.name} className="hover:bg-white/5 transition-colors">
+                      {/* Rank */}
+                      <td className="px-6 py-4">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                          index === 0 ? "bg-violet-500/20 text-violet-400" :
+                          index === 1 ? "bg-violet-400/20 text-violet-300" :
+                          index === 2 ? "bg-violet-300/20 text-violet-200" :
+                          "bg-white/5 text-gray-400"
+                        }`}>
+                          {index + 1}
+                        </div>
+                      </td>
+
+                      {/* Commune */}
+                      <td className="px-6 py-4">
+                        <p className="font-semibold text-white">{commune.name}</p>
+                      </td>
+
+                      {/* Users Count */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 max-w-[100px]">
+                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-violet-500 rounded-full"
+                                style={{ width: `${(commune.usersCount / (abidjanCity?.usersCount || 1)) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                          <span className="text-white font-semibold">{commune.usersCount}</span>
+                        </div>
+                      </td>
+
+                      {/* Talents Count */}
+                      <td className="px-6 py-4 text-white">{commune.talentsCount}</td>
+
+                      {/* Posts Count */}
+                      <td className="px-6 py-4 text-white">{commune.postsCount}</td>
+
+                      {/* Percentage */}
+                      <td className="px-6 py-4">
+                        <span className="text-violet-400 font-semibold">{percentage}%</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

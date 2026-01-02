@@ -255,19 +255,7 @@ export const skillCategories = [
   { id: "autre", name: "Autre", count: 18 },
 ];
 
-export const cities = [
-  "Abidjan",
-  "Accra",
-  "Dakar",
-  "Yaoundé",
-  "Bamako",
-  "Ouagadougou",
-  "Kumasi",
-  "Tunis",
-  "Bobo-Dioulasso",
-  "Nairobi",
-  "Conakry",
-  "Lagos",
-  "Kinshasa",
-  "Douala",
-];
+// Import des villes depuis locationData pour compatibilité
+import { allCities } from "./locationData";
+
+export const cities = allCities;

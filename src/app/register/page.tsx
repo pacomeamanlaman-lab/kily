@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, User, Users, Briefcase, ChevronRight, Plus, Check, Search, X, Sparkles } from "lucide-react";
@@ -9,16 +9,19 @@ import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import StepIndicator from "@/components/ui/StepIndicator";
-import { cities } from "@/lib/mockData";
+import { countries, getCitiesByCountry, abidjanCommunes, requiresCommune } from "@/lib/locationData";
 
 type UserType = "talent" | "neighbor" | "recruiter";
 
 interface FormData {
   userType: UserType | null;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
+  country: string;
   city: string;
+  commune: string;
   bio: string;
   selectedSkills: Array<{name: string, category: string}>;
 }
@@ -28,10 +31,13 @@ export default function RegisterPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     userType: null,
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
+    country: "Côte d'Ivoire", // Pays pilote pré-sélectionné
     city: "",
+    commune: "",
     bio: "",
     selectedSkills: [],
   });
@@ -39,6 +45,7 @@ export default function RegisterPage() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [customSkill, setCustomSkill] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const buttonsRef = useRef<HTMLDivElement>(null);
 
   const steps = [
     { title: "Type de compte", description: "Choisissez votre profil" },
@@ -84,10 +91,16 @@ export default function RegisterPage() {
   const validateStep2 = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Le nom est requis";
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = "Le nom doit contenir au moins 2 caractères";
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = "Le prénom est requis";
+    } else if (formData.firstName.trim().length < 2) {
+      newErrors.firstName = "Le prénom doit contenir au moins 2 caractères";
+    }
+
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = "Le nom est requis";
+    } else if (formData.lastName.trim().length < 2) {
+      newErrors.lastName = "Le nom doit contenir au moins 2 caractères";
     }
 
     if (!formData.email.trim()) {
@@ -102,8 +115,19 @@ export default function RegisterPage() {
       newErrors.phone = "Numéro de téléphone invalide";
     }
 
+    if (!formData.country.trim()) {
+      newErrors.country = "Le pays est requis";
+    }
+
     if (!formData.city.trim()) {
       newErrors.city = "La ville est requise";
+    }
+
+    // Validation commune si nécessaire
+    if (requiresCommune(formData.country, formData.city)) {
+      if (!formData.commune.trim()) {
+        newErrors.commune = "La commune est requise pour Abidjan";
+      }
     }
 
     setErrors(newErrors);
@@ -115,13 +139,23 @@ export default function RegisterPage() {
     const newErrors = { ...errors };
 
     switch (field) {
-      case "name":
+      case "firstName":
         if (!value.trim()) {
-          newErrors.name = "Le nom est requis";
+          newErrors.firstName = "Le prénom est requis";
         } else if (value.trim().length < 2) {
-          newErrors.name = "Le nom doit contenir au moins 2 caractères";
+          newErrors.firstName = "Le prénom doit contenir au moins 2 caractères";
         } else {
-          delete newErrors.name;
+          delete newErrors.firstName;
+        }
+        break;
+
+      case "lastName":
+        if (!value.trim()) {
+          newErrors.lastName = "Le nom est requis";
+        } else if (value.trim().length < 2) {
+          newErrors.lastName = "Le nom doit contenir au moins 2 caractères";
+        } else {
+          delete newErrors.lastName;
         }
         break;
 
@@ -145,11 +179,39 @@ export default function RegisterPage() {
         }
         break;
 
+      case "country":
+        if (!value.trim()) {
+          newErrors.country = "Le pays est requis";
+        } else {
+          delete newErrors.country;
+          // Réinitialiser ville et commune si le pays change
+          if (formData.country !== value) {
+            setFormData(prev => ({ ...prev, city: "", commune: "" }));
+          }
+        }
+        break;
+
       case "city":
         if (!value.trim()) {
           newErrors.city = "La ville est requise";
         } else {
           delete newErrors.city;
+          // Réinitialiser commune si la ville change et n'est plus Abidjan
+          if (formData.city !== value && !requiresCommune(formData.country, value)) {
+            setFormData(prev => ({ ...prev, commune: "" }));
+          }
+        }
+        break;
+
+      case "commune":
+        if (requiresCommune(formData.country, formData.city)) {
+          if (!value.trim()) {
+            newErrors.commune = "La commune est requise pour Abidjan";
+          } else {
+            delete newErrors.commune;
+          }
+        } else {
+          delete newErrors.commune;
         }
         break;
     }
@@ -181,10 +243,13 @@ export default function RegisterPage() {
     } else if (currentStep === 2) {
       // Marquer tous les champs comme touchés pour afficher les erreurs
       setTouched({
-        name: true,
+        firstName: true,
+        lastName: true,
         email: true,
         phone: true,
+        country: true,
         city: true,
+        commune: requiresCommune(formData.country, formData.city),
       });
       
       isValid = validateStep2();
@@ -306,7 +371,7 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      <div className="flex-1 max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+      <div className="flex-1 max-w-2xl lg:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
         {/* Title Section */}
         <div className="mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold mb-2">
@@ -332,7 +397,7 @@ export default function RegisterPage() {
             exit={{ opacity: 0, x: -20 }}
           >
             <h2 className="text-2xl font-bold mb-6">Quel est votre profil ?</h2>
-            <div className="space-y-4">
+            <div className="space-y-4 lg:grid lg:grid-cols-3 lg:gap-6 lg:space-y-0">
               {userTypes.map((type) => {
                 const Icon = type.icon;
                 const isSelected = formData.userType === type.type;
@@ -341,26 +406,37 @@ export default function RegisterPage() {
                   <Card
                     key={type.type}
                     variant="hover"
-                    className={`p-6 cursor-pointer transition-all ${
+                    className={`p-6 lg:p-8 cursor-pointer transition-all ${
                       isSelected ? "border-violet-500 bg-violet-600/10" : ""
                     }`}
-                    onClick={() => setFormData({ ...formData, userType: type.type })}
+                    onClick={() => {
+                      setFormData({ ...formData, userType: type.type });
+                      // Scroll vers les boutons en desktop après un court délai
+                      if (window.innerWidth >= 1024) {
+                        setTimeout(() => {
+                          buttonsRef.current?.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'end' 
+                          });
+                        }, 300);
+                      }
+                    }}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 lg:flex-col lg:text-center">
                       <div
-                        className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        className={`w-12 h-12 lg:w-20 lg:h-20 rounded-xl flex items-center justify-center flex-shrink-0 ${
                           isSelected ? "bg-violet-600" : "bg-white/10"
                         }`}
                       >
-                        <Icon className="w-6 h-6" />
+                        <Icon className="w-6 h-6 lg:w-10 lg:h-10" />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-xl font-semibold mb-1">{type.title}</h3>
-                        <p className="text-gray-400 text-sm">{type.description}</p>
+                      <div className="flex-1 lg:flex-none">
+                        <h3 className="text-xl lg:text-2xl font-semibold mb-1 lg:mb-2">{type.title}</h3>
+                        <p className="text-gray-400 text-sm lg:text-base">{type.description}</p>
                       </div>
                       {isSelected && (
-                        <div className="w-6 h-6 bg-violet-600 rounded-full flex items-center justify-center">
-                          <ChevronRight className="w-4 h-4" />
+                        <div className="w-6 h-6 lg:w-10 lg:h-10 bg-violet-600 rounded-full flex items-center justify-center flex-shrink-0">
+                          <ChevronRight className="w-4 h-4 lg:w-6 lg:h-6" />
                         </div>
                       )}
                     </div>
@@ -381,44 +457,64 @@ export default function RegisterPage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
           >
-            <h2 className="text-2xl font-bold mb-6">Vos informations</h2>
+            <h2 className="text-2xl lg:text-3xl font-bold mb-6 lg:mb-8">Vos informations</h2>
             
             {/* Message d'erreur global si des champs sont invalides */}
             {Object.keys(errors).length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl"
+                className="mb-6 lg:mb-8 p-4 lg:p-6 bg-red-500/10 border border-red-500/30 rounded-xl"
               >
-                <p className="text-red-400 font-semibold mb-2">
+                <p className="text-red-400 font-semibold mb-2 lg:text-lg">
                   Veuillez corriger les erreurs suivantes :
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-sm text-red-300">
-                  {errors.name && <li>{errors.name}</li>}
+                <ul className="list-disc list-inside space-y-1 text-sm lg:text-base text-red-300">
+                  {errors.firstName && <li>{errors.firstName}</li>}
+                  {errors.lastName && <li>{errors.lastName}</li>}
                   {errors.email && <li>{errors.email}</li>}
                   {errors.phone && <li>{errors.phone}</li>}
+                  {errors.country && <li>{errors.country}</li>}
                   {errors.city && <li>{errors.city}</li>}
+                  {errors.commune && <li>{errors.commune}</li>}
                 </ul>
               </motion.div>
             )}
             
-            <div className="space-y-4">
+            <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0">
               <Input
-                label="Nom complet"
+                label="Nom"
                 type="text"
-                value={formData.name}
+                value={formData.lastName}
                 onChange={(e) => {
-                  setFormData({ ...formData, name: e.target.value });
-                  if (touched.name) {
-                    validateField("name", e.target.value);
+                  setFormData({ ...formData, lastName: e.target.value });
+                  if (touched.lastName) {
+                    validateField("lastName", e.target.value);
                   }
                 }}
                 onBlur={() => {
-                  setTouched({ ...touched, name: true });
-                  validateField("name", formData.name);
+                  setTouched({ ...touched, lastName: true });
+                  validateField("lastName", formData.lastName);
                 }}
-                error={touched.name ? errors.name : undefined}
-                placeholder="Ex: Amina Koné"
+                error={touched.lastName ? errors.lastName : undefined}
+                placeholder="Ex: Koné"
+              />
+              <Input
+                label="Prénom(s)"
+                type="text"
+                value={formData.firstName}
+                onChange={(e) => {
+                  setFormData({ ...formData, firstName: e.target.value });
+                  if (touched.firstName) {
+                    validateField("firstName", e.target.value);
+                  }
+                }}
+                onBlur={() => {
+                  setTouched({ ...touched, firstName: true });
+                  validateField("firstName", formData.firstName);
+                }}
+                error={touched.firstName ? errors.firstName : undefined}
+                placeholder="Ex: Amina"
               />
               <Input
                 label="Email"
@@ -455,44 +551,93 @@ export default function RegisterPage() {
                 placeholder="+225 XX XX XX XX XX"
               />
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm lg:text-base font-medium text-gray-300 mb-2 lg:mb-3">
+                  Pays
+                </label>
+                <div className="w-full px-4 py-3 lg:px-6 lg:py-4 bg-white/5 border border-white/10 rounded-xl text-white text-sm lg:text-base opacity-60 cursor-not-allowed">
+                  {formData.country}
+                </div>
+                <p className="text-xs lg:text-sm text-gray-400 mt-1.5 lg:mt-2">
+                  Disponible dans ce pays pour l'instant
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm lg:text-base font-medium text-gray-300 mb-2 lg:mb-3">
                   Ville
                 </label>
                 <select
                   value={formData.city}
                   onChange={(e) => {
-                    setFormData({ ...formData, city: e.target.value });
+                    const newCity = e.target.value;
+                    setFormData({ 
+                      ...formData, 
+                      city: newCity,
+                      commune: requiresCommune(formData.country, newCity) ? formData.commune : ""
+                    });
                     if (touched.city) {
-                      validateField("city", e.target.value);
+                      validateField("city", newCity);
                     }
                   }}
                   onBlur={() => {
                     setTouched({ ...touched, city: true });
                     validateField("city", formData.city);
                   }}
-                  className={`w-full px-4 py-3 bg-white/5 border ${
+                  disabled={!formData.country}
+                  className={`w-full px-4 py-3 lg:px-6 lg:py-4 bg-white/5 border ${
                     touched.city && errors.city ? "border-red-500" : "border-white/10"
-                  } rounded-xl text-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all`}
+                  } rounded-xl text-white text-sm lg:text-base focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  <option value="">Sélectionnez une ville</option>
-                  {cities.map((city) => (
-                    <option key={city} value={city} className="bg-black">
+                  <option value="" className="bg-gray-900 text-gray-400">{formData.country ? "Sélectionnez une ville" : "Sélectionnez d'abord un pays"}</option>
+                  {formData.country && getCitiesByCountry(formData.country).map((city) => (
+                    <option key={city} value={city} className="bg-gray-900 text-white">
                       {city}
                     </option>
                   ))}
                 </select>
                 {touched.city && errors.city && <p className="text-red-400 text-sm mt-1">{errors.city}</p>}
               </div>
+              {/* Champ commune uniquement si Côte d'Ivoire et Abidjan sont sélectionnés */}
+              {requiresCommune(formData.country, formData.city) && (
+                <div className="lg:col-span-2">
+                  <label className="block text-sm lg:text-base font-medium text-gray-300 mb-2 lg:mb-3">
+                    Commune à Abidjan
+                  </label>
+                  <select
+                    value={formData.commune}
+                    onChange={(e) => {
+                      setFormData({ ...formData, commune: e.target.value });
+                      if (touched.commune) {
+                        validateField("commune", e.target.value);
+                      }
+                    }}
+                    onBlur={() => {
+                      setTouched({ ...touched, commune: true });
+                      validateField("commune", formData.commune);
+                    }}
+                    className={`w-full px-4 py-3 lg:px-6 lg:py-4 bg-white/5 border ${
+                      touched.commune && errors.commune ? "border-red-500" : "border-white/10"
+                    } rounded-xl text-white text-sm lg:text-base focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all`}
+                  >
+                    <option value="" className="bg-gray-900 text-gray-400">Sélectionnez votre commune</option>
+                    {abidjanCommunes.map((commune) => (
+                      <option key={commune} value={commune} className="bg-gray-900 text-white">
+                        {commune}
+                      </option>
+                    ))}
+                  </select>
+                  {touched.commune && errors.commune && <p className="text-red-400 text-sm mt-1">{errors.commune}</p>}
+                </div>
+              )}
               {formData.userType === "talent" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                <div className="lg:col-span-2">
+                  <label className="block text-sm lg:text-base font-medium text-gray-300 mb-2 lg:mb-3">
                     Bio (optionnel)
                   </label>
                   <textarea
                     value={formData.bio}
                     onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                     rows={4}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all resize-none"
+                    className="w-full px-4 py-3 lg:px-6 lg:py-4 bg-white/5 border border-white/10 rounded-xl text-white text-sm lg:text-base placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all resize-none"
                     placeholder="Présentez-vous en quelques mots..."
                   />
                 </div>
@@ -575,7 +720,7 @@ export default function RegisterPage() {
               )}
 
               {/* Compétences prédéfinies */}
-              <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2">
+              <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 lg:max-h-[50vh]">
                 {Object.entries(getFilteredSkills()).length > 0 ? (
                   Object.entries(getFilteredSkills()).map(([category, skills]) => (
                     <div key={category}>
@@ -661,13 +806,13 @@ export default function RegisterPage() {
       </div>
 
       {/* Buttons - Sticky en bas */}
-      <div className="sticky bottom-0 z-30 bg-black/95 backdrop-blur-lg border-t border-white/10">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex gap-4">
-            <Button variant="secondary" onClick={handleBack} className="flex-1">
+      <div ref={buttonsRef} className="sticky bottom-0 z-30 bg-black/95 backdrop-blur-lg border-t border-white/10 lg:border-t-0 lg:bg-transparent lg:relative lg:mt-8">
+        <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-0">
+          <div className="flex gap-4 lg:justify-end">
+            <Button variant="secondary" onClick={handleBack} className="flex-1 lg:flex-none lg:min-w-[150px]">
               Retour
             </Button>
-            <Button variant="primary" onClick={handleNext} className="flex-1">
+            <Button variant="primary" onClick={handleNext} className="flex-1 lg:flex-none lg:min-w-[200px]">
               {currentStep === 3 || (currentStep === 2 && formData.userType !== "talent")
                 ? "Terminer"
                 : "Continuer"}
