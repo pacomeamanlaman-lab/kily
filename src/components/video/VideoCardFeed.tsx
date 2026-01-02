@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, MessageCircle, Share2, MoreHorizontal, CheckCircle, Play, Send, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Video } from "@/lib/videoData";
 import { mockComments } from "@/lib/feedData";
@@ -23,6 +24,7 @@ interface Comment {
 }
 
 export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
+  const router = useRouter();
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(video.likes);
   const [showComments, setShowComments] = useState(false);
@@ -108,7 +110,10 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.push(`/profile/${video.author.id}`)}
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+        >
           <div className="relative">
             <img
               src={video.author.avatar}
@@ -121,14 +126,14 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
               </div>
             )}
           </div>
-          <div>
+          <div className="text-left">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-white">{video.author.name}</h3>
             </div>
             <p className="text-sm text-gray-400 capitalize">{video.category}</p>
             <p className="text-xs text-gray-500">{getTimeAgo(video.createdAt)}</p>
           </div>
-        </div>
+        </button>
         <button className="text-gray-400 hover:text-white transition-colors">
           <MoreHorizontal className="w-5 h-5" />
         </button>
