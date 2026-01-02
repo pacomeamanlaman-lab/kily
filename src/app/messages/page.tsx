@@ -6,16 +6,20 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { loadConversations } from "@/lib/messages";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { getCurrentUser } from "@/lib/users";
 
-export default function MessagesPage() {
+function MessagesPageContent() {
   const router = useRouter();
   const scrollDirection = useScrollDirection({ threshold: 10 });
-  const currentUserId = "current_user";
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.id || null;
   const [searchQuery, setSearchQuery] = useState("");
   const [conversations, setConversations] = useState<any[]>([]);
 
   // Load conversations from localStorage
   useEffect(() => {
+    if (!currentUserId) return;
     const loadedConversations = loadConversations(currentUserId);
     // Transform to match UI format
     const formattedConversations = loadedConversations.map(conv => {
@@ -181,5 +185,13 @@ export default function MessagesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <ProtectedRoute>
+      <MessagesPageContent />
+    </ProtectedRoute>
   );
 }

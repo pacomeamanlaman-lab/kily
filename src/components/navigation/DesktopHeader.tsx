@@ -1,10 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Bell, Search, Sparkles, User } from "lucide-react";
-import { useState } from "react";
+import { Bell, Search, Sparkles, User, Settings, LogOut, ChevronDown, Home } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 import NotificationsSidebar from "@/components/notifications/NotificationsSidebar";
+import { getCurrentUser, getUserFullName } from "@/lib/users";
+import { logout, isLoggedIn } from "@/lib/auth";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface DesktopHeaderProps {
   unreadNotifications?: number;
@@ -16,13 +19,47 @@ export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [currentUser, setCurrentUser] = useState(getCurrentUser());
+  const menuRef = useRef<HTMLDivElement>(null);
   const scrollDirection = useScrollDirection({ threshold: 10 });
+
+  // Update user when it changes
+  useEffect(() => {
+    const handleUserUpdate = () => {
+      setCurrentUser(getCurrentUser());
+    };
+    window.addEventListener('userUpdated', handleUserUpdate);
+    return () => window.removeEventListener('userUpdated', handleUserUpdate);
+  }, []);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    if (showProfileMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showProfileMenu]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/discover?search=${encodeURIComponent(searchQuery)}`);
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
   };
 
   return (
@@ -35,7 +72,7 @@ export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide
         <div className="flex items-center justify-between gap-6">
           {/* Logo */}
           <button
-            onClick={() => router.push("/feed")}
+            onClick={() => router.push(isLoggedIn() ? "/feed" : "/")}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-lg flex items-center justify-center">
@@ -77,13 +114,93 @@ export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide
               </button>
             )}
 
-            {/* Avatar */}
-            <button
-              onClick={() => router.push("/profile")}
-              className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center hover:scale-105 transition-transform"
-            >
-              <User className="w-5 h-5" />
-            </button>
+            {/* Profile Menu */}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center gap-2 hover:bg-white/5 rounded-xl px-2 py-1.5 transition-colors"
+              >
+                {currentUser?.avatar ? (
+                  <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-violet-500/50">
+                    <img
+                      src={currentUser.avatar}
+                      alt={getUserFullName(currentUser) || "User"}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center">
+                    <User className="w-5 h-5" />
+                  </div>
+                )}
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Dropdown Menu */}
+              <AnimatePresence>
+                {showProfileMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute right-0 top-full mt-2 w-56 bg-black/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
+                  >
+                    {/* User Info */}
+                    <div className="px-4 py-3 border-b border-white/10">
+                      <p className="text-sm font-semibold text-white">
+                        {currentUser ? getUserFullName(currentUser) : "Utilisateur"}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">
+                        {currentUser?.email || ""}
+                      </p>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div className="py-2">
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          router.push("/feed");
+                        }}
+                        className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                      >
+                        <Home className="w-4 h-4" />
+                        <span className="text-sm">Accueil</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          router.push("/profile");
+                        }}
+                        className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                      >
+                        <User className="w-4 h-4" />
+                        <span className="text-sm">Mon profil</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          router.push("/settings");
+                        }}
+                        className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                      >
+                        <Settings className="w-4 h-4" />
+                        <span className="text-sm">Paramètres</span>
+                      </button>
+                      <div className="border-t border-white/10 my-1" />
+                      <button
+                        onClick={handleLogout}
+                        className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span className="text-sm">Déconnexion</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>

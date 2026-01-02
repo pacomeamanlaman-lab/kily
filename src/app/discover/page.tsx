@@ -16,8 +16,9 @@ import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
-export default function DiscoverPage() {
+function DiscoverPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const scrollDirection = useScrollDirection({ threshold: 10 });
@@ -1075,5 +1076,13 @@ export default function DiscoverPage() {
         onClose={() => setIsVideoPlayerOpen(false)}
       />
     </div>
+  );
+}
+
+export default function DiscoverPage() {
+  return (
+    <ProtectedRoute>
+      <DiscoverPageContent />
+    </ProtectedRoute>
   );
 }

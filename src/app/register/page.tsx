@@ -280,11 +280,38 @@ export default function RegisterPage() {
   };
 
   const handleSubmit = () => {
-    // Sauvegarder dans localStorage (temporaire)
-    localStorage.setItem("kily_user_data", JSON.stringify(formData));
+    // Import createUser dynamically to avoid SSR issues
+    import("@/lib/users").then(({ createUser }) => {
+      try {
+        // Create user in the system
+        const newUser = createUser({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          country: formData.country,
+          city: formData.city,
+          commune: formData.commune || undefined,
+          bio: formData.bio,
+          userType: formData.userType!,
+          selectedSkills: formData.selectedSkills,
+        });
 
-    // Rediriger vers feed
-    router.push("/feed");
+        // Also save in old format for backward compatibility
+        localStorage.setItem("kily_user_data", JSON.stringify(formData));
+        
+        // Login the user
+        import("@/lib/auth").then(({ login }) => {
+          login(formData.email);
+        });
+
+        // Rediriger vers feed
+        router.push("/feed");
+      } catch (error: any) {
+        // Handle error (e.g., email already exists)
+        setErrors({ email: error.message || "Une erreur est survenue" });
+      }
+    });
   };
 
   // Compétences prédéfinies par catégorie (même que profile)

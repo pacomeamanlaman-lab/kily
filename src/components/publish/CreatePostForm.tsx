@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Image as ImageIcon, X } from "lucide-react";
 import { showToast } from "@/lib/toast";
 import { createPost } from "@/lib/posts";
+import { getCurrentUser, getUserDisplayName, getUserFullName } from "@/lib/users";
 
 interface CreatePostFormProps {
   onSuccess: () => void;
@@ -63,16 +64,24 @@ export default function CreatePostForm({ onSuccess, onCancel }: CreatePostFormPr
     // Mock API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
+    // Get current user
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      showToast("Vous devez être connecté pour publier", "error");
+      setIsSubmitting(false);
+      return;
+    }
+
     // Save to localStorage
     const newPost = createPost({
       content,
       category,
       image: imagePreview || undefined,
       author: {
-        id: "current_user",
-        name: "Vous",
-        username: "@vous",
-        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+        id: currentUser.id,
+        name: getUserDisplayName(currentUser),
+        username: `@${currentUser.firstName.toLowerCase()}${currentUser.lastName.toLowerCase()}`,
+        avatar: currentUser.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
       },
     });
 

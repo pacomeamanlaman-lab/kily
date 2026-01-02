@@ -154,7 +154,9 @@ export const togglePostLike = (postId: string, userId: string): { liked: boolean
     post.likedBy = post.likedBy.filter((id) => id !== userId);
     post.likes = Math.max(0, post.likes - 1);
   } else {
-    post.likedBy.push(userId);
+    if (!post.likedBy.includes(userId)) {
+      post.likedBy.push(userId);
+    }
     post.likes += 1;
   }
 

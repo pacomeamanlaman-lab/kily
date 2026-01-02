@@ -1,15 +1,19 @@
 "use client";
 
-import { Camera, Edit, MapPin, Mail, Phone, Star, Award, Users, TrendingUp, X, Upload, Image as ImageIcon, Pencil, Plus, Check, Search } from "lucide-react";
-import { useState, useRef } from "react";
+import { Camera, Edit, MapPin, Mail, Phone, Star, Award, Users, TrendingUp, X, Upload, Image as ImageIcon, Pencil, Plus, Check, Search, ArrowLeft } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import SkillBadge from "@/components/talent/SkillBadge";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
 import { Skill, SkillCategory } from "@/types";
+import { getCurrentUser, updateUser, getUserFullName } from "@/lib/users";
+import { isLoggedIn } from "@/lib/auth";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingPortfolio, setIsAddingPortfolio] = useState(false);
   const [isAddingSkill, setIsAddingSkill] = useState(false);
@@ -19,6 +23,7 @@ export default function ProfilePage() {
   const [customSkill, setCustomSkill] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -28,7 +33,7 @@ export default function ProfilePage() {
     isVisible: false,
   });
 
-  // Mock user data - will be replaced with real user data from auth
+  // Load user data from localStorage
   const [user, setUser] = useState<{
     id: string;
     name: string;
@@ -49,61 +54,121 @@ export default function ProfilePage() {
     skills: Skill[];
     portfolio: Array<{ id: string; title: string; description: string; imageUrl: string }>;
     joinedDate: string;
-  }>({
-    id: "current-user",
-    name: "Utilisateur",
-    email: "user@example.com",
-    phone: "+225 07 00 00 00 00",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=CurrentUser",
-    coverImage: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200",
-    bio: "Complétez votre profil pour montrer vos talents au monde !",
-    userType: "talent" as const,
-    location: {
-      city: "Abidjan",
-      country: "Côte d'Ivoire",
-    },
-    verified: false,
-    rating: 0,
-    reviewCount: 0,
-    completedProjects: 0,
-    skills: [],
-    portfolio: [],
-    joinedDate: new Date().toISOString(),
-  });
+  } | null>(null);
+
+  // Load user on mount
+  useEffect(() => {
+    if (!isLoggedIn()) {
+      router.push("/login");
+      return;
+    }
+
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      router.push("/register");
+      return;
+    }
+
+    // Convert user data to profile format
+    const profileUser = {
+      id: currentUser.id,
+      name: getUserFullName(currentUser),
+      email: currentUser.email,
+      phone: currentUser.phone,
+      avatar: currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.firstName}${currentUser.lastName}`,
+      coverImage: currentUser.coverImage || "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200",
+      bio: currentUser.bio || "Complétez votre profil pour montrer vos talents au monde !",
+      userType: currentUser.userType,
+      location: {
+        city: currentUser.city,
+        country: currentUser.country,
+      },
+      verified: currentUser.verified,
+      rating: currentUser.rating,
+      reviewCount: currentUser.reviewCount,
+      completedProjects: currentUser.completedProjects,
+      skills: currentUser.selectedSkills.map(skill => ({
+        id: skill.name,
+        name: skill.name,
+        category: skill.category as SkillCategory,
+        level: "intermediate" as const,
+        verified: false,
+      })),
+      portfolio: currentUser.portfolio,
+      joinedDate: currentUser.joinedDate,
+    };
+
+    setUser(profileUser);
+    setFormData({
+      name: profileUser.name,
+      bio: profileUser.bio,
+      email: profileUser.email,
+      phone: profileUser.phone,
+      city: profileUser.location.city,
+    });
+    setSelectedSkills(currentUser.selectedSkills);
+    setLoading(false);
+  }, [router]);
 
   const [formData, setFormData] = useState({
-    name: user.name,
-    bio: user.bio,
-    email: user.email,
-    phone: user.phone,
-    city: user.location.city,
+    name: "",
+    bio: "",
+    email: "",
+    phone: "",
+    city: "",
   });
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
 
-    setUser({
-      ...user,
-      name: formData.name,
+    // Update user in localStorage
+    const updatedUser = updateUser(user.id, {
+      firstName: formData.name.split(' ')[0] || formData.name,
+      lastName: formData.name.split(' ').slice(1).join(' ') || '',
       bio: formData.bio,
       email: formData.email,
       phone: formData.phone,
-      location: {
-        ...user.location,
-        city: formData.city,
-      },
+      city: formData.city,
+      selectedSkills: selectedSkills,
+      portfolio: user.portfolio,
     });
 
-    setIsEditing(false);
-    setToast({
-      message: "Profil mis à jour avec succès !",
-      type: "success",
-      isVisible: true,
-    });
+    if (updatedUser) {
+      // Update local state
+      setUser({
+        ...user,
+        name: getUserFullName(updatedUser),
+        bio: updatedUser.bio,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        location: {
+          ...user.location,
+          city: updatedUser.city,
+        },
+        skills: updatedUser.selectedSkills.map(skill => ({
+          id: skill.name,
+          name: skill.name,
+          category: skill.category as SkillCategory,
+          level: "intermediate" as const,
+          verified: false,
+        })),
+      });
+
+      // Dispatch event to notify other components
+      window.dispatchEvent(new Event('userUpdated'));
+
+      setIsEditing(false);
+      setToast({
+        message: "Profil mis à jour avec succès !",
+        type: "success",
+        isVisible: true,
+      });
+    }
   };
 
   const processFiles = async (files: FileList) => {
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || !user) return;
 
     const newItems: Array<{ id: string; title: string; description: string; imageUrl: string }> = [];
 
@@ -117,7 +182,7 @@ export default function ProfilePage() {
 
       await new Promise((resolve) => {
         reader.onloadend = () => {
-          const portfolioItemNumber = user.portfolio.length + newItems.length + 1;
+          const portfolioItemNumber = (user?.portfolio.length || 0) + newItems.length + 1;
           newItems.push({
             id: `${Date.now()}-${i}`,
             title: `Portfolio item ${portfolioItemNumber}`,
@@ -186,6 +251,7 @@ export default function ProfilePage() {
   };
 
   const handleSaveEdit = () => {
+    if (!user) return;
     setUser({
       ...user,
       portfolio: user.portfolio.map((item) =>
@@ -204,10 +270,11 @@ export default function ProfilePage() {
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith('image/')) return;
+    if (!file || !file.type.startsWith('image/') || !user) return;
 
     const reader = new FileReader();
     reader.onloadend = () => {
+      if (!user) return;
       setUser({
         ...user,
         avatar: reader.result as string,
@@ -223,7 +290,7 @@ export default function ProfilePage() {
 
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith('image/')) return;
+    if (!file || !file.type.startsWith('image/') || !user) return;
 
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -273,7 +340,7 @@ export default function ProfilePage() {
   };
 
   const handleSaveSkills = () => {
-    if (selectedSkills.length === 0) return;
+    if (selectedSkills.length === 0 || !user) return;
 
     const newSkills: Skill[] = selectedSkills.map((skill, index) => ({
       id: `${Date.now()}-${index}`,
@@ -318,6 +385,18 @@ export default function ProfilePage() {
     return filtered;
   };
 
+  // Show loading state
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Chargement du profil...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white pb-20">
       {/* Cover Image */}
@@ -327,6 +406,13 @@ export default function ProfilePage() {
           alt="Cover"
           className="w-full h-full object-cover opacity-30"
         />
+        {/* Back Button */}
+        <button
+          onClick={() => router.push("/feed")}
+          className="absolute top-4 left-4 sm:top-6 sm:left-6 p-2.5 sm:p-3 bg-black/50 backdrop-blur-lg rounded-full hover:bg-black/70 transition-all z-10"
+        >
+          <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+        </button>
         <button
           onClick={() => coverInputRef.current?.click()}
           className="absolute bottom-4 right-4 bg-black/50 backdrop-blur-sm hover:bg-black/70 text-white p-2 rounded-full transition-colors"

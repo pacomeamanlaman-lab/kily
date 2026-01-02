@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { mockTalents, mockReviews } from "@/lib/mockData";
+import { getCurrentUser } from "@/lib/users";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
@@ -28,7 +29,8 @@ import { isTalentSaved, toggleSaveTalent } from "@/lib/savedTalents";
 export default function ProfilePage() {
   const router = useRouter();
   const params = useParams();
-  const currentUserId = "current_user";
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.id || null;
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showReviewsDrawer, setShowReviewsDrawer] = useState(false);
@@ -56,9 +58,10 @@ export default function ProfilePage() {
 
   // Load saved status from localStorage
   useEffect(() => {
+    if (!currentUserId) return;
     const saved = isTalentSaved(currentUserId, talent.id);
     setIsSaved(saved);
-  }, [talent.id]);
+  }, [talent.id, currentUserId]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -69,6 +72,14 @@ export default function ProfilePage() {
   };
 
   const handleSave = () => {
+    if (!currentUserId) {
+      setToast({
+        message: "Vous devez être connecté pour sauvegarder",
+        type: "error",
+        visible: true,
+      });
+      return;
+    }
     const result = toggleSaveTalent(currentUserId, talent.id);
     setIsSaved(result.saved);
     setToast({

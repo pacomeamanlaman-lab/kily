@@ -1,12 +1,14 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, MessageCircle, Share2, MoreHorizontal, CheckCircle, Send, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, CheckCircle, Send, X, Edit, Trash2, Flag, EyeOff, Copy, UserPlus, UserMinus, Link } from "lucide-react";
+import ShareModal from "@/components/share/ShareModal";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
 import { togglePostLike, isPostLiked, addComment, loadComments } from "@/lib/posts";
+import { getCurrentUser, getUserDisplayName } from "@/lib/users";
 
 export interface Post {
   id: string;
@@ -39,17 +41,24 @@ interface Comment {
 
 export default function PostCard({ post }: PostCardProps) {
   const router = useRouter();
-  const currentUserId = "current_user";
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.id || null;
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState("");
+  const [showMenu, setShowMenu] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
     type: "success",
     visible: false,
   });
+
+  // Check if post belongs to current user
+  const isOwnPost = currentUserId === post.author.id;
 
   // Load existing comments and like status on mount
   useEffect(() => {
@@ -63,11 +72,21 @@ export default function PostCard({ post }: PostCardProps) {
     }));
     setComments(formattedComments);
 
-    const isLiked = isPostLiked(post.id, currentUserId);
-    setLiked(isLiked);
-  }, [post.id]);
+    if (currentUserId) {
+      const isLiked = isPostLiked(post.id, currentUserId);
+      setLiked(isLiked);
+    }
+  }, [post.id, currentUserId]);
 
   const handleLike = () => {
+    if (!currentUserId) {
+      setToast({
+        message: "Vous devez être connecté pour liker",
+        type: "error",
+        visible: true,
+      });
+      return;
+    }
     const result = togglePostLike(post.id, currentUserId);
     setLiked(result.liked);
     setLikesCount(result.likesCount);
@@ -75,14 +94,23 @@ export default function PostCard({ post }: PostCardProps) {
 
   const handleAddComment = () => {
     if (!commentText.trim()) return;
+    
+    if (!currentUser) {
+      setToast({
+        message: "Vous devez être connecté pour commenter",
+        type: "error",
+        visible: true,
+      });
+      return;
+    }
 
     const newComment = addComment(
       post.id,
       commentText,
       {
-        name: "Vous",
-        username: "@vous",
-        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+        name: getUserDisplayName(currentUser),
+        username: `@${currentUser.firstName.toLowerCase()}${currentUser.lastName.toLowerCase()}`,
+        avatar: currentUser.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
       }
     );
 
@@ -104,11 +132,100 @@ export default function PostCard({ post }: PostCardProps) {
   };
 
   const handleShare = () => {
+    setShowShareModal(true);
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMenu]);
+
+  const handleCopyLink = () => {
+    const postUrl = `${window.location.origin}/post/${post.id}`;
+    navigator.clipboard.writeText(postUrl);
+    setShowMenu(false);
     setToast({
       message: "Lien copié dans le presse-papiers",
       type: "success",
       visible: true,
     });
+  };
+
+  const handleSharePost = () => {
+    setShowMenu(false);
+    setShowShareModal(true);
+  };
+
+  const handleDelete = () => {
+    setShowMenu(false);
+    setToast({
+      message: "Post supprimé",
+      type: "success",
+      visible: true,
+    });
+    // TODO: Implement delete post functionality
+  };
+
+  const handleEdit = () => {
+    setShowMenu(false);
+    setToast({
+      message: "Fonctionnalité à venir",
+      type: "info",
+      visible: true,
+    });
+    // TODO: Implement edit post functionality
+  };
+
+  const handleReport = () => {
+    setShowMenu(false);
+    setToast({
+      message: "Post signalé. Merci pour votre vigilance.",
+      type: "success",
+      visible: true,
+    });
+    // TODO: Implement report functionality
+  };
+
+  const handleHide = () => {
+    setShowMenu(false);
+    setToast({
+      message: "Post masqué",
+      type: "success",
+      visible: true,
+    });
+    // TODO: Implement hide post functionality
+  };
+
+  const handleFollow = () => {
+    setShowMenu(false);
+    setToast({
+      message: `Vous suivez maintenant ${post.author.name}`,
+      type: "success",
+      visible: true,
+    });
+    // TODO: Implement follow functionality
+  };
+
+  const handleUnfollow = () => {
+    setShowMenu(false);
+    setToast({
+      message: `Vous ne suivez plus ${post.author.name}`,
+      type: "info",
+      visible: true,
+    });
+    // TODO: Implement unfollow functionality
   };
 
   const getTimeAgo = (timestamp: string) => {
@@ -155,9 +272,103 @@ export default function PostCard({ post }: PostCardProps) {
             <p className="text-xs text-gray-500">{getTimeAgo(post.timestamp)}</p>
           </div>
         </button>
-        <button className="text-gray-400 hover:text-white transition-colors">
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="text-gray-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+          >
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+
+          {/* Menu Dropdown */}
+          <AnimatePresence>
+            {showMenu && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="absolute right-0 top-full mt-2 w-56 bg-black/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
+              >
+                {isOwnPost ? (
+                  // Menu for own posts
+                  <div className="py-2">
+                    <button
+                      onClick={handleEdit}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span className="text-sm">Modifier</span>
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span className="text-sm">Supprimer</span>
+                    </button>
+                    <div className="border-t border-white/10 my-1" />
+                    <button
+                      onClick={handleSharePost}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span className="text-sm">Partager</span>
+                    </button>
+                    <button
+                      onClick={handleCopyLink}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <Link className="w-4 h-4" />
+                      <span className="text-sm">Copier le lien</span>
+                    </button>
+                  </div>
+                ) : (
+                  // Menu for other users' posts
+                  <div className="py-2">
+                    <button
+                      onClick={handleFollow}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      <span className="text-sm">Suivre</span>
+                    </button>
+                    <div className="border-t border-white/10 my-1" />
+                    <button
+                      onClick={handleSharePost}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span className="text-sm">Partager</span>
+                    </button>
+                    <button
+                      onClick={handleCopyLink}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <Link className="w-4 h-4" />
+                      <span className="text-sm">Copier le lien</span>
+                    </button>
+                    <div className="border-t border-white/10 my-1" />
+                    <button
+                      onClick={handleHide}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <EyeOff className="w-4 h-4" />
+                      <span className="text-sm">Masquer</span>
+                    </button>
+                    <button
+                      onClick={handleReport}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      <Flag className="w-4 h-4" />
+                      <span className="text-sm">Signaler</span>
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Content */}
@@ -316,6 +527,15 @@ export default function PostCard({ post }: PostCardProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        url={`${typeof window !== 'undefined' ? window.location.origin : ''}/post/${post.id}`}
+        title={post.content.substring(0, 100)}
+        description={post.content}
+      />
 
       {/* Toast */}
       <Toast

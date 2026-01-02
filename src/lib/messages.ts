@@ -24,105 +24,15 @@ const CONVERSATIONS_KEY = "kily_conversations";
 
 // Initialize with default conversations/messages
 const getDefaultConversations = (): Conversation[] => {
-  return [
-    {
-      id: "conv_1",
-      participants: ["current_user", "1"], // current_user with Amina
-      lastMessage: "Merci pour votre intérêt !",
-      lastMessageAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      unreadCount: 2,
-      unreadBy: "current_user",
-    },
-    {
-      id: "conv_2",
-      participants: ["current_user", "2"], // current_user with Kofi
-      lastMessage: "Super, on peut discuter demain ?",
-      lastMessageAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      unreadCount: 0,
-      unreadBy: "",
-    },
-    {
-      id: "conv_3",
-      participants: ["current_user", "3"], // current_user with Sarah
-      lastMessage: "Je vous envoie mon portfolio",
-      lastMessageAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-      unreadCount: 1,
-      unreadBy: "current_user",
-    },
-  ];
+  // Return empty array - conversations will be created dynamically
+  // This prevents hardcoding "current_user"
+  return [];
 };
 
 const getDefaultMessages = (): Message[] => {
-  return [
-    // Conversation 1 (Amina)
-    {
-      id: "msg_1",
-      conversationId: "conv_1",
-      senderId: "1",
-      receiverId: "current_user",
-      content: "Bonjour ! J'ai vu votre profil et je suis intéressée par votre proposition.",
-      timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-      read: true,
-    },
-    {
-      id: "msg_2",
-      conversationId: "conv_1",
-      senderId: "current_user",
-      receiverId: "1",
-      content: "Bonjour Amina ! Ravi de vous lire. Pouvez-vous m'en dire plus sur votre expérience ?",
-      timestamp: new Date(Date.now() - 50 * 60 * 1000).toISOString(),
-      read: true,
-    },
-    {
-      id: "msg_3",
-      conversationId: "conv_1",
-      senderId: "1",
-      receiverId: "current_user",
-      content: "Bien sûr ! Je suis pâtissière depuis 5 ans et je me spécialise dans les desserts africains.",
-      timestamp: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
-      read: true,
-    },
-    {
-      id: "msg_4",
-      conversationId: "conv_1",
-      senderId: "1",
-      receiverId: "current_user",
-      content: "Merci pour votre intérêt !",
-      timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      read: false,
-    },
-
-    // Conversation 2 (Kofi)
-    {
-      id: "msg_5",
-      conversationId: "conv_2",
-      senderId: "current_user",
-      receiverId: "2",
-      content: "Salut Kofi ! J'ai besoin d'un développeur pour un projet mobile.",
-      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-      read: true,
-    },
-    {
-      id: "msg_6",
-      conversationId: "conv_2",
-      senderId: "2",
-      receiverId: "current_user",
-      content: "Super, on peut discuter demain ?",
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      read: true,
-    },
-
-    // Conversation 3 (Sarah)
-    {
-      id: "msg_7",
-      conversationId: "conv_3",
-      senderId: "3",
-      receiverId: "current_user",
-      content: "Je vous envoie mon portfolio",
-      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-      read: false,
-    },
-  ];
+  // Return empty array - messages will be created dynamically
+  // This prevents hardcoding "current_user"
+  return [];
 };
 
 // Load conversations from localStorage
@@ -151,16 +61,12 @@ const saveConversations = (conversations: Conversation[]): void => {
 
 // Load messages from localStorage
 export const loadMessages = (conversationId?: string): Message[] => {
-  if (typeof window === "undefined") return getDefaultMessages();
+  if (typeof window === "undefined") return [];
 
   const stored = localStorage.getItem(MESSAGES_KEY);
 
   if (!stored) {
-    const defaultMsgs = getDefaultMessages();
-    localStorage.setItem(MESSAGES_KEY, JSON.stringify(defaultMsgs));
-    return conversationId
-      ? defaultMsgs.filter((m) => m.conversationId === conversationId)
-      : defaultMsgs;
+    return [];
   }
 
   const allMessages: Message[] = JSON.parse(stored);
@@ -199,7 +105,9 @@ export const getOrCreateConversation = (userId1: string, userId2: string): Conve
     unreadBy: "",
   };
 
-  const allConvos = loadConversations("all"); // Load all conversations
+  // Load all conversations (we need to get all, not just for one user)
+  const stored = localStorage.getItem(CONVERSATIONS_KEY);
+  const allConvos: Conversation[] = stored ? JSON.parse(stored) : [];
   allConvos.push(newConvo);
   saveConversations(allConvos);
 

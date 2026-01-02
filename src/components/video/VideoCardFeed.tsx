@@ -1,14 +1,16 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, MessageCircle, Share2, MoreHorizontal, CheckCircle, Play, Send, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, CheckCircle, Play, Send, X, Edit, Trash2, Flag, EyeOff, Copy, UserPlus, UserMinus, Link } from "lucide-react";
+import ShareModal from "@/components/share/ShareModal";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Video } from "@/lib/videoData";
 import { mockComments } from "@/lib/feedData";
 import Toast from "@/components/ui/Toast";
 import { isVideoLiked, getVideoLikesCount, toggleVideoLike, initVideoLikesCount } from "@/lib/videoLikes";
+import { getCurrentUser } from "@/lib/users";
 
 interface VideoCardFeedProps {
   video: Video;
@@ -25,16 +27,24 @@ interface Comment {
 
 export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
   const router = useRouter();
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.id || null;
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(video.likes);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState("");
+  const [showMenu, setShowMenu] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
     type: "success",
     visible: false,
   });
+
+  // Check if video belongs to current user
+  const isOwnVideo = currentUserId === video.author.id;
   
   // Debug: log thumbnail info
   useEffect(() => {
@@ -70,11 +80,108 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setShowShareModal(true);
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMenu]);
+
+  const handleCopyLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const videoUrl = `${window.location.origin}/video/${video.id}`;
+    navigator.clipboard.writeText(videoUrl);
+    setShowMenu(false);
     setToast({
       message: "Lien copié dans le presse-papiers",
       type: "success",
       visible: true,
     });
+  };
+
+  const handleShareVideo = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    setShowShareModal(true);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    setToast({
+      message: "Vidéo supprimée",
+      type: "success",
+      visible: true,
+    });
+    // TODO: Implement delete video functionality
+  };
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    setToast({
+      message: "Fonctionnalité à venir",
+      type: "info",
+      visible: true,
+    });
+    // TODO: Implement edit video functionality
+  };
+
+  const handleReport = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    setToast({
+      message: "Vidéo signalée. Merci pour votre vigilance.",
+      type: "success",
+      visible: true,
+    });
+    // TODO: Implement report functionality
+  };
+
+  const handleHide = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    setToast({
+      message: "Vidéo masquée",
+      type: "success",
+      visible: true,
+    });
+    // TODO: Implement hide video functionality
+  };
+
+  const handleFollow = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    setToast({
+      message: `Vous suivez maintenant ${video.author.name}`,
+      type: "success",
+      visible: true,
+    });
+    // TODO: Implement follow functionality
+  };
+
+  const handleUnfollow = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    setToast({
+      message: `Vous ne suivez plus ${video.author.name}`,
+      type: "info",
+      visible: true,
+    });
+    // TODO: Implement unfollow functionality
   };
 
   const handleAddComment = () => {
@@ -146,9 +253,107 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
             <p className="text-xs text-gray-500">{getTimeAgo(video.createdAt)}</p>
           </div>
         </button>
-        <button className="text-gray-400 hover:text-white transition-colors">
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu(!showMenu);
+            }}
+            className="text-gray-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+          >
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+
+          {/* Menu Dropdown */}
+          <AnimatePresence>
+            {showMenu && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="absolute right-0 top-full mt-2 w-56 bg-black/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {isOwnVideo ? (
+                  // Menu for own videos
+                  <div className="py-2">
+                    <button
+                      onClick={handleEdit}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span className="text-sm">Modifier</span>
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span className="text-sm">Supprimer</span>
+                    </button>
+                    <div className="border-t border-white/10 my-1" />
+                    <button
+                      onClick={handleShareVideo}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span className="text-sm">Partager</span>
+                    </button>
+                    <button
+                      onClick={handleCopyLink}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <Link className="w-4 h-4" />
+                      <span className="text-sm">Copier le lien</span>
+                    </button>
+                  </div>
+                ) : (
+                  // Menu for other users' videos
+                  <div className="py-2">
+                    <button
+                      onClick={handleFollow}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      <span className="text-sm">Suivre</span>
+                    </button>
+                    <div className="border-t border-white/10 my-1" />
+                    <button
+                      onClick={handleShareVideo}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span className="text-sm">Partager</span>
+                    </button>
+                    <button
+                      onClick={handleCopyLink}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <Link className="w-4 h-4" />
+                      <span className="text-sm">Copier le lien</span>
+                    </button>
+                    <div className="border-t border-white/10 my-1" />
+                    <button
+                      onClick={handleHide}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                    >
+                      <EyeOff className="w-4 h-4" />
+                      <span className="text-sm">Masquer</span>
+                    </button>
+                    <button
+                      onClick={handleReport}
+                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      <Flag className="w-4 h-4" />
+                      <span className="text-sm">Signaler</span>
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Content */}
@@ -367,6 +572,15 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        url={`${typeof window !== 'undefined' ? window.location.origin : ''}/video/${video.id}`}
+        title={video.title}
+        description={video.description}
+      />
 
       {/* Toast */}
       <Toast

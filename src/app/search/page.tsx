@@ -9,6 +9,7 @@ import TalentCard from "@/components/talent/TalentCard";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 function SearchContent() {
   const router = useRouter();
@@ -205,17 +206,14 @@ function SearchContent() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-violet-500/10 border border-violet-500/30 rounded-full mb-6 animate-pulse">
-            <Search className="w-10 h-10 text-violet-500" />
-          </div>
+    <ProtectedRoute>
+      <Suspense fallback={
+        <div className="min-h-screen bg-black text-white flex items-center justify-center">
           <p className="text-gray-400">Chargement...</p>
         </div>
-      </div>
-    }>
-      <SearchContent />
-    </Suspense>
+      }>
+        <SearchContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }

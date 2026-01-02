@@ -34,8 +34,9 @@ import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 import NotificationsSidebar from "@/components/notifications/NotificationsSidebar";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
-export default function FeedPage() {
+function FeedPageContent() {
   const router = useRouter();
   const scrollDirection = useScrollDirection({ threshold: 10 });
   const [filter, setFilter] = useState<"all" | "following" | "trending">("all");
@@ -774,5 +775,13 @@ export default function FeedPage() {
         onClose={() => setShowNotifications(false)}
       />
     </div>
+  );
+}
+
+export default function FeedPage() {
+  return (
+    <ProtectedRoute>
+      <FeedPageContent />
+    </ProtectedRoute>
   );
 }

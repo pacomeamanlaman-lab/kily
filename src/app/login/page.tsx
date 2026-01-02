@@ -80,11 +80,22 @@ export default function LoginPage() {
 
       // Simulation de connexion (2 secondes)
       setTimeout(() => {
-        // Sauvegarder état de connexion avec helper
-        login(formData.email);
+        // Try to login
+        const success = login(formData.email);
+        
+        if (!success) {
+          // User not found - show error
+          setErrors({ email: "Aucun compte trouvé avec cet email" });
+          setIsLoading(false);
+          return;
+        }
 
         setIsLoading(false);
-        router.push("/feed");
+        
+        // Redirect to intended page or feed
+        const redirectPath = sessionStorage.getItem("redirectAfterLogin") || "/feed";
+        sessionStorage.removeItem("redirectAfterLogin");
+        router.push(redirectPath);
       }, 2000);
     }
   };

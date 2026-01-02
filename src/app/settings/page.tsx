@@ -21,8 +21,9 @@ import {
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Toast from "@/components/ui/Toast";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const router = useRouter();
   const scrollDirection = useScrollDirection({ threshold: 10 });
   const [activeTab, setActiveTab] = useState<"profile" | "notifications" | "privacy" | "security">("profile");
@@ -589,5 +590,13 @@ export default function SettingsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <ProtectedRoute>
+      <SettingsPageContent />
+    </ProtectedRoute>
   );
 }

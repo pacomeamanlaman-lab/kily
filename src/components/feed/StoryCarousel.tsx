@@ -5,6 +5,7 @@ import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import CreateStoryModal from "./CreateStoryModal";
 import { loadStories, markStoryAsViewed, isStoryViewed } from "@/lib/stories";
+import { getCurrentUser } from "@/lib/users";
 
 export interface Story {
   id: string;
@@ -22,7 +23,8 @@ interface StoryCarouselProps {
 }
 
 export default function StoryCarousel({ stories: initialStories }: StoryCarouselProps) {
-  const currentUserId = "current_user";
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.id || null;
   const [stories, setStories] = useState<Story[]>(initialStories || []);
   const [selectedStory, setSelectedStory] = useState<number | null>(null);
   const [viewedStories, setViewedStories] = useState<Set<string>>(new Set());
@@ -35,15 +37,17 @@ export default function StoryCarousel({ stories: initialStories }: StoryCarousel
       id: s.id,
       author: s.author,
       thumbnail: s.thumbnail,
-      viewed: isStoryViewed(s.id, currentUserId),
+      viewed: currentUserId ? isStoryViewed(s.id, currentUserId) : false,
     }));
     setStories(formattedStories);
-  }, [showCreateStoryModal]);
+  }, [showCreateStoryModal, currentUserId]);
 
   const handleStoryClick = (index: number, storyId: string) => {
     setSelectedStory(index);
     setViewedStories((prev) => new Set(prev).add(storyId));
-    markStoryAsViewed(storyId, currentUserId);
+    if (currentUserId) {
+      markStoryAsViewed(storyId, currentUserId);
+    }
   };
 
   const handleNext = () => {
@@ -51,7 +55,9 @@ export default function StoryCarousel({ stories: initialStories }: StoryCarousel
       const nextStory = stories[selectedStory + 1];
       setSelectedStory(selectedStory + 1);
       setViewedStories((prev) => new Set(prev).add(nextStory.id));
-      markStoryAsViewed(nextStory.id, currentUserId);
+      if (currentUserId) {
+        markStoryAsViewed(nextStory.id, currentUserId);
+      }
     } else {
       setSelectedStory(null);
     }

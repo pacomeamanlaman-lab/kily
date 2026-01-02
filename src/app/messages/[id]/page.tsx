@@ -13,6 +13,9 @@ import {
   Smile,
 } from "lucide-react";
 import { mockTalents } from "@/lib/mockData";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { getCurrentUser } from "@/lib/users";
+import { loadMessages, sendMessage } from "@/lib/messages";
 
 interface Message {
   id: string;
@@ -22,9 +25,12 @@ interface Message {
   isOwn: boolean;
 }
 
-export default function ConversationPage() {
+function ConversationPageContent() {
   const router = useRouter();
   const params = useParams();
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.id || null;
+  const conversationId = params.id as string;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messageInput, setMessageInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -32,30 +38,37 @@ export default function ConversationPage() {
   // Trouver le talent pour cette conversation
   const talent = mockTalents.find((t) => t.id === params.id);
 
-  // Messages mockés
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content: "Bonjour ! Merci de m'avoir contacté. Comment puis-je vous aider ?",
-      senderId: params.id as string,
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      isOwn: false,
-    },
-    {
-      id: "2",
-      content: "Bonjour ! J'ai vu votre profil et je suis très intéressé par vos services.",
-      senderId: "current-user",
-      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-      isOwn: true,
-    },
-    {
-      id: "3",
-      content: "Super ! Je serais ravi de discuter de votre projet. Quels sont vos besoins précis ?",
-      senderId: params.id as string,
-      timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      isOwn: false,
-    },
-  ]);
+  // Load messages from localStorage
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    if (!currentUserId || !conversationId) return;
+    
+    // Load existing messages for this conversation
+    const loadedMessages = loadMessages(conversationId);
+    const formattedMessages = loadedMessages.map(msg => ({
+      id: msg.id,
+      content: msg.content,
+      senderId: msg.senderId,
+      timestamp: msg.timestamp,
+      isOwn: msg.senderId === currentUserId,
+    }));
+    
+    // If no messages, add default ones
+    if (formattedMessages.length === 0) {
+      setMessages([
+        {
+          id: "1",
+          content: "Bonjour ! Merci de m'avoir contacté. Comment puis-je vous aider ?",
+          senderId: conversationId,
+          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          isOwn: false,
+        },
+      ]);
+    } else {
+      setMessages(formattedMessages);
+    }
+  }, [currentUserId, conversationId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -68,13 +81,21 @@ export default function ConversationPage() {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!messageInput.trim()) return;
+    if (!messageInput.trim() || !currentUserId || !conversationId) return;
+
+    // Send message using the messages library
+    const newMsg = sendMessage(
+      conversationId,
+      currentUserId,
+      conversationId,
+      messageInput
+    );
 
     const newMessage: Message = {
-      id: Date.now().toString(),
-      content: messageInput,
-      senderId: "current-user",
-      timestamp: new Date().toISOString(),
+      id: newMsg.id,
+      content: newMsg.content,
+      senderId: newMsg.senderId,
+      timestamp: newMsg.timestamp,
       isOwn: true,
     };
 
@@ -260,5 +281,13 @@ export default function ConversationPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ConversationPage() {
+  return (
+    <ProtectedRoute>
+      <ConversationPageContent />
+    </ProtectedRoute>
   );
 }

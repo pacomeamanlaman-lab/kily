@@ -5,6 +5,7 @@ import { X, Upload, Image as ImageIcon } from "lucide-react";
 import { useState } from "react";
 import { showToast } from "@/lib/toast";
 import { createStory } from "@/lib/stories";
+import { getCurrentUser, getUserDisplayName } from "@/lib/users";
 
 interface CreateStoryModalProps {
   isOpen: boolean;
@@ -58,13 +59,21 @@ export default function CreateStoryModal({ isOpen, onClose }: CreateStoryModalPr
     // Mock API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
+    // Get current user
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      showToast("Vous devez être connecté pour publier", "error");
+      setIsSubmitting(false);
+      return;
+    }
+
     // Save to localStorage
     const newStory = createStory({
       image: imagePreview,
       author: {
-        id: "current_user",
-        name: "Vous",
-        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+        id: currentUser.id,
+        name: getUserDisplayName(currentUser),
+        avatar: currentUser.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
       },
     });
 

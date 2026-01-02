@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
   TrendingUp,
@@ -17,9 +17,17 @@ import {
   Wrench,
   Camera,
   Menu,
-  X
+  X,
+  User,
+  Settings,
+  LogOut,
+  ChevronDown
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { isLoggedIn } from "@/lib/auth";
+import { getCurrentUser, getUserFullName } from "@/lib/users";
+import { logout } from "@/lib/auth";
 
 // Mock data pour les talents populaires
 const popularTalents = [
@@ -104,8 +112,13 @@ const features = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   const ref = useRef(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [currentUser, setCurrentUser] = useState<ReturnType<typeof getCurrentUser>>(null);
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
@@ -113,6 +126,58 @@ export default function Home() {
 
   const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
   const opacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
+
+  // Check if user is logged in and redirect to feed if connected
+  useEffect(() => {
+    const checkAuth = () => {
+      const loggedIn = isLoggedIn();
+      setIsUserLoggedIn(loggedIn);
+      if (loggedIn) {
+        setCurrentUser(getCurrentUser());
+        // Redirect to feed if user is logged in
+        router.push("/feed");
+      }
+    };
+    checkAuth();
+
+    const handleUserUpdate = () => {
+      checkAuth();
+    };
+    window.addEventListener('userUpdated', handleUserUpdate);
+    window.addEventListener('userLoggedIn', handleUserUpdate);
+    window.addEventListener('userLoggedOut', handleUserUpdate);
+
+    return () => {
+      window.removeEventListener('userUpdated', handleUserUpdate);
+      window.removeEventListener('userLoggedIn', handleUserUpdate);
+      window.removeEventListener('userLoggedOut', handleUserUpdate);
+    };
+  }, [router]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    if (showProfileMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showProfileMenu]);
+
+  const handleLogout = () => {
+    logout();
+    setShowProfileMenu(false);
+    setIsUserLoggedIn(false);
+    setCurrentUser(null);
+    router.push("/login");
+  };
 
   return (
     <div className="bg-black text-white min-h-screen overflow-x-hidden pb-20 sm:pb-0">
@@ -124,12 +189,15 @@ export default function Home() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <a href="/" className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+            <button
+              onClick={() => router.push(isUserLoggedIn ? "/feed" : "/")}
+              className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+            >
               <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5" />
               </div>
               <span className="text-xl font-bold">Kily</span>
-            </a>
+            </button>
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8">
@@ -140,25 +208,204 @@ export default function Home() {
             
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-4">
-              <a href="/login">
-                <button className="hover:text-violet-500 transition-colors">
-                  Connexion
-                </button>
-              </a>
-              <a href="/register">
-                <button className="bg-violet-600 hover:bg-violet-700 px-6 py-2 rounded-full font-medium transition-all hover:scale-105">
-                  S'inscrire
-                </button>
-              </a>
+              {isUserLoggedIn ? (
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    className="flex items-center gap-2 hover:bg-white/5 rounded-xl px-2 py-1.5 transition-colors"
+                  >
+                    {currentUser?.avatar ? (
+                      <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-violet-500/50">
+                        <img
+                          src={currentUser.avatar}
+                          alt={getUserFullName(currentUser) || "User"}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center">
+                        <User className="w-5 h-5" />
+                      </div>
+                    )}
+                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  <AnimatePresence>
+                    {showProfileMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute right-0 top-full mt-2 w-56 bg-black/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
+                      >
+                        {/* User Info */}
+                        <div className="px-4 py-3 border-b border-white/10">
+                          <p className="text-sm font-semibold text-white">
+                            {currentUser ? getUserFullName(currentUser) : "Utilisateur"}
+                          </p>
+                          <p className="text-xs text-gray-400 truncate">
+                            {currentUser?.email || ""}
+                          </p>
+                        </div>
+
+                        {/* Menu Items */}
+                        <div className="py-2">
+                          <button
+                            onClick={() => {
+                              setShowProfileMenu(false);
+                              router.push("/feed");
+                            }}
+                            className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            <span className="text-sm">Accueil</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowProfileMenu(false);
+                              router.push("/profile");
+                            }}
+                            className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                          >
+                            <User className="w-4 h-4" />
+                            <span className="text-sm">Mon profil</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowProfileMenu(false);
+                              router.push("/settings");
+                            }}
+                            className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                          >
+                            <Settings className="w-4 h-4" />
+                            <span className="text-sm">Paramètres</span>
+                          </button>
+                          <div className="border-t border-white/10 my-1" />
+                          <button
+                            onClick={handleLogout}
+                            className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-red-400 hover:bg-red-500/10 transition-colors"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span className="text-sm">Déconnexion</span>
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <>
+                  <a href="/login">
+                    <button className="hover:text-violet-500 transition-colors">
+                      Connexion
+                    </button>
+                  </a>
+                  <a href="/register">
+                    <button className="bg-violet-600 hover:bg-violet-700 px-6 py-2 rounded-full font-medium transition-all hover:scale-105">
+                      S'inscrire
+                    </button>
+                  </a>
+                </>
+              )}
             </div>
 
             {/* Mobile Actions */}
             <div className="flex md:hidden items-center gap-3">
-              <a href="/register">
-                <button className="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-full text-sm font-medium transition-all">
-                  S'inscrire
-                </button>
-              </a>
+              {isUserLoggedIn ? (
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    className="flex items-center gap-2 hover:bg-white/5 rounded-xl px-2 py-1.5 transition-colors"
+                  >
+                    {currentUser?.avatar ? (
+                      <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-violet-500/50">
+                        <img
+                          src={currentUser.avatar}
+                          alt={getUserFullName(currentUser) || "User"}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center">
+                        <User className="w-5 h-5" />
+                      </div>
+                    )}
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  <AnimatePresence>
+                    {showProfileMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute right-0 top-full mt-2 w-56 bg-black/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
+                      >
+                        {/* User Info */}
+                        <div className="px-4 py-3 border-b border-white/10">
+                          <p className="text-sm font-semibold text-white">
+                            {currentUser ? getUserFullName(currentUser) : "Utilisateur"}
+                          </p>
+                          <p className="text-xs text-gray-400 truncate">
+                            {currentUser?.email || ""}
+                          </p>
+                        </div>
+
+                        {/* Menu Items */}
+                        <div className="py-2">
+                          <button
+                            onClick={() => {
+                              setShowProfileMenu(false);
+                              router.push("/feed");
+                            }}
+                            className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            <span className="text-sm">Accueil</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowProfileMenu(false);
+                              router.push("/profile");
+                            }}
+                            className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                          >
+                            <User className="w-4 h-4" />
+                            <span className="text-sm">Mon profil</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowProfileMenu(false);
+                              router.push("/settings");
+                            }}
+                            className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                          >
+                            <Settings className="w-4 h-4" />
+                            <span className="text-sm">Paramètres</span>
+                          </button>
+                          <div className="border-t border-white/10 my-1" />
+                          <button
+                            onClick={handleLogout}
+                            className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-red-400 hover:bg-red-500/10 transition-colors"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span className="text-sm">Déconnexion</span>
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <a href="/register">
+                  <button className="bg-violet-600 hover:bg-violet-700 px-4 py-2 rounded-full text-sm font-medium transition-all">
+                    S'inscrire
+                  </button>
+                </a>
+              )}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -202,13 +449,55 @@ export default function Home() {
                 >
                   Fonctionnalités
                 </a>
-                <a
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="px-4 py-2 hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  Connexion
-                </a>
+                {!isUserLoggedIn && (
+                  <a
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="px-4 py-2 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    Connexion
+                  </a>
+                )}
+                {isUserLoggedIn && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push("/feed");
+                      }}
+                      className="px-4 py-2 hover:bg-white/10 rounded-lg transition-colors text-left"
+                    >
+                      Accueil
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push("/profile");
+                      }}
+                      className="px-4 py-2 hover:bg-white/10 rounded-lg transition-colors text-left"
+                    >
+                      Mon profil
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push("/settings");
+                      }}
+                      className="px-4 py-2 hover:bg-white/10 rounded-lg transition-colors text-left"
+                    >
+                      Paramètres
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      className="px-4 py-2 hover:bg-red-500/10 rounded-lg transition-colors text-left text-red-400"
+                    >
+                      Déconnexion
+                    </button>
+                  </>
+                )}
               </div>
             </motion.div>
           )}
