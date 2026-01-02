@@ -13,6 +13,7 @@ import {
   CheckCircle,
   TrendingUp
 } from "lucide-react";
+import StatsCardsCarousel from "@/components/admin/StatsCardsCarousel";
 
 interface Badge {
   id: string;
@@ -172,55 +173,52 @@ export default function ReputationPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-violet-600/20 to-violet-800/10 border border-violet-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-violet-500/20 rounded-lg flex items-center justify-center">
-              <Award className="w-5 h-5 text-violet-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{badges.length}</p>
-              <p className="text-xs text-gray-400">Badges disponibles</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-yellow-600/20 to-yellow-800/10 border border-yellow-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-              <Crown className="w-5 h-5 text-yellow-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{totalBadgesAwarded}</p>
-              <p className="text-xs text-gray-400">Badges attribués</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-green-600/20 to-green-800/10 border border-green-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-              <Star className="w-5 h-5 text-green-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{averageRating}</p>
-              <p className="text-xs text-gray-400">Note moyenne</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-pink-600/20 to-pink-800/10 border border-pink-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-pink-500/20 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-pink-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">+23%</p>
-              <p className="text-xs text-gray-400">Croissance avis</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <StatsCardsCarousel
+        cards={[
+          {
+            id: "badges",
+            icon: Award,
+            gradient: "from-violet-600/20 to-violet-800/10",
+            border: "border-violet-500/30",
+            bgIcon: "bg-violet-500/20",
+            textIcon: "text-violet-400",
+            label: "Badges disponibles",
+            value: badges.length.toString(),
+          },
+          {
+            id: "awarded",
+            icon: Crown,
+            gradient: "from-yellow-600/20 to-yellow-800/10",
+            border: "border-yellow-500/30",
+            bgIcon: "bg-yellow-500/20",
+            textIcon: "text-yellow-400",
+            label: "Badges attribués",
+            value: totalBadgesAwarded.toString(),
+          },
+          {
+            id: "rating",
+            icon: Star,
+            gradient: "from-green-600/20 to-green-800/10",
+            border: "border-green-500/30",
+            bgIcon: "bg-green-500/20",
+            textIcon: "text-green-400",
+            label: "Note moyenne",
+            value: averageRating.toString(),
+          },
+          {
+            id: "growth",
+            icon: TrendingUp,
+            gradient: "from-pink-600/20 to-pink-800/10",
+            border: "border-pink-500/30",
+            bgIcon: "bg-pink-500/20",
+            textIcon: "text-pink-400",
+            label: "Croissance avis",
+            value: "+23%",
+            change: "+23%",
+            changeColor: "text-pink-400",
+          },
+        ]}
+      />
 
       {/* Badges Grid */}
       <div className="mb-6">
@@ -277,7 +275,8 @@ export default function ReputationPage() {
       <div>
         <h2 className="text-xl font-bold mb-4">Top Talents par Note</h2>
         <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto horizontal-scrollbar">
+            <table className="w-full min-w-[700px]">
             <thead className="bg-white/5 border-b border-white/10">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Classement</th>
@@ -354,6 +353,7 @@ export default function ReputationPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>

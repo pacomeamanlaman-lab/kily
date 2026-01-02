@@ -11,8 +11,11 @@ import {
   MessageSquare,
   FileText,
   Video,
-  User
+  User,
+  MoreVertical,
+  ChevronDown
 } from "lucide-react";
+import StatsCardsCarousel from "@/components/admin/StatsCardsCarousel";
 
 interface Report {
   id: string;
@@ -41,6 +44,7 @@ interface Report {
 export default function ModerationPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
+  const [expandedActions, setExpandedActions] = useState<string | null>(null);
 
   // Mock data
   const mockReports: Report[] = [
@@ -177,55 +181,50 @@ export default function ModerationPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-yellow-600/20 to-yellow-800/10 border border-yellow-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-yellow-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{pendingCount}</p>
-              <p className="text-xs text-gray-400">En attente</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-green-600/20 to-green-800/10 border border-green-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{approvedCount}</p>
-              <p className="text-xs text-gray-400">Approuvés</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-red-600/20 to-red-800/10 border border-red-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
-              <XCircle className="w-5 h-5 text-red-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{rejectedCount}</p>
-              <p className="text-xs text-gray-400">Rejetés</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-violet-600/20 to-violet-800/10 border border-violet-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-violet-500/20 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-violet-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{mockReports.length}</p>
-              <p className="text-xs text-gray-400">Total</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <StatsCardsCarousel
+        cards={[
+          {
+            id: "pending",
+            icon: AlertTriangle,
+            gradient: "from-yellow-600/20 to-yellow-800/10",
+            border: "border-yellow-500/30",
+            bgIcon: "bg-yellow-500/20",
+            textIcon: "text-yellow-400",
+            label: "En attente",
+            value: pendingCount.toString(),
+          },
+          {
+            id: "approved",
+            icon: CheckCircle,
+            gradient: "from-green-600/20 to-green-800/10",
+            border: "border-green-500/30",
+            bgIcon: "bg-green-500/20",
+            textIcon: "text-green-400",
+            label: "Approuvés",
+            value: approvedCount.toString(),
+          },
+          {
+            id: "rejected",
+            icon: XCircle,
+            gradient: "from-red-600/20 to-red-800/10",
+            border: "border-red-500/30",
+            bgIcon: "bg-red-500/20",
+            textIcon: "text-red-400",
+            label: "Rejetés",
+            value: rejectedCount.toString(),
+          },
+          {
+            id: "total",
+            icon: AlertTriangle,
+            gradient: "from-violet-600/20 to-violet-800/10",
+            border: "border-violet-500/30",
+            bgIcon: "bg-violet-500/20",
+            textIcon: "text-violet-400",
+            label: "Total",
+            value: mockReports.length.toString(),
+          },
+        ]}
+      />
 
       {/* Filters */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
@@ -265,19 +264,19 @@ export default function ModerationPage() {
         {filteredReports.map((report) => (
           <div
             key={report.id}
-            className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-white/20 transition-all"
+            className="bg-white/5 border border-white/10 rounded-2xl p-4 lg:p-6 hover:border-white/20 transition-all"
           >
-            <div className="flex gap-4">
+            <div className="flex flex-col lg:flex-row gap-4">
               {/* Thumbnail/Avatar */}
               {report.reportedItem.thumbnail ? (
                 <img
                   src={report.reportedItem.thumbnail}
                   alt="Thumbnail"
-                  className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
+                  className="w-20 h-20 lg:w-24 lg:h-24 rounded-lg object-cover flex-shrink-0"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-lg bg-violet-500/20 flex items-center justify-center flex-shrink-0">
-                  <User className="w-12 h-12 text-violet-400" />
+                <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-lg bg-violet-500/20 flex items-center justify-center flex-shrink-0">
+                  <User className="w-10 h-10 lg:w-12 lg:h-12 text-violet-400" />
                 </div>
               )}
 
@@ -285,16 +284,16 @@ export default function ModerationPage() {
               <div className="flex-1">
                 {/* Header */}
                 <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getTypeBadge(report.type)}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <span className={`inline-flex items-center gap-1 px-2 lg:px-3 py-1 rounded-full text-xs font-medium border ${getTypeBadge(report.type)}`}>
                         {getTypeIcon(report.type, report.contentType)}
-                        {report.type === "content" ? "Contenu" : report.type === "user" ? "Utilisateur" : "Commentaire"}
+                        <span className="hidden sm:inline">{report.type === "content" ? "Contenu" : report.type === "user" ? "Utilisateur" : "Commentaire"}</span>
                       </span>
-                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(report.status)}`}>
+                      <span className={`inline-flex items-center gap-1 px-2 lg:px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(report.status)}`}>
                         {report.status === "pending" ? "En attente" : report.status === "approved" ? "Approuvé" : "Rejeté"}
                       </span>
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30">
+                      <span className="px-2 lg:px-3 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30">
                         {report.reportCount} signalement{report.reportCount > 1 ? "s" : ""}
                       </span>
                     </div>
@@ -330,24 +329,58 @@ export default function ModerationPage() {
 
                 {/* Actions */}
                 {report.status === "pending" && (
-                  <div className="flex items-center gap-2">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 transition-all cursor-pointer">
-                      <Eye className="w-4 h-4" />
-                      Voir détails
-                    </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 transition-all cursor-pointer">
-                      <CheckCircle className="w-4 h-4" />
-                      Approuver
-                    </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 transition-all cursor-pointer">
-                      <Trash2 className="w-4 h-4" />
-                      Supprimer
-                    </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-400 transition-all cursor-pointer">
-                      <Ban className="w-4 h-4" />
-                      Bannir auteur
-                    </button>
-                  </div>
+                  <>
+                    {/* Desktop Actions */}
+                    <div className="hidden lg:flex items-center gap-2">
+                      <button className="flex items-center gap-2 px-4 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 transition-all cursor-pointer">
+                        <Eye className="w-4 h-4" />
+                        Voir détails
+                      </button>
+                      <button className="flex items-center gap-2 px-4 py-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 transition-all cursor-pointer">
+                        <CheckCircle className="w-4 h-4" />
+                        Approuver
+                      </button>
+                      <button className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 transition-all cursor-pointer">
+                        <Trash2 className="w-4 h-4" />
+                        Supprimer
+                      </button>
+                      <button className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-400 transition-all cursor-pointer">
+                        <Ban className="w-4 h-4" />
+                        Bannir auteur
+                      </button>
+                    </div>
+
+                    {/* Mobile Actions */}
+                    <div className="lg:hidden relative">
+                      <button
+                        onClick={() => setExpandedActions(expandedActions === report.id ? null : report.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white transition-all w-full justify-between"
+                      >
+                        <span>Actions</span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${expandedActions === report.id ? 'rotate-180' : ''}`} />
+                      </button>
+                      {expandedActions === report.id && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-white/10 rounded-lg p-2 space-y-2 z-10">
+                          <button className="w-full flex items-center gap-2 px-3 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 transition-all text-sm">
+                            <Eye className="w-4 h-4" />
+                            Voir détails
+                          </button>
+                          <button className="w-full flex items-center gap-2 px-3 py-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 transition-all text-sm">
+                            <CheckCircle className="w-4 h-4" />
+                            Approuver
+                          </button>
+                          <button className="w-full flex items-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 transition-all text-sm">
+                            <Trash2 className="w-4 h-4" />
+                            Supprimer
+                          </button>
+                          <button className="w-full flex items-center gap-2 px-3 py-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-400 transition-all text-sm">
+                            <Ban className="w-4 h-4" />
+                            Bannir auteur
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             </div>

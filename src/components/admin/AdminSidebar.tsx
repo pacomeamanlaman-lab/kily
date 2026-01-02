@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   Users,
@@ -12,12 +13,20 @@ import {
   Star,
   Settings,
   LogOut,
-  Sparkles
+  Sparkles,
+  X
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function AdminSidebar({ isOpen = true, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   const menuItems = [
     {
@@ -79,12 +88,66 @@ export default function AdminSidebar() {
   const handleLogout = () => {
     // TODO: Implement logout logic
     router.push("/");
+    if (onClose) onClose();
   };
 
-  return (
-    <aside className="w-64 bg-gradient-to-b from-gray-900 to-black border-r border-white/10 flex flex-col">
+  const handleNavigation = (path: string) => {
+    router.push(path);
+    if (onClose) onClose();
+  };
+
+  // Close on click outside (mobile only)
+  useEffect(() => {
+    if (!onClose) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+        const isMobile = window.innerWidth < 1024;
+        if (isMobile) {
+          onClose();
+        }
+      }
+    };
+
+    if (isOpen) {
+      const isMobile = window.innerWidth < 1024;
+      if (isMobile) {
+        document.addEventListener("mousedown", handleClickOutside);
+      }
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
+  // Prevent body scroll when drawer is open on mobile
+  useEffect(() => {
+    if (!onClose) return;
+
+    const checkMobile = () => {
+      const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+      if (isOpen && isMobile) {
+        document.body.style.overflow = "hidden";
+      } else {
+        document.body.style.overflow = "";
+      }
+    };
+
+    checkMobile();
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen, onClose]);
+
+  const sidebarContent = (
+    <aside
+      ref={sidebarRef}
+      className="w-64 bg-gradient-to-b from-gray-900 to-black border-r border-white/10 flex flex-col h-full"
+    >
       {/* Logo */}
-      <div className="p-6 border-b border-white/10">
+      <div className="p-6 border-b border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-violet-700 rounded-xl flex items-center justify-center">
             <Sparkles className="w-6 h-6 text-white" />
@@ -94,6 +157,15 @@ export default function AdminSidebar() {
             <p className="text-xs text-gray-400">Super Admin</p>
           </div>
         </div>
+        {/* Close button - mobile only */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden p-2 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -106,7 +178,7 @@ export default function AdminSidebar() {
             return (
               <button
                 key={item.id}
-                onClick={() => router.push(item.path)}
+                onClick={() => handleNavigation(item.path)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all cursor-pointer ${
                   isActive
                     ? "bg-violet-600 text-white"
@@ -132,5 +204,51 @@ export default function AdminSidebar() {
         </button>
       </div>
     </aside>
+  );
+
+  // Desktop: always visible sidebar (no onClose means desktop mode)
+  if (!onClose) {
+    return (
+      <div className="hidden lg:block">
+        {sidebarContent}
+      </div>
+    );
+  }
+
+  // Mobile: drawer with animation
+  return (
+    <>
+      {/* Desktop Sidebar - Always visible */}
+      <div className="hidden lg:block">
+        {sidebarContent}
+      </div>
+
+      {/* Mobile Drawer */}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onClose}
+              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            />
+
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: -256 }}
+              animate={{ x: 0 }}
+              exit={{ x: -256 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed left-0 top-0 bottom-0 z-50 lg:hidden"
+            >
+              {sidebarContent}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Edit, Trash2, MapPin, TrendingUp } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, TrendingUp, Users, Building2 } from "lucide-react";
+import StatsCardsCarousel from "@/components/admin/StatsCardsCarousel";
 
 interface City {
   id: string;
@@ -43,33 +44,57 @@ export default function CitiesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <p className="text-gray-400 text-sm mb-1">Total Villes</p>
-          <p className="text-3xl font-bold text-white">{cities.length}</p>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <p className="text-gray-400 text-sm mb-1">Total Utilisateurs</p>
-          <p className="text-3xl font-bold text-white">
-            {cities.reduce((sum, city) => sum + city.usersCount, 0)}
-          </p>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <p className="text-gray-400 text-sm mb-1">Ville la Plus Active</p>
-          <p className="text-xl font-bold text-white">{sortedCities[0]?.name}</p>
-          <p className="text-sm text-gray-400">{sortedCities[0]?.usersCount} utilisateurs</p>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <p className="text-gray-400 text-sm mb-1">Croissance Moyenne</p>
-          <p className="text-3xl font-bold text-green-400">
-            +{Math.round(cities.reduce((sum, city) => sum + city.growth, 0) / cities.length)}%
-          </p>
-        </div>
-      </div>
+      <StatsCardsCarousel
+        cards={[
+          {
+            id: "total",
+            icon: MapPin,
+            gradient: "from-blue-600/20 to-blue-800/10",
+            border: "border-blue-500/30",
+            bgIcon: "bg-blue-500/20",
+            textIcon: "text-blue-400",
+            label: "Total Villes",
+            value: cities.length.toString(),
+          },
+          {
+            id: "users",
+            icon: Users,
+            gradient: "from-violet-600/20 to-violet-800/10",
+            border: "border-violet-500/30",
+            bgIcon: "bg-violet-500/20",
+            textIcon: "text-violet-400",
+            label: "Total Utilisateurs",
+            value: cities.reduce((sum, city) => sum + city.usersCount, 0).toString(),
+          },
+          {
+            id: "active",
+            icon: Building2,
+            gradient: "from-orange-600/20 to-orange-800/10",
+            border: "border-orange-500/30",
+            bgIcon: "bg-orange-500/20",
+            textIcon: "text-orange-400",
+            label: sortedCities[0]?.name || "Ville la Plus Active",
+            value: sortedCities[0]?.usersCount.toString() || "0",
+          },
+          {
+            id: "growth",
+            icon: TrendingUp,
+            gradient: "from-green-600/20 to-green-800/10",
+            border: "border-green-500/30",
+            bgIcon: "bg-green-500/20",
+            textIcon: "text-green-400",
+            label: "Croissance Moyenne",
+            value: `+${Math.round(cities.reduce((sum, city) => sum + city.growth, 0) / cities.length)}%`,
+            change: `+${Math.round(cities.reduce((sum, city) => sum + city.growth, 0) / cities.length)}%`,
+            changeColor: "text-green-400",
+          },
+        ]}
+      />
 
       {/* Cities Table */}
       <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-        <table className="w-full">
+        <div className="overflow-x-auto horizontal-scrollbar">
+          <table className="w-full min-w-[800px]">
           <thead className="bg-white/5 border-b border-white/10">
             <tr>
               <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Classement</th>
@@ -157,6 +182,7 @@ export default function CitiesPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

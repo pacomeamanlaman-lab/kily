@@ -5,6 +5,7 @@ import DesktopHeader from "./DesktopHeader";
 
 const PAGES_WITH_HEADER = ["/feed", "/discover", "/messages"];
 const PAGES_WITHOUT_AUTO_HIDE = ["/feed"]; // Pages where header stays visible
+const PAGES_WITH_NOTIFICATIONS = ["/feed"]; // Pages where notification bell should be visible
 
 export default function ConditionalDesktopHeader() {
   const pathname = usePathname();
@@ -23,5 +24,10 @@ export default function ConditionalDesktopHeader() {
     pathname === path || pathname.startsWith(`${path}/`)
   );
 
-  return <DesktopHeader disableAutoHide={disableAutoHide} />;
+  // Check if notifications should be shown (only on feed page)
+  const showNotifications = PAGES_WITH_NOTIFICATIONS.some((path) =>
+    pathname === path || pathname.startsWith(`${path}/`)
+  );
+
+  return <DesktopHeader disableAutoHide={disableAutoHide} showNotifications={showNotifications} />;
 }

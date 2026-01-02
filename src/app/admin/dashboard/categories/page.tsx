@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Edit, Trash2, Code, Palette, Briefcase, Music, Sparkles, Dumbbell, ChefHat, Wrench } from "lucide-react";
+import { Plus, Edit, Trash2, Code, Palette, Briefcase, Music, Sparkles, Dumbbell, ChefHat, Wrench, Tag, Users, FileText } from "lucide-react";
+import StatsCardsCarousel from "@/components/admin/StatsCardsCarousel";
 
 interface Category {
   id: string;
@@ -53,24 +54,40 @@ export default function CategoriesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <p className="text-gray-400 text-sm mb-1">Total Catégories</p>
-          <p className="text-3xl font-bold text-white">{categories.length}</p>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <p className="text-gray-400 text-sm mb-1">Total Talents</p>
-          <p className="text-3xl font-bold text-white">
-            {categories.reduce((sum, cat) => sum + cat.talentsCount, 0)}
-          </p>
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <p className="text-gray-400 text-sm mb-1">Total Posts</p>
-          <p className="text-3xl font-bold text-white">
-            {categories.reduce((sum, cat) => sum + cat.postsCount, 0)}
-          </p>
-        </div>
-      </div>
+      <StatsCardsCarousel
+        cards={[
+          {
+            id: "categories",
+            icon: Tag,
+            gradient: "from-violet-600/20 to-violet-800/10",
+            border: "border-violet-500/30",
+            bgIcon: "bg-violet-500/20",
+            textIcon: "text-violet-400",
+            label: "Total Catégories",
+            value: categories.length.toString(),
+          },
+          {
+            id: "talents",
+            icon: Users,
+            gradient: "from-pink-600/20 to-pink-800/10",
+            border: "border-pink-500/30",
+            bgIcon: "bg-pink-500/20",
+            textIcon: "text-pink-400",
+            label: "Total Talents",
+            value: categories.reduce((sum, cat) => sum + cat.talentsCount, 0).toString(),
+          },
+          {
+            id: "posts",
+            icon: FileText,
+            gradient: "from-orange-600/20 to-orange-800/10",
+            border: "border-orange-500/30",
+            bgIcon: "bg-orange-500/20",
+            textIcon: "text-orange-400",
+            label: "Total Posts",
+            value: categories.reduce((sum, cat) => sum + cat.postsCount, 0).toString(),
+          },
+        ]}
+      />
 
       {/* Categories Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

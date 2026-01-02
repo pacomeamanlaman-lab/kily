@@ -43,14 +43,14 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold mb-2">Paramètres de la Plateforme</h1>
-          <p className="text-gray-400">Configurez les paramètres globaux de Kily</p>
+          <h1 className="text-xl sm:text-2xl font-bold mb-2">Paramètres de la Plateforme</h1>
+          <p className="text-sm sm:text-base text-gray-400">Configurez les paramètres globaux de Kily</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <button
             onClick={handleReset}
             className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white font-medium transition-all cursor-pointer"
@@ -279,13 +279,14 @@ export default function SettingsPage() {
       </div>
 
       {/* Save Button (Fixed Bottom) */}
-      <div className="fixed bottom-6 right-6">
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-10">
         <button
           onClick={handleSave}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 rounded-xl text-white font-medium shadow-lg shadow-violet-500/50 transition-all cursor-pointer"
+          className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 rounded-lg sm:rounded-xl text-white text-sm sm:text-base font-medium shadow-lg shadow-violet-500/50 transition-all cursor-pointer"
         >
-          <Save className="w-5 h-5" />
-          Sauvegarder les Modifications
+          <Save className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="hidden sm:inline">Sauvegarder les Modifications</span>
+          <span className="sm:hidden">Sauvegarder</span>
         </button>
       </div>
     </div>

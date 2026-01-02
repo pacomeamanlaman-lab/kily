@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MessageSquare, TrendingUp, Users, Clock, Eye, Flag } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import StatsCardsCarousel from "@/components/admin/StatsCardsCarousel";
 
 interface Conversation {
   id: string;
@@ -97,70 +98,67 @@ export default function MessagesPage() {
   const reportedConversations = mockConversations.filter(c => c.reported).length;
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Monitoring Messages</h1>
-        <p className="text-gray-400">Surveillez l'activité des messages sur la plateforme</p>
+        <h1 className="text-xl sm:text-2xl font-bold mb-2">Monitoring Messages</h1>
+        <p className="text-sm sm:text-base text-gray-400">Surveillez l'activité des messages sur la plateforme</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-violet-600/20 to-violet-800/10 border border-violet-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-violet-500/20 rounded-lg flex items-center justify-center">
-              <MessageSquare className="w-5 h-5 text-violet-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{totalMessages}</p>
-              <p className="text-xs text-gray-400">Messages (7j)</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/10 border border-blue-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-              <Users className="w-5 h-5 text-blue-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{activeConversations}</p>
-              <p className="text-xs text-gray-400">Conversations actives</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-green-600/20 to-green-800/10 border border-green-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-green-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">+18%</p>
-              <p className="text-xs text-gray-400">Croissance</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-red-600/20 to-red-800/10 border border-red-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
-              <Flag className="w-5 h-5 text-red-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{reportedConversations}</p>
-              <p className="text-xs text-gray-400">Conversations signalées</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <StatsCardsCarousel
+        cards={[
+          {
+            id: "messages",
+            icon: MessageSquare,
+            gradient: "from-violet-600/20 to-violet-800/10",
+            border: "border-violet-500/30",
+            bgIcon: "bg-violet-500/20",
+            textIcon: "text-violet-400",
+            label: "Messages (7j)",
+            value: totalMessages.toString(),
+          },
+          {
+            id: "conversations",
+            icon: Users,
+            gradient: "from-blue-600/20 to-blue-800/10",
+            border: "border-blue-500/30",
+            bgIcon: "bg-blue-500/20",
+            textIcon: "text-blue-400",
+            label: "Conversations actives",
+            value: activeConversations.toString(),
+          },
+          {
+            id: "growth",
+            icon: TrendingUp,
+            gradient: "from-green-600/20 to-green-800/10",
+            border: "border-green-500/30",
+            bgIcon: "bg-green-500/20",
+            textIcon: "text-green-400",
+            label: "Croissance",
+            value: "+18%",
+            change: "+18%",
+            changeColor: "text-green-400",
+          },
+          {
+            id: "reported",
+            icon: Flag,
+            gradient: "from-red-600/20 to-red-800/10",
+            border: "border-red-500/30",
+            bgIcon: "bg-red-500/20",
+            textIcon: "text-red-400",
+            label: "Conversations signalées",
+            value: reportedConversations.toString(),
+          },
+        ]}
+      />
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
         {/* Messages per Day */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-          <h3 className="text-lg font-bold mb-4">Messages par Jour (7 derniers jours)</h3>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Messages par Jour (7 derniers jours)</h3>
+          <ResponsiveContainer width="100%" height={250}>
             <LineChart data={messagesData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#333" />
               <XAxis dataKey="name" stroke="#9ca3af" />
@@ -176,9 +174,9 @@ export default function MessagesPage() {
         </div>
 
         {/* Messages by Hour */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-          <h3 className="text-lg font-bold mb-4">Activité par Heure</h3>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Activité par Heure</h3>
+          <ResponsiveContainer width="100%" height={250}>
             <BarChart data={hourlyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#333" />
               <XAxis dataKey="hour" stroke="#9ca3af" />
@@ -195,8 +193,8 @@ export default function MessagesPage() {
       </div>
 
       {/* Recent Conversations */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-        <h3 className="text-lg font-bold mb-4">Conversations Récentes</h3>
+      <div className="bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Conversations Récentes</h3>
         <div className="space-y-4">
           {mockConversations.map((conversation) => (
             <div

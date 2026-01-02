@@ -4,15 +4,18 @@ import { useRouter } from "next/navigation";
 import { Bell, Search, Sparkles, User } from "lucide-react";
 import { useState } from "react";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
+import NotificationsSidebar from "@/components/notifications/NotificationsSidebar";
 
 interface DesktopHeaderProps {
   unreadNotifications?: number;
   disableAutoHide?: boolean;
+  showNotifications?: boolean; // Control visibility of notification bell
 }
 
-export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide = false }: DesktopHeaderProps) {
+export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide = false, showNotifications: showNotificationsIcon = true }: DesktopHeaderProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [showNotifications, setShowNotifications] = useState(false);
   const scrollDirection = useScrollDirection({ threshold: 10 });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -57,15 +60,22 @@ export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide
 
           {/* Right Actions */}
           <div className="flex items-center gap-3">
-            {/* Notifications */}
-            <button className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
-              <Bell className="w-6 h-6" />
-              {unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {unreadNotifications > 9 ? "9+" : unreadNotifications}
-                </span>
-              )}
-            </button>
+            {/* Notifications - Only show on feed page */}
+            {showNotificationsIcon && (
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all ${
+                  showNotifications ? "bg-white/10 text-white" : ""
+                }`}
+              >
+                <Bell className="w-6 h-6" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Avatar */}
             <button
@@ -77,6 +87,14 @@ export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide
           </div>
         </div>
       </div>
+
+      {/* Notifications Sidebar - Only render if notifications icon is visible */}
+      {showNotificationsIcon && (
+        <NotificationsSidebar
+          isOpen={showNotifications}
+          onClose={() => setShowNotifications(false)}
+        />
+      )}
     </header>
   );
 }

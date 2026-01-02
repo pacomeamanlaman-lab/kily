@@ -33,6 +33,7 @@ import Toast from "@/components/ui/Toast";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
+import NotificationsSidebar from "@/components/notifications/NotificationsSidebar";
 
 export default function FeedPage() {
   const router = useRouter();
@@ -41,6 +42,7 @@ export default function FeedPage() {
   const [followedTalents, setFollowedTalents] = useState<Set<number>>(new Set());
   const [visiblePosts, setVisiblePosts] = useState(3);
   const [unreadNotifications] = useState(5); // Mock notifications count
+  const [showNotifications, setShowNotifications] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
@@ -409,7 +411,12 @@ export default function FeedPage() {
               </div>
               <h1 className="text-2xl font-bold">Kily</h1>
             </div>
-            <button className="relative p-2 text-violet-400 hover:text-violet-300 transition-colors">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className={`relative p-2 text-violet-400 hover:text-violet-300 transition-colors ${
+                showNotifications ? "bg-white/10" : ""
+              }`}
+            >
               <Bell className="w-6 h-6" />
               {unreadNotifications > 0 && (
                 <span className="absolute -top-0 -right-0 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
@@ -747,6 +754,12 @@ export default function FeedPage() {
         initialIndex={selectedVideoIndex}
         isOpen={isVideoPlayerOpen}
         onClose={() => setIsVideoPlayerOpen(false)}
+      />
+
+      {/* Notifications Sidebar */}
+      <NotificationsSidebar
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
       />
     </div>
   );

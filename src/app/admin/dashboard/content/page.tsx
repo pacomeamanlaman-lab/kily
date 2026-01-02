@@ -10,8 +10,12 @@ import {
   Trash2,
   Flag,
   TrendingUp,
-  Calendar
+  Calendar,
+  MoreVertical,
+  Heart,
+  MessageCircle
 } from "lucide-react";
+import StatsCardsCarousel from "@/components/admin/StatsCardsCarousel";
 
 interface Content {
   id: string;
@@ -143,55 +147,50 @@ export default function ContentPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-pink-600/20 to-pink-800/10 border border-pink-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-pink-500/20 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 text-pink-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">1,234</p>
-              <p className="text-xs text-gray-400">Posts</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-orange-600/20 to-orange-800/10 border border-orange-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
-              <Video className="w-5 h-5 text-orange-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">567</p>
-              <p className="text-xs text-gray-400">Vidéos</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-violet-600/20 to-violet-800/10 border border-violet-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-violet-500/20 rounded-lg flex items-center justify-center">
-              <ImageIcon className="w-5 h-5 text-violet-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">892</p>
-              <p className="text-xs text-gray-400">Stories</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-red-600/20 to-red-800/10 border border-red-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
-              <Flag className="w-5 h-5 text-red-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">12</p>
-              <p className="text-xs text-gray-400">Signalements</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <StatsCardsCarousel
+        cards={[
+          {
+            id: "posts",
+            icon: FileText,
+            gradient: "from-pink-600/20 to-pink-800/10",
+            border: "border-pink-500/30",
+            bgIcon: "bg-pink-500/20",
+            textIcon: "text-pink-400",
+            label: "Posts",
+            value: "1,234",
+          },
+          {
+            id: "videos",
+            icon: Video,
+            gradient: "from-orange-600/20 to-orange-800/10",
+            border: "border-orange-500/30",
+            bgIcon: "bg-orange-500/20",
+            textIcon: "text-orange-400",
+            label: "Vidéos",
+            value: "567",
+          },
+          {
+            id: "stories",
+            icon: ImageIcon,
+            gradient: "from-violet-600/20 to-violet-800/10",
+            border: "border-violet-500/30",
+            bgIcon: "bg-violet-500/20",
+            textIcon: "text-violet-400",
+            label: "Stories",
+            value: "892",
+          },
+          {
+            id: "reports",
+            icon: Flag,
+            gradient: "from-red-600/20 to-red-800/10",
+            border: "border-red-500/30",
+            bgIcon: "bg-red-500/20",
+            textIcon: "text-red-400",
+            label: "Signalements",
+            value: "12",
+          },
+        ]}
+      />
 
       {/* Filters */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
@@ -241,8 +240,8 @@ export default function ContentPage() {
         </div>
       </div>
 
-      {/* Content Table */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+      {/* Desktop Table */}
+      <div className="hidden lg:block bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
         <table className="w-full">
           <thead className="bg-white/5 border-b border-white/10">
             <tr>
@@ -335,13 +334,98 @@ export default function ContentPage() {
             ))}
           </tbody>
         </table>
-
-        {filteredContent.length === 0 && (
-          <div className="py-12 text-center text-gray-400">
-            Aucun contenu trouvé avec ces critères
-          </div>
-        )}
       </div>
+
+      {/* Mobile Cards */}
+      <div className="lg:hidden space-y-4">
+        {filteredContent.map((content) => (
+          <div
+            key={content.id}
+            className="bg-white/5 border border-white/10 rounded-2xl p-4 hover:border-white/20 transition-all"
+          >
+            {/* Header */}
+            <div className="flex items-start gap-3 mb-4">
+              {content.thumbnail && (
+                <img
+                  src={content.thumbnail}
+                  alt={content.title}
+                  className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <p className="font-semibold text-white line-clamp-2">{content.title}</p>
+                  <button className="p-1 hover:bg-white/10 rounded transition-colors flex-shrink-0">
+                    <MoreVertical className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getTypeBadge(content.type)}`}>
+                  {getTypeIcon(content.type)}
+                  {content.type === "post" ? "Post" : content.type === "video" ? "Vidéo" : "Story"}
+                </span>
+              </div>
+            </div>
+
+            {/* Author */}
+            <div className="flex items-center gap-2 mb-3">
+              <img
+                src={content.author.avatar}
+                alt={content.author.name}
+                className="w-6 h-6 rounded-full object-cover"
+              />
+              <span className="text-sm text-gray-300">{content.author.name}</span>
+              <span className="text-xs text-gray-500">•</span>
+              <span className="text-xs text-gray-500">{content.category}</span>
+            </div>
+
+            {/* Engagement */}
+            <div className="flex items-center gap-4 mb-3 text-sm text-gray-400">
+              <div className="flex items-center gap-1">
+                <Eye className="w-4 h-4" />
+                <span>{content.views}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Heart className="w-4 h-4" />
+                <span>{content.likes}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <MessageCircle className="w-4 h-4" />
+                <span>{content.comments}</span>
+              </div>
+              {content.reports > 0 && (
+                <div className="flex items-center gap-1 text-red-400">
+                  <Flag className="w-4 h-4" />
+                  <span>{content.reports}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-3 border-t border-white/10">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Calendar className="w-3 h-3" />
+                <span>{new Date(content.publishedAt).toLocaleDateString("fr-FR")}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="px-3 py-1.5 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 transition-all text-xs">
+                  <Eye className="w-3 h-3 inline mr-1" />
+                  Voir
+                </button>
+                <button className="p-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 transition-all">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Empty State */}
+      {filteredContent.length === 0 && (
+        <div className="py-12 text-center text-gray-400">
+          Aucun contenu trouvé avec ces critères
+        </div>
+      )}
     </div>
   );
 }
