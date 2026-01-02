@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import DesktopHeader from "./DesktopHeader";
 
 const PAGES_WITH_HEADER = ["/feed", "/discover", "/messages"];
+const PAGES_WITHOUT_AUTO_HIDE = ["/feed"]; // Pages where header stays visible
 
 export default function ConditionalDesktopHeader() {
   const pathname = usePathname();
@@ -17,5 +18,10 @@ export default function ConditionalDesktopHeader() {
     return null;
   }
 
-  return <DesktopHeader />;
+  // Check if auto-hide should be disabled
+  const disableAutoHide = PAGES_WITHOUT_AUTO_HIDE.some((path) =>
+    pathname === path || pathname.startsWith(`${path}/`)
+  );
+
+  return <DesktopHeader disableAutoHide={disableAutoHide} />;
 }

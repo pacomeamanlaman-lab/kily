@@ -7,9 +7,10 @@ import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 interface DesktopHeaderProps {
   unreadNotifications?: number;
+  disableAutoHide?: boolean;
 }
 
-export default function DesktopHeader({ unreadNotifications = 5 }: DesktopHeaderProps) {
+export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide = false }: DesktopHeaderProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const scrollDirection = useScrollDirection({ threshold: 10 });
@@ -24,7 +25,7 @@ export default function DesktopHeader({ unreadNotifications = 5 }: DesktopHeader
   return (
     <header
       className={`hidden lg:block sticky top-0 z-50 bg-black/95 backdrop-blur-lg border-b border-white/10 transition-transform duration-300 ${
-        scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"
+        !disableAutoHide && scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"
       }`}
     >
       <div className="max-w-[1400px] mx-auto px-6 py-3">

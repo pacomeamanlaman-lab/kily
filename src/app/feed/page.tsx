@@ -550,7 +550,7 @@ export default function FeedPage() {
 
         {/* Right Sidebar */}
         <div className="w-80 flex-shrink-0">
-          <div className="sticky top-6 space-y-6">
+          <div className="sticky top-20 space-y-6">
             {/* Suggestions */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
               <h2 className="text-lg font-bold mb-4">Talents suggérés</h2>

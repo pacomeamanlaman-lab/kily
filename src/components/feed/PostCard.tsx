@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, MessageCircle, Share2, MoreHorizontal, CheckCircle, Send, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
 import { togglePostLike, isPostLiked, addComment, loadComments } from "@/lib/posts";
@@ -37,6 +38,7 @@ interface Comment {
 }
 
 export default function PostCard({ post }: PostCardProps) {
+  const router = useRouter();
   const currentUserId = "current_user";
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes);
@@ -127,7 +129,10 @@ export default function PostCard({ post }: PostCardProps) {
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.push(`/profile/${post.author.id}`)}
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+        >
           <div className="relative">
             <img
               src={post.author.avatar}
@@ -140,7 +145,7 @@ export default function PostCard({ post }: PostCardProps) {
               </div>
             )}
           </div>
-          <div>
+          <div className="text-left">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-white">{post.author.name}</h3>
             </div>
@@ -149,7 +154,7 @@ export default function PostCard({ post }: PostCardProps) {
             )}
             <p className="text-xs text-gray-500">{getTimeAgo(post.timestamp)}</p>
           </div>
-        </div>
+        </button>
         <button className="text-gray-400 hover:text-white transition-colors">
           <MoreHorizontal className="w-5 h-5" />
         </button>
