@@ -22,8 +22,9 @@ import {
 import PostCard from "@/components/feed/PostCard";
 import StoryCarousel from "@/components/feed/StoryCarousel";
 import CreatePostButton from "@/components/feed/CreatePostButton";
-import { mockPosts, mockStories } from "@/lib/feedData";
+import { mockStories } from "@/lib/feedData";
 import { mockVideos } from "@/lib/videoData";
+import { loadPosts } from "@/lib/posts";
 import VideoCard from "@/components/video/VideoCard";
 import VideoCardFeed from "@/components/video/VideoCardFeed";
 import VideoPlayer from "@/components/video/VideoPlayer";
@@ -38,11 +39,41 @@ export default function FeedPage() {
   const [followedTalents, setFollowedTalents] = useState<Set<number>>(new Set());
   const [visiblePosts, setVisiblePosts] = useState(3);
   const [unreadNotifications] = useState(5); // Mock notifications count
+  const [posts, setPosts] = useState<any[]>([]);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
     type: "success",
     visible: false,
   });
+
+  // Load posts from localStorage on mount and when window gets focus
+  useEffect(() => {
+    const loadedPosts = loadPosts();
+    setPosts(loadedPosts);
+  }, []);
+
+  // Refresh posts when window gains focus (after creating a post)
+  useEffect(() => {
+    const handleFocus = () => {
+      const loadedPosts = loadPosts();
+      setPosts(loadedPosts);
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    // Also listen for a custom event from the modal
+    const handlePostCreated = () => {
+      const loadedPosts = loadPosts();
+      setPosts(loadedPosts);
+    };
+
+    window.addEventListener('postCreated', handlePostCreated);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('postCreated', handlePostCreated);
+    };
+  }, []);
 
   // Video player state
   const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(false);
@@ -92,7 +123,7 @@ export default function FeedPage() {
   // Filter posts based on selected filter
   const filteredPosts = useMemo(() => {
     if (filter === "all") {
-      return mockPosts;
+      return posts;
     }
 
     if (filter === "following") {
@@ -101,20 +132,20 @@ export default function FeedPage() {
         .filter((talent) => followedTalents.has(talent.id))
         .map((talent) => talent.postAuthorId);
 
-      const filtered = mockPosts.filter((post) =>
+      const filtered = posts.filter((post) =>
         followedAuthorIds.includes(post.author.id)
       );
 
-      return filtered.length > 0 ? filtered : mockPosts; // Fallback to all if no followed
+      return filtered.length > 0 ? filtered : posts; // Fallback to all if no followed
     }
 
     if (filter === "trending") {
       // Sort by likes (descending)
-      return [...mockPosts].sort((a, b) => b.likes - a.likes);
+      return [...posts].sort((a, b) => b.likes - a.likes);
     }
 
-    return mockPosts;
-  }, [filter, followedTalents]);
+    return posts;
+  }, [filter, followedTalents, posts]);
 
   // Create mixed feed of posts and videos
   const mixedFeed = useMemo(() => {

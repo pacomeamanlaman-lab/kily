@@ -78,6 +78,9 @@ export default function CreatePostForm({ onSuccess, onCancel }: CreatePostFormPr
 
     console.log("New post created:", newPost);
 
+    // Dispatch custom event to refresh feed
+    window.dispatchEvent(new Event('postCreated'));
+
     showToast("Post publié avec succès !", "success");
     setIsSubmitting(false);
     onSuccess();
