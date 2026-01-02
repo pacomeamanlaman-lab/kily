@@ -309,6 +309,24 @@ export default function VideoPlayer({
     }
   }, [currentVideoIndex, isOpen]);
 
+  // Blocage du scroll du body quand le player est ouvert
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, [isOpen]);
+
   // Protection contre les vidéos manquantes
   if (!currentVideo) {
     return (
@@ -344,24 +362,6 @@ export default function VideoPlayer({
     verified: currentVideo.author.verified,
     subscribers: "125K", // Mock data, à adapter selon vos besoins
   };
-
-  // Blocage du scroll du body quand le player est ouvert
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-    };
-  }, [isOpen]);
 
   return (
     <>

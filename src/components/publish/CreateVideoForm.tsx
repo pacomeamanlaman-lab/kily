@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Upload, X } from "lucide-react";
 import { showToast } from "@/lib/toast";
+import { createVideo } from "@/lib/videos";
 
 interface CreateVideoFormProps {
   onSuccess: () => void;
@@ -26,7 +27,33 @@ export default function CreateVideoForm({ onSuccess, onCancel }: CreateVideoForm
   const [category, setCategory] = useState("");
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState<string>("0:00");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Helper function to format duration (seconds to mm:ss)
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Helper function to capture video frame as thumbnail
+  const captureVideoFrame = (video: HTMLVideoElement): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      } else {
+        resolve('');
+      }
+    });
+  };
 
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -40,7 +67,69 @@ export default function CreateVideoForm({ onSuccess, onCancel }: CreateVideoForm
       setVideoFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setVideoPreview(reader.result as string);
+        const dataUrl = reader.result as string;
+        setVideoPreview(dataUrl);
+        
+        // Create video element to get duration and capture thumbnail
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.muted = true; // Mute to allow autoplay
+        video.playsInline = true; // For mobile compatibility
+        video.src = dataUrl;
+        
+        // Create object URL as fallback if data URL doesn't work
+        const objectUrl = URL.createObjectURL(file);
+        video.src = objectUrl;
+        
+        const handleLoadedMetadata = () => {
+          // Set duration
+          if (video.duration && !isNaN(video.duration) && isFinite(video.duration)) {
+            const duration = formatDuration(video.duration);
+            setVideoDuration(duration);
+            
+            // Seek to 1 second (or 10% of duration if less than 1 second) to capture a good frame
+            const seekTime = Math.min(1, Math.max(0.1, video.duration * 0.1));
+            video.currentTime = seekTime;
+          } else {
+            setVideoDuration("0:00");
+            // Try to capture frame at 0.5 seconds as fallback
+            video.currentTime = 0.5;
+          }
+        };
+        
+        const handleSeeked = async () => {
+          // Capture frame as thumbnail
+          try {
+            const thumbnail = await captureVideoFrame(video);
+            if (thumbnail) {
+              setVideoThumbnail(thumbnail);
+            } else {
+              // Fallback: use a placeholder or the video URL
+              console.warn('Failed to capture thumbnail, using fallback');
+              setVideoThumbnail(dataUrl);
+            }
+          } catch (error) {
+            console.error('Error capturing thumbnail:', error);
+            setVideoThumbnail(dataUrl);
+          } finally {
+            // Clean up object URL
+            URL.revokeObjectURL(objectUrl);
+          }
+        };
+        
+        video.addEventListener('loadedmetadata', handleLoadedMetadata);
+        video.addEventListener('seeked', handleSeeked);
+        
+        video.onerror = () => {
+          console.error('Error loading video');
+          // Fallback: use video data URL as thumbnail (not ideal but better than nothing)
+          setVideoThumbnail(dataUrl);
+          setVideoDuration("0:00");
+          URL.revokeObjectURL(objectUrl);
+        };
+        
+        // Load the video
+        video.load();
       };
       reader.readAsDataURL(file);
     }
@@ -49,6 +138,8 @@ export default function CreateVideoForm({ onSuccess, onCancel }: CreateVideoForm
   const removeVideo = () => {
     setVideoFile(null);
     setVideoPreview(null);
+    setVideoThumbnail(null);
+    setVideoDuration("0:00");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,25 +165,26 @@ export default function CreateVideoForm({ onSuccess, onCancel }: CreateVideoForm
     // Mock API call
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // TODO: Save to localStorage or mock store
-    const newVideo = {
-      id: Date.now().toString(),
+    // Save to localStorage
+    const newVideo = createVideo({
       title,
       description,
       category,
-      videoUrl: videoPreview,
+      videoUrl: videoPreview!,
+      thumbnail: videoThumbnail || videoPreview || undefined,
+      duration: videoDuration,
       author: {
+        id: "current_user",
         name: "Vous",
-        username: "@vous",
-        avatar: "/default-avatar.png",
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+        verified: false,
       },
-      likes: 0,
-      comments: 0,
-      views: 0,
-      timestamp: new Date().toISOString(),
-    };
+    });
 
     console.log("New video created:", newVideo);
+
+    // Dispatch custom event to refresh feed
+    window.dispatchEvent(new Event('videoCreated'));
 
     showToast("Vidéo publiée avec succès !", "success");
     setIsSubmitting(false);

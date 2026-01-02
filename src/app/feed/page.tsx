@@ -23,8 +23,8 @@ import PostCard from "@/components/feed/PostCard";
 import StoryCarousel from "@/components/feed/StoryCarousel";
 import CreatePostButton from "@/components/feed/CreatePostButton";
 import { mockStories } from "@/lib/feedData";
-import { mockVideos } from "@/lib/videoData";
 import { loadPosts } from "@/lib/posts";
+import { loadVideos } from "@/lib/videos";
 import VideoCard from "@/components/video/VideoCard";
 import VideoCardFeed from "@/components/video/VideoCardFeed";
 import VideoPlayer from "@/components/video/VideoPlayer";
@@ -44,38 +44,50 @@ export default function FeedPage() {
   const [unreadNotifications] = useState(5); // Mock notifications count
   const [showNotifications, setShowNotifications] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
+  const [videos, setVideos] = useState<any[]>([]);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
     type: "success",
     visible: false,
   });
 
-  // Load posts from localStorage on mount and when window gets focus
+  // Load posts and videos from localStorage on mount and when window gets focus
   useEffect(() => {
     const loadedPosts = loadPosts();
+    const loadedVideos = loadVideos();
     setPosts(loadedPosts);
+    setVideos(loadedVideos);
   }, []);
 
-  // Refresh posts when window gains focus (after creating a post)
+  // Refresh posts and videos when window gains focus (after creating a post/video)
   useEffect(() => {
     const handleFocus = () => {
       const loadedPosts = loadPosts();
+      const loadedVideos = loadVideos();
       setPosts(loadedPosts);
+      setVideos(loadedVideos);
     };
 
     window.addEventListener('focus', handleFocus);
 
-    // Also listen for a custom event from the modal
+    // Listen for custom events from the modals
     const handlePostCreated = () => {
       const loadedPosts = loadPosts();
       setPosts(loadedPosts);
     };
 
+    const handleVideoCreated = () => {
+      const loadedVideos = loadVideos();
+      setVideos(loadedVideos);
+    };
+
     window.addEventListener('postCreated', handlePostCreated);
+    window.addEventListener('videoCreated', handleVideoCreated);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('postCreated', handlePostCreated);
+      window.removeEventListener('videoCreated', handleVideoCreated);
     };
   }, []);
 
@@ -151,38 +163,38 @@ export default function FeedPage() {
     return posts;
   }, [filter, followedTalents, posts]);
 
-  // Create mixed feed of posts and videos
+  // Create mixed feed of posts and videos, sorted by date (newest first)
   const mixedFeed = useMemo(() => {
-    const feed: Array<{ type: "post" | "video"; data: any; id: string }> = [];
-    let postIndex = 0;
-    let videoIndex = 0;
+    const feed: Array<{ type: "post" | "video"; data: any; id: string; timestamp: number }> = [];
 
-    // Alternate: 2 posts, 1 video, 2 posts, 1 video...
-    for (let i = 0; i < Math.max(filteredPosts.length, mockVideos.length * 2); i++) {
-      if (i % 3 === 2 && videoIndex < mockVideos.length) {
-        // Every 3rd item is a video
-        feed.push({
-          type: "video",
-          data: mockVideos[videoIndex],
-          id: `video-${mockVideos[videoIndex].id}`,
-        });
-        videoIndex++;
-      } else if (postIndex < filteredPosts.length) {
-        // Otherwise, add a post
-        feed.push({
-          type: "post",
-          data: filteredPosts[postIndex],
-          id: `post-${filteredPosts[postIndex].id}`,
-        });
-        postIndex++;
-      }
-    }
+    // Add all posts
+    filteredPosts.forEach((post) => {
+      feed.push({
+        type: "post",
+        data: post,
+        id: `post-${post.id}`,
+        timestamp: new Date(post.timestamp || post.createdAt || 0).getTime(),
+      });
+    });
+
+    // Add all videos
+    videos.forEach((video) => {
+      feed.push({
+        type: "video",
+        data: video,
+        id: `video-${video.id}`,
+        timestamp: new Date(video.createdAt || 0).getTime(),
+      });
+    });
+
+    // Sort by timestamp (newest first)
+    feed.sort((a, b) => b.timestamp - a.timestamp);
 
     return feed;
-  }, [filteredPosts]);
+  }, [filteredPosts, videos]);
 
   const handleVideoClick = (videoId: string) => {
-    const videoIndex = mockVideos.findIndex((v) => v.id === videoId);
+    const videoIndex = videos.findIndex((v) => v.id === videoId);
     if (videoIndex !== -1) {
       setSelectedVideoIndex(videoIndex);
       setIsVideoPlayerOpen(true);
@@ -750,7 +762,7 @@ export default function FeedPage() {
 
       {/* Video Player Modal */}
       <VideoPlayer
-        videos={mockVideos}
+        videos={videos}
         initialIndex={selectedVideoIndex}
         isOpen={isVideoPlayerOpen}
         onClose={() => setIsVideoPlayerOpen(false)}

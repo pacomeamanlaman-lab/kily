@@ -371,7 +371,7 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      <div className="flex-1 max-w-2xl lg:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+      <div className="flex-1 max-w-2xl lg:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 lg:pb-16">
         {/* Title Section */}
         <div className="mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold mb-2">
@@ -806,7 +806,7 @@ export default function RegisterPage() {
       </div>
 
       {/* Buttons - Sticky en bas */}
-      <div ref={buttonsRef} className="sticky bottom-0 z-30 bg-black/95 backdrop-blur-lg border-t border-white/10 lg:border-t-0 lg:bg-transparent lg:relative lg:mt-8">
+      <div ref={buttonsRef} className="sticky bottom-0 z-30 bg-black/95 backdrop-blur-lg border-t border-white/10 lg:border-t-0 lg:bg-transparent lg:relative lg:mt-8 mb-6 lg:mb-8">
         <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-0">
           <div className="flex gap-4 lg:justify-end">
             <Button variant="secondary" onClick={handleBack} className="flex-1 lg:flex-none lg:min-w-[150px]">

@@ -35,6 +35,18 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
     type: "success",
     visible: false,
   });
+  
+  // Debug: log thumbnail info
+  useEffect(() => {
+    if (video.thumbnail) {
+      console.log('Video thumbnail:', {
+        hasThumbnail: !!video.thumbnail,
+        isDataUrl: video.thumbnail.startsWith('data:'),
+        isBlob: video.thumbnail.startsWith('blob:'),
+        thumbnailLength: video.thumbnail.length,
+      });
+    }
+  }, [video.thumbnail]);
 
   // Load existing comments and likes on mount
   useEffect(() => {
@@ -146,16 +158,51 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
 
       {/* Video Thumbnail */}
       <div 
-        className="relative aspect-square sm:aspect-video overflow-hidden cursor-pointer group"
+        className="relative aspect-square sm:aspect-video overflow-hidden cursor-pointer group bg-black"
         onClick={onClick}
       >
-        <Image
-          src={video.thumbnail}
-          alt={video.title}
-          fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-        />
+        {/* Check if thumbnail is a data URL (base64) or regular URL */}
+        {video.thumbnail && (video.thumbnail.startsWith('data:image') || video.thumbnail.startsWith('blob:')) ? (
+          // Use regular img for data URLs and blob URLs
+          <img
+            src={video.thumbnail}
+            alt={video.title}
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={(e) => {
+              console.error('Error loading thumbnail image:', e);
+              // Fallback to placeholder if image fails to load
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        ) : video.thumbnail && video.thumbnail.startsWith('data:video') ? (
+          // If thumbnail is actually a video data URL, try to use it as background
+          <div 
+            className="absolute inset-0 w-full h-full"
+            style={{
+              backgroundImage: `url(${video.thumbnail})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+        ) : video.thumbnail ? (
+          // Use Next.js Image for regular URLs
+          <Image
+            src={video.thumbnail}
+            alt={video.title}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            unoptimized={video.thumbnail.startsWith('http://') || video.thumbnail.startsWith('https://') ? false : true}
+            onError={() => {
+              console.error('Error loading thumbnail with Next.js Image');
+            }}
+          />
+        ) : (
+          // Fallback: show video URL as background or placeholder
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-900/20 to-gray-900 flex items-center justify-center">
+            <Play className="w-16 h-16 text-white/50" />
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         
         {/* Play button overlay */}
@@ -169,8 +216,8 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
         </div>
 
         {/* Duration badge */}
-        <div className="absolute bottom-3 right-3 rounded-md bg-black/80 px-2 py-1 text-xs font-medium">
-          {video.duration}
+        <div className="absolute bottom-3 right-3 rounded-md bg-black/80 px-2 py-1 text-xs font-medium text-white">
+          {video.duration || "0:00"}
         </div>
       </div>
 
