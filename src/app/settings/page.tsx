@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 import {
   ArrowLeft,
   User,
@@ -23,6 +24,7 @@ import Toast from "@/components/ui/Toast";
 
 export default function SettingsPage() {
   const router = useRouter();
+  const scrollDirection = useScrollDirection({ threshold: 10 });
   const [activeTab, setActiveTab] = useState<"profile" | "notifications" | "privacy" | "security">("profile");
 
   // Mock user data
@@ -222,7 +224,11 @@ export default function SettingsPage() {
       />
 
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-black border-b border-white/10">
+      <div
+        className={`sticky top-0 z-40 bg-black border-b border-white/10 transition-transform duration-300 ${
+          scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"
+        }`}
+      >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <button
             onClick={() => router.back()}

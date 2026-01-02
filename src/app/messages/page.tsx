@@ -5,9 +5,11 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { loadConversations } from "@/lib/messages";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 export default function MessagesPage() {
   const router = useRouter();
+  const scrollDirection = useScrollDirection({ threshold: 10 });
   const currentUserId = "current_user";
   const [searchQuery, setSearchQuery] = useState("");
   const [conversations, setConversations] = useState<any[]>([]);
@@ -71,7 +73,11 @@ export default function MessagesPage() {
   return (
     <div className="min-h-screen bg-black text-white pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-black border-b border-white/10">
+      <div
+        className={`sticky top-0 z-40 bg-black border-b border-white/10 transition-transform duration-300 ${
+          scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <button
             onClick={() => router.back()}

@@ -8,10 +8,12 @@ import { mockTalents } from "@/lib/mockData";
 import TalentCard from "@/components/talent/TalentCard";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const scrollDirection = useScrollDirection({ threshold: 10 });
   const initialQuery = searchParams.get("q") || "";
 
   const [searchQuery, setSearchQuery] = useState(initialQuery);
@@ -43,7 +45,11 @@ function SearchContent() {
   return (
     <div className="min-h-screen bg-black text-white pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-black backdrop-blur-lg border-b border-white/10 px-4 sm:px-6 lg:px-8 pt-6 pb-4">
+      <div
+        className={`sticky top-0 z-40 bg-black backdrop-blur-lg border-b border-white/10 px-4 sm:px-6 lg:px-8 pt-6 pb-4 transition-transform duration-300 ${
+          scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"
+        }`}
+      >
         <div className="max-w-4xl mx-auto">
           {/* Back Button */}
           <button

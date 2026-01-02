@@ -32,9 +32,11 @@ import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 export default function FeedPage() {
   const router = useRouter();
+  const scrollDirection = useScrollDirection({ threshold: 10 });
   const [filter, setFilter] = useState<"all" | "following" | "trending">("all");
   const [followedTalents, setFollowedTalents] = useState<Set<number>>(new Set());
   const [visiblePosts, setVisiblePosts] = useState(3);
@@ -394,7 +396,11 @@ export default function FeedPage() {
       />
 
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-black/95 backdrop-blur-lg border-b border-white/10 lg:hidden">
+      <div
+        className={`sticky top-0 z-40 bg-black/95 backdrop-blur-lg border-b border-white/10 lg:hidden transition-transform duration-300 ${
+          scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"
+        }`}
+      >
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">

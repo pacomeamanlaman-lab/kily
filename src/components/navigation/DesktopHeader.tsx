@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Bell, Search, Sparkles, User } from "lucide-react";
 import { useState } from "react";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 interface DesktopHeaderProps {
   unreadNotifications?: number;
@@ -11,6 +12,7 @@ interface DesktopHeaderProps {
 export default function DesktopHeader({ unreadNotifications = 5 }: DesktopHeaderProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const scrollDirection = useScrollDirection({ threshold: 10 });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +22,11 @@ export default function DesktopHeader({ unreadNotifications = 5 }: DesktopHeader
   };
 
   return (
-    <header className="hidden lg:block sticky top-0 z-50 bg-black/95 backdrop-blur-lg border-b border-white/10">
+    <header
+      className={`hidden lg:block sticky top-0 z-50 bg-black/95 backdrop-blur-lg border-b border-white/10 transition-transform duration-300 ${
+        scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"
+      }`}
+    >
       <div className="max-w-[1400px] mx-auto px-6 py-3">
         <div className="flex items-center justify-between gap-6">
           {/* Logo */}

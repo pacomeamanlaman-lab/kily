@@ -15,10 +15,12 @@ import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 export default function DiscoverPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const scrollDirection = useScrollDirection({ threshold: 10 });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
@@ -356,7 +358,11 @@ export default function DiscoverPage() {
         onClose={() => setToast({ ...toast, visible: false })}
       />
       {/* Header */}
-      <div className="lg:hidden sticky top-0 z-40 bg-black backdrop-blur-lg border-b border-white/10 px-4 sm:px-6 pt-6 pb-6 shadow-xl">
+      <div
+        className={`lg:hidden sticky top-0 z-40 bg-black backdrop-blur-lg border-b border-white/10 px-4 sm:px-6 pt-6 pb-6 shadow-xl transition-transform duration-300 ${
+          scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"
+        }`}
+      >
         <div className="max-w-7xl mx-auto">
           {/* Back Button */}
           <button
