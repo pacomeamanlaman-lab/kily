@@ -2,8 +2,9 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CreateStoryModal from "./CreateStoryModal";
+import { loadStories, markStoryAsViewed, isStoryViewed } from "@/lib/stories";
 
 export interface Story {
   id: string;
@@ -17,17 +18,32 @@ export interface Story {
 }
 
 interface StoryCarouselProps {
-  stories: Story[];
+  stories?: Story[];
 }
 
-export default function StoryCarousel({ stories }: StoryCarouselProps) {
+export default function StoryCarousel({ stories: initialStories }: StoryCarouselProps) {
+  const currentUserId = "current_user";
+  const [stories, setStories] = useState<Story[]>(initialStories || []);
   const [selectedStory, setSelectedStory] = useState<number | null>(null);
   const [viewedStories, setViewedStories] = useState<Set<string>>(new Set());
   const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
 
+  // Load stories from localStorage on mount and when modal closes
+  useEffect(() => {
+    const loadedStories = loadStories();
+    const formattedStories: Story[] = loadedStories.map(s => ({
+      id: s.id,
+      author: s.author,
+      thumbnail: s.thumbnail,
+      viewed: isStoryViewed(s.id, currentUserId),
+    }));
+    setStories(formattedStories);
+  }, [showCreateStoryModal]);
+
   const handleStoryClick = (index: number, storyId: string) => {
     setSelectedStory(index);
     setViewedStories((prev) => new Set(prev).add(storyId));
+    markStoryAsViewed(storyId, currentUserId);
   };
 
   const handleNext = () => {
@@ -35,6 +51,7 @@ export default function StoryCarousel({ stories }: StoryCarouselProps) {
       const nextStory = stories[selectedStory + 1];
       setSelectedStory(selectedStory + 1);
       setViewedStories((prev) => new Set(prev).add(nextStory.id));
+      markStoryAsViewed(nextStory.id, currentUserId);
     } else {
       setSelectedStory(null);
     }

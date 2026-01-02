@@ -1,15 +1,49 @@
 "use client";
 
 import { MessageCircle, Search, Send, ArrowLeft } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { mockConversations } from "@/lib/messagesData";
+import { loadConversations } from "@/lib/messages";
 
 export default function MessagesPage() {
   const router = useRouter();
+  const currentUserId = "current_user";
   const [searchQuery, setSearchQuery] = useState("");
-  const [conversations, setConversations] = useState(mockConversations);
+  const [conversations, setConversations] = useState<any[]>([]);
+
+  // Load conversations from localStorage
+  useEffect(() => {
+    const loadedConversations = loadConversations(currentUserId);
+    // Transform to match UI format
+    const formattedConversations = loadedConversations.map(conv => {
+      const otherUserId = conv.participants.find(id => id !== currentUserId) || "";
+      // Mock user data - in real app, you'd fetch from users database
+      const userData = {
+        id: otherUserId,
+        name: otherUserId === "1" ? "Amina Koné" :
+              otherUserId === "2" ? "Kofi Mensah" :
+              otherUserId === "3" ? "Sarah Mensah" : "Utilisateur",
+        avatar: otherUserId === "1" ? "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400" :
+                otherUserId === "2" ? "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400" :
+                otherUserId === "3" ? "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400" :
+                "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+        online: false,
+      };
+
+      return {
+        id: conv.id,
+        participant: userData,
+        lastMessage: {
+          content: conv.lastMessage,
+          timestamp: conv.lastMessageAt,
+          unread: conv.unreadBy === currentUserId && conv.unreadCount > 0,
+          isOwn: false,
+        },
+      };
+    });
+    setConversations(formattedConversations);
+  }, []);
 
   const filteredConversations = useMemo(() => {
     if (!searchQuery) return conversations;
@@ -19,15 +53,7 @@ export default function MessagesPage() {
   }, [searchQuery, conversations]);
 
   const handleConversationClick = (conversationId: string, participantId: string) => {
-    // Marquer comme lu
-    setConversations((prev) =>
-      prev.map((conv) =>
-        conv.id === conversationId
-          ? { ...conv, lastMessage: { ...conv.lastMessage, unread: false } }
-          : conv
-      )
-    );
-
+    // Marquer comme lu (on mark in conversation page directly)
     // Naviguer vers la conversation
     router.push(`/messages/${participantId}`);
   };

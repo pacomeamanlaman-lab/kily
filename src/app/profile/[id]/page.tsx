@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -23,10 +23,12 @@ import BottomSheet from "@/components/ui/BottomSheet";
 import SkillBadge from "@/components/talent/SkillBadge";
 import ReputationScore from "@/components/talent/ReputationScore";
 import Toast from "@/components/ui/Toast";
+import { isTalentSaved, toggleSaveTalent } from "@/lib/savedTalents";
 
 export default function ProfilePage() {
   const router = useRouter();
   const params = useParams();
+  const currentUserId = "current_user";
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showReviewsDrawer, setShowReviewsDrawer] = useState(false);
@@ -52,6 +54,12 @@ export default function ProfilePage() {
     return null;
   }
 
+  // Load saved status from localStorage
+  useEffect(() => {
+    const saved = isTalentSaved(currentUserId, talent.id);
+    setIsSaved(saved);
+  }, [talent.id]);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("fr-FR", {
@@ -61,12 +69,13 @@ export default function ProfilePage() {
   };
 
   const handleSave = () => {
-    setIsSaved(!isSaved);
+    const result = toggleSaveTalent(currentUserId, talent.id);
+    setIsSaved(result.saved);
     setToast({
-      message: isSaved
-        ? `${talent.name} retiré des favoris`
-        : `${talent.name} ajouté aux favoris`,
-      type: isSaved ? "info" : "success",
+      message: result.saved
+        ? `${talent.name} ajouté aux favoris`
+        : `${talent.name} retiré des favoris`,
+      type: result.saved ? "success" : "info",
       visible: true,
     });
   };

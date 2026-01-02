@@ -5,7 +5,7 @@ import { Heart, MessageCircle, Share2, MoreHorizontal, CheckCircle, Send, X } fr
 import { useState, useEffect } from "react";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
-import { mockComments } from "@/lib/feedData";
+import { togglePostLike, isPostLiked, addComment, loadComments } from "@/lib/posts";
 
 export interface Post {
   id: string;
@@ -37,6 +37,7 @@ interface Comment {
 }
 
 export default function PostCard({ post }: PostCardProps) {
+  const currentUserId = "current_user";
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes);
   const [showComments, setShowComments] = useState(false);
@@ -48,29 +49,50 @@ export default function PostCard({ post }: PostCardProps) {
     visible: false,
   });
 
-  // Load existing comments on mount
+  // Load existing comments and like status on mount
   useEffect(() => {
-    const existingComments = mockComments[post.id] || [];
-    setComments(existingComments);
+    const existingComments = loadComments(post.id);
+    const formattedComments = existingComments.map(c => ({
+      id: c.id,
+      author: c.author.name,
+      avatar: c.author.avatar,
+      content: c.content,
+      timestamp: c.timestamp,
+    }));
+    setComments(formattedComments);
+
+    const isLiked = isPostLiked(post.id, currentUserId);
+    setLiked(isLiked);
   }, [post.id]);
 
   const handleLike = () => {
-    setLiked(!liked);
-    setLikesCount(liked ? likesCount - 1 : likesCount + 1);
+    const result = togglePostLike(post.id, currentUserId);
+    setLiked(result.liked);
+    setLikesCount(result.likesCount);
   };
 
   const handleAddComment = () => {
     if (!commentText.trim()) return;
 
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      author: "Vous",
-      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
-      content: commentText,
-      timestamp: new Date().toISOString(),
+    const newComment = addComment(
+      post.id,
+      commentText,
+      {
+        name: "Vous",
+        username: "@vous",
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+      }
+    );
+
+    const formattedComment: Comment = {
+      id: newComment.id,
+      author: newComment.author.name,
+      avatar: newComment.author.avatar,
+      content: newComment.content,
+      timestamp: newComment.timestamp,
     };
 
-    setComments([...comments, newComment]);
+    setComments([...comments, formattedComment]);
     setCommentText("");
     setToast({
       message: "Commentaire ajouté !",

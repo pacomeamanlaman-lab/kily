@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Upload, Image as ImageIcon } from "lucide-react";
 import { useState } from "react";
 import { showToast } from "@/lib/toast";
+import { createStory } from "@/lib/stories";
 
 interface CreateStoryModalProps {
   isOpen: boolean;
@@ -47,7 +48,7 @@ export default function CreateStoryModal({ isOpen, onClose }: CreateStoryModalPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!imageFile) {
+    if (!imageFile || !imagePreview) {
       showToast("Veuillez sélectionner une image", "error");
       return;
     }
@@ -57,18 +58,15 @@ export default function CreateStoryModal({ isOpen, onClose }: CreateStoryModalPr
     // Mock API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // TODO: Save to localStorage or mock store
-    const newStory = {
-      id: Date.now().toString(),
+    // Save to localStorage
+    const newStory = createStory({
       image: imagePreview,
       author: {
+        id: "current_user",
         name: "Vous",
-        username: "@vous",
-        avatar: "/default-avatar.png",
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
       },
-      timestamp: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h
-    };
+    });
 
     console.log("New story created:", newStory);
 

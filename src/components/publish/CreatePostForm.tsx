@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Image as ImageIcon, X } from "lucide-react";
 import { showToast } from "@/lib/toast";
+import { createPost } from "@/lib/posts";
 
 interface CreatePostFormProps {
   onSuccess: () => void;
@@ -62,21 +63,18 @@ export default function CreatePostForm({ onSuccess, onCancel }: CreatePostFormPr
     // Mock API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // TODO: Save to localStorage or mock store
-    const newPost = {
-      id: Date.now().toString(),
+    // Save to localStorage
+    const newPost = createPost({
       content,
       category,
-      image: imagePreview,
+      image: imagePreview || undefined,
       author: {
+        id: "current_user",
         name: "Vous",
         username: "@vous",
-        avatar: "/default-avatar.png",
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
       },
-      likes: 0,
-      comments: 0,
-      timestamp: new Date().toISOString(),
-    };
+    });
 
     console.log("New post created:", newPost);
 
