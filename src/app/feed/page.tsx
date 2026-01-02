@@ -35,6 +35,7 @@ import { useRouter } from "next/navigation";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 import NotificationsSidebar from "@/components/notifications/NotificationsSidebar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import FeedBottomSheet from "@/components/feed/FeedBottomSheet";
 
 function FeedPageContent() {
   const router = useRouter();
@@ -44,6 +45,7 @@ function FeedPageContent() {
   const [visiblePosts, setVisiblePosts] = useState(3);
   const [unreadNotifications] = useState(5); // Mock notifications count
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showBottomSheet, setShowBottomSheet] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
@@ -424,19 +426,27 @@ function FeedPageContent() {
               </div>
               <h1 className="text-2xl font-bold">Kily</h1>
             </div>
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className={`relative p-2 text-violet-400 hover:text-violet-300 transition-colors ${
-                showNotifications ? "bg-white/10" : ""
-              }`}
-            >
-              <Bell className="w-6 h-6" />
-              {unreadNotifications > 0 && (
-                <span className="absolute -top-0 -right-0 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {unreadNotifications > 9 ? "9+" : unreadNotifications}
-                </span>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowBottomSheet(true)}
+                className="relative p-2 text-violet-400 hover:text-violet-300 transition-colors"
+              >
+                <User className="w-6 h-6" />
+              </button>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`relative p-2 text-violet-400 hover:text-violet-300 transition-colors ${
+                  showNotifications ? "bg-white/10" : ""
+                }`}
+              >
+                <Bell className="w-6 h-6" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-0 -right-0 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Filter Tabs */}
@@ -773,6 +783,12 @@ function FeedPageContent() {
       <NotificationsSidebar
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
+      />
+
+      {/* Bottom Sheet */}
+      <FeedBottomSheet
+        isOpen={showBottomSheet}
+        onClose={() => setShowBottomSheet(false)}
       />
     </div>
   );

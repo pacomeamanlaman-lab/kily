@@ -70,5 +70,17 @@ html {
   background: #6d28d9;
 }
 
+/* Global cursor pointer for clickable elements */
+button,
+a,
+[role="button"],
+[onclick],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+label[for] {
+  cursor: pointer;
+}
+
 
 

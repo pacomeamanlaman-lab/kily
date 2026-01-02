@@ -20,18 +20,32 @@ export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide
   const [searchQuery, setSearchQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [currentUser, setCurrentUser] = useState(getCurrentUser());
+  const [currentUser, setCurrentUser] = useState<ReturnType<typeof getCurrentUser>>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const scrollDirection = useScrollDirection({ threshold: 10 });
 
+  // Load user on mount to avoid hydration mismatch
+  useEffect(() => {
+    setIsMounted(true);
+    setCurrentUser(getCurrentUser());
+  }, []);
+
   // Update user when it changes
   useEffect(() => {
+    if (!isMounted) return;
     const handleUserUpdate = () => {
       setCurrentUser(getCurrentUser());
     };
     window.addEventListener('userUpdated', handleUserUpdate);
-    return () => window.removeEventListener('userUpdated', handleUserUpdate);
-  }, []);
+    window.addEventListener('userLoggedIn', handleUserUpdate);
+    window.addEventListener('userLoggedOut', handleUserUpdate);
+    return () => {
+      window.removeEventListener('userUpdated', handleUserUpdate);
+      window.removeEventListener('userLoggedIn', handleUserUpdate);
+      window.removeEventListener('userLoggedOut', handleUserUpdate);
+    };
+  }, [isMounted]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -120,7 +134,7 @@ export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex items-center gap-2 hover:bg-white/5 rounded-xl px-2 py-1.5 transition-colors"
               >
-                {currentUser?.avatar ? (
+                {isMounted && currentUser?.avatar ? (
                   <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-violet-500/50">
                     <img
                       src={currentUser.avatar}
