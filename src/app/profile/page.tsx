@@ -1,9 +1,13 @@
 "use client";
 
-import { Camera, Edit, MapPin, Mail, Phone, Star, Award, Users, TrendingUp, X, Upload, Image as ImageIcon, Pencil, Plus, Check, Search, ArrowLeft } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { Camera, Edit, MapPin, Mail, Phone, Star, Award, Users, TrendingUp, X, Upload, Image as ImageIcon, Pencil, Plus, Check, Search, ArrowLeft, FileText, Video, BookMarked, Briefcase } from "lucide-react";
+import { useState, useRef, useEffect, useMemo, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { loadPosts } from "@/lib/posts";
+import { loadVideos } from "@/lib/videos";
+import PostCard from "@/components/feed/PostCard";
+import VideoCardFeed from "@/components/video/VideoCardFeed";
 import SkillBadge from "@/components/talent/SkillBadge";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -12,8 +16,10 @@ import { Skill, SkillCategory } from "@/types";
 import { getCurrentUser, updateUser, getUserFullName } from "@/lib/users";
 import { isLoggedIn } from "@/lib/auth";
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") || "overview";
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingPortfolio, setIsAddingPortfolio] = useState(false);
   const [isAddingSkill, setIsAddingSkill] = useState(false);
@@ -109,6 +115,59 @@ export default function ProfilePage() {
     setSelectedSkills(currentUser.selectedSkills);
     setLoading(false);
   }, [router]);
+
+  // Load user's posts and videos
+  const userPosts = useMemo(() => {
+    if (!user) return [];
+    const allPosts = loadPosts();
+    return allPosts.filter(post => post.author.id === user.id);
+  }, [user]);
+
+  const userVideos = useMemo(() => {
+    if (!user) return [];
+    const allVideos = loadVideos();
+    return allVideos.filter(video => video.author.id === user.id);
+  }, [user]);
+
+  // Scroll to content section when coming from feed (via sidebar links)
+  const contentRef = useRef<HTMLDivElement>(null);
+  const hasScrolledRef = useRef(false);
+  
+  useEffect(() => {
+    // Only proceed if user is loaded and not loading
+    if (loading || !user) return;
+    
+    // Check if we should scroll (only when coming from feed via sidebar)
+    const shouldScroll = sessionStorage.getItem("scrollToProfileTab") === "true";
+    
+    if (shouldScroll && activeTab !== "overview" && !hasScrolledRef.current) {
+      // Wait for content to be rendered
+      const scrollToContent = (retryCount = 0) => {
+        const element = contentRef.current;
+        if (element) {
+          // Get element position
+          const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+          const offsetPosition = Math.max(0, elementPosition - 120); // Offset for header, ensure not negative
+          
+          // Scroll to the content section
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth"
+          });
+          
+          hasScrolledRef.current = true;
+          // Clear the flag after scrolling
+          sessionStorage.removeItem("scrollToProfileTab");
+        } else if (retryCount < 5) {
+          // Retry if element not found yet (max 5 retries)
+          setTimeout(() => scrollToContent(retryCount + 1), 200);
+        }
+      };
+      
+      // Initial delay to ensure content is fully rendered
+      setTimeout(() => scrollToContent(), 800);
+    }
+  }, [activeTab, user, loading]); // Add dependencies to trigger when data is ready
 
   const [formData, setFormData] = useState({
     name: "",
@@ -536,9 +595,160 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Skills Section */}
-        {user.userType === "talent" && (
-          <div className="mb-8">
+        {/* Tabs Navigation (for talents and neighbors) */}
+        {(user.userType === "talent" || user.userType === "neighbor") && (
+          <div className="mb-6 border-b border-white/10">
+            <div className="flex gap-2 overflow-x-auto horizontal-scrollbar">
+              <button
+                onClick={() => router.push("/profile")}
+                className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  activeTab === "overview"
+                    ? "border-violet-500 text-violet-400"
+                    : "border-transparent text-gray-400 hover:text-white"
+                }`}
+              >
+                Vue d'ensemble
+              </button>
+              {/* Tabs spécifiques aux talents */}
+              {user.userType === "talent" && (
+                <>
+                  <button
+                    onClick={() => router.push("/profile?tab=posts")}
+                    className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${
+                      activeTab === "posts"
+                        ? "border-violet-500 text-violet-400"
+                        : "border-transparent text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    <FileText className="w-4 h-4" />
+                    Mes posts
+                    {userPosts.length > 0 && (
+                      <span className="px-2 py-0.5 bg-violet-500/20 text-violet-400 text-xs rounded-full">
+                        {userPosts.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => router.push("/profile?tab=videos")}
+                    className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${
+                      activeTab === "videos"
+                        ? "border-violet-500 text-violet-400"
+                        : "border-transparent text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    <Video className="w-4 h-4" />
+                    Mes vidéos
+                    {userVideos.length > 0 && (
+                      <span className="px-2 py-0.5 bg-violet-500/20 text-violet-400 text-xs rounded-full">
+                        {userVideos.length}
+                      </span>
+                    )}
+                  </button>
+                </>
+              )}
+
+              {/* Tabs spécifiques aux voisins */}
+              {user.userType === "neighbor" && (
+                <>
+                  <button
+                    onClick={() => router.push("/profile?tab=saved")}
+                    className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${
+                      activeTab === "saved"
+                        ? "border-violet-500 text-violet-400"
+                        : "border-transparent text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    <BookMarked className="w-4 h-4" />
+                    Services sauvegardés
+                  </button>
+                  <button
+                    onClick={() => router.push("/profile?tab=requests")}
+                    className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${
+                      activeTab === "requests"
+                        ? "border-violet-500 text-violet-400"
+                        : "border-transparent text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    <Briefcase className="w-4 h-4" />
+                    Demandes actives
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Content based on active tab */}
+        <div ref={contentRef}>
+        {activeTab === "posts" && user.userType === "talent" ? (
+          <div className="space-y-4">
+            {userPosts.length > 0 ? (
+              userPosts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))
+            ) : (
+              <div className="bg-white/5 border border-white/10 rounded-xl p-12 text-center">
+                <FileText className="w-16 h-16 text-violet-500/50 mx-auto mb-4" />
+                <h3 className="text-xl font-bold mb-2">Aucun post pour le moment</h3>
+                <p className="text-gray-400 mb-6">
+                  Partagez vos créations avec la communauté !
+                </p>
+                <Button variant="primary" onClick={() => router.push("/feed")}>
+                  Créer mon premier post
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : activeTab === "videos" && user.userType === "talent" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {userVideos.length > 0 ? (
+              userVideos.map((video) => (
+                <VideoCardFeed 
+                  key={video.id} 
+                  video={video} 
+                  onClick={() => router.push(`/discover?video=${video.id}`)}
+                />
+              ))
+            ) : (
+              <div className="col-span-full bg-white/5 border border-white/10 rounded-xl p-12 text-center">
+                <Video className="w-16 h-16 text-violet-500/50 mx-auto mb-4" />
+                <h3 className="text-xl font-bold mb-2">Aucune vidéo pour le moment</h3>
+                <p className="text-gray-400 mb-6">
+                  Partagez vos vidéos avec la communauté !
+                </p>
+                <Button variant="primary" onClick={() => router.push("/feed")}>
+                  Créer ma première vidéo
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : activeTab === "saved" && user.userType === "neighbor" ? (
+          <div className="bg-white/5 border border-white/10 rounded-xl p-12 text-center">
+            <BookMarked className="w-16 h-16 text-violet-500/50 mx-auto mb-4" />
+            <h3 className="text-xl font-bold mb-2">Services sauvegardés</h3>
+            <p className="text-gray-400 mb-6">
+              Les services que vous avez sauvegardés apparaîtront ici
+            </p>
+            <Button variant="primary" onClick={() => router.push("/discover")}>
+              Découvrir des services
+            </Button>
+          </div>
+        ) : activeTab === "requests" && user.userType === "neighbor" ? (
+          <div className="bg-white/5 border border-white/10 rounded-xl p-12 text-center">
+            <Briefcase className="w-16 h-16 text-violet-500/50 mx-auto mb-4" />
+            <h3 className="text-xl font-bold mb-2">Demandes actives</h3>
+            <p className="text-gray-400 mb-6">
+              Vos demandes de services en cours apparaîtront ici
+            </p>
+            <Button variant="primary" onClick={() => router.push("/discover")}>
+              Faire une demande
+            </Button>
+          </div>
+        ) : (
+          <>
+            {/* Skills Section */}
+            {user.userType === "talent" && (
+              <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Compétences</h2>
               <Button variant="ghost" size="sm" onClick={() => setIsAddingSkill(true)}>
@@ -632,6 +842,9 @@ export default function ProfilePage() {
             )}
           </div>
         )}
+          </>
+        )}
+        </div>
 
         {/* Account Settings */}
         <div className="mb-8">
@@ -1128,5 +1341,20 @@ export default function ProfilePage() {
         onClose={() => setToast({ ...toast, isVisible: false })}
       />
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <ProfilePageContent />
+    </Suspense>
   );
 }
