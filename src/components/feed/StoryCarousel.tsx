@@ -25,6 +25,7 @@ interface StoryCarouselProps {
 export default function StoryCarousel({ stories: initialStories }: StoryCarouselProps) {
   const currentUser = getCurrentUser();
   const currentUserId = currentUser?.id || null;
+  const canPublish = currentUser?.userType === "talent"; // Only Talents can create stories
   const [stories, setStories] = useState<Story[]>(initialStories || []);
   const [selectedStory, setSelectedStory] = useState<number | null>(null);
   const [viewedStories, setViewedStories] = useState<Set<string>>(new Set());
@@ -75,18 +76,20 @@ export default function StoryCarousel({ stories: initialStories }: StoryCarousel
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
       <div className="flex items-center gap-4 overflow-x-auto horizontal-scrollbar pb-1">
-        {/* Add Story */}
-        <button
-          onClick={() => setShowCreateStoryModal(true)}
-          className="flex-shrink-0 flex flex-col items-center gap-2 group cursor-pointer"
-        >
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-600 to-violet-800 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Plus className="w-8 h-8 text-white" />
-          </div>
-          <span className="text-xs text-gray-400 w-16 text-center truncate">
-            Ajouter
-          </span>
-        </button>
+        {/* Add Story - Only for Talents */}
+        {canPublish && (
+          <button
+            onClick={() => setShowCreateStoryModal(true)}
+            className="flex-shrink-0 flex flex-col items-center gap-2 group cursor-pointer"
+          >
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-600 to-violet-800 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Plus className="w-8 h-8 text-white" />
+            </div>
+            <span className="text-xs text-gray-400 w-16 text-center truncate">
+              Ajouter
+            </span>
+          </button>
+        )}
 
         {/* Stories */}
         {stories.map((story, index) => {

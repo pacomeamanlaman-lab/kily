@@ -37,6 +37,7 @@ import { useScrollDirection } from "@/hooks/useScrollDirection";
 import NotificationsSidebar from "@/components/notifications/NotificationsSidebar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import FeedBottomSheet from "@/components/feed/FeedBottomSheet";
+import { getCurrentUser } from "@/lib/users";
 
 function FeedPageContent() {
   const router = useRouter();
@@ -54,6 +55,10 @@ function FeedPageContent() {
     type: "success",
     visible: false,
   });
+
+  // Get current user to check if they can publish
+  const currentUser = getCurrentUser();
+  const canPublish = currentUser?.userType === "talent";
 
   // Load posts and videos from localStorage on mount and when window gets focus
   useEffect(() => {
@@ -594,8 +599,8 @@ function FeedPageContent() {
             })}
           </div>
 
-          {/* Create Post Button */}
-          <CreatePostButton />
+          {/* Create Post Button - Only for Talents */}
+          {canPublish && <CreatePostButton />}
 
           {/* Stories */}
           <motion.div

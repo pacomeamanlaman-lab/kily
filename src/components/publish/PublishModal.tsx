@@ -1,10 +1,11 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, FileText, Video } from "lucide-react";
+import { X, FileText, Video, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import CreatePostForm from "./CreatePostForm";
 import CreateVideoForm from "./CreateVideoForm";
+import { getCurrentUser } from "@/lib/users";
 
 interface PublishModalProps {
   isOpen: boolean;
@@ -17,6 +18,10 @@ type PublishType = "post" | "video" | null;
 export default function PublishModal({ isOpen, onClose, initialType = null }: PublishModalProps) {
   const [publishType, setPublishType] = useState<PublishType>(initialType);
 
+  // Check if user can publish (only Talents)
+  const currentUser = getCurrentUser();
+  const canPublish = currentUser?.userType === "talent";
+
   // Sync publishType with initialType when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -28,6 +33,47 @@ export default function PublishModal({ isOpen, onClose, initialType = null }: Pu
     setPublishType(null);
     onClose();
   };
+
+  // If user cannot publish, show error message
+  if (isOpen && !canPublish) {
+    return (
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={handleClose}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        >
+          <div className="bg-gradient-to-br from-gray-900 to-black border border-red-500/30 rounded-2xl max-w-md w-full shadow-2xl p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Accès refusé</h3>
+                <p className="text-sm text-white/60">
+                  Seuls les Talents peuvent publier du contenu
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleClose}
+              className="w-full py-3 bg-violet-500 hover:bg-violet-600 text-white font-medium rounded-xl transition-colors"
+            >
+              Compris
+            </button>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
 
   return (
     <AnimatePresence>
