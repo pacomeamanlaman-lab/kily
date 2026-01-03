@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Compass, MessageCircle, User, Plus, Search } from "lucide-react";
 import { useState } from "react";
+import { isLoggedIn } from "@/lib/auth";
 
 interface BottomNavProps {
   onPublishClick?: () => void;
@@ -14,12 +15,15 @@ export default function BottomNav({ onPublishClick, showPublishButton = false }:
   const router = useRouter();
   const [unreadMessages] = useState(3); // Mock unread messages count
 
+  // Determine profile path based on login status
+  const profilePath = isLoggedIn() ? "/profile" : "/login";
+
   // Tabs pour les pages normales (sans le bouton +)
   const normalTabs = [
     { id: "home", label: "Accueil", icon: Home, path: "/feed" },
     { id: "discover", label: "Découvrir", icon: Compass, path: "/discover" },
     { id: "search", label: "Recherche", icon: Search, path: "/search" },
-    { id: "profile", label: "Profil", icon: User, path: "/register" },
+    { id: "profile", label: "Profil", icon: User, path: profilePath },
   ];
 
   // Tabs pour le feed (avec le bouton +) - seulement si showPublishButton est true ET onPublishClick existe
@@ -28,7 +32,7 @@ export default function BottomNav({ onPublishClick, showPublishButton = false }:
     { id: "discover", label: "Découvrir", icon: Compass, path: "/discover" },
     { id: "publish", label: "Publier", icon: Plus, path: "", onClick: onPublishClick!, isPublish: true },
     { id: "messages", label: "Messages", icon: MessageCircle, path: "/messages", badge: unreadMessages },
-    { id: "profile", label: "Profil", icon: User, path: "/profile" },
+    { id: "profile", label: "Profil", icon: User, path: profilePath },
   ];
 
   // Utiliser feedTabs uniquement si showPublishButton est true ET onPublishClick existe, sinon normalTabs
@@ -41,8 +45,8 @@ export default function BottomNav({ onPublishClick, showPublishButton = false }:
     if (path === "") {
       return false; // Le bouton publish n'est jamais actif
     }
-    if (path === "/register") {
-      return pathname === "/register" || pathname === "/profile";
+    if (path === "/login" || path === "/profile") {
+      return pathname === "/login" || pathname === "/register" || pathname === "/profile";
     }
     return pathname.startsWith(path);
   };

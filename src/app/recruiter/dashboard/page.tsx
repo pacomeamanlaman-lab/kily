@@ -17,23 +17,40 @@ import {
   Mail,
   Filter,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import TalentCard from "@/components/talent/TalentCard";
 import { mockTalents } from "@/lib/mockData";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
+import { loadSavedTalents, loadContactedTalents, addSavedTalent, removeSavedTalent, addContactedTalent, removeContactedTalent } from "@/lib/savedTalents";
 
 export default function RecruiterDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"overview" | "saved" | "contacted">("overview");
 
-  // State management
-  const [savedTalentIds, setSavedTalentIds] = useState<string[]>(
-    mockTalents.slice(0, 6).map(t => t.id)
-  );
-  const [contactedTalentIds, setContactedTalentIds] = useState<string[]>(
-    mockTalents.slice(0, 4).map(t => t.id)
-  );
+  // State management - Load from localStorage
+  const [savedTalentIds, setSavedTalentIds] = useState<string[]>([]);
+  const [contactedTalentIds, setContactedTalentIds] = useState<string[]>([]);
+
+  // Load saved and contacted talents from localStorage on mount
+  useEffect(() => {
+    const saved = loadSavedTalents();
+    const contacted = loadContactedTalents();
+    
+    // If empty, initialize with some mock data for demo
+    if (saved.length === 0 && contacted.length === 0) {
+      const initialSaved = mockTalents.slice(0, 6).map(t => t.id);
+      const initialContacted = mockTalents.slice(0, 4).map(t => t.id);
+      setSavedTalentIds(initialSaved);
+      setContactedTalentIds(initialContacted);
+      // Save to localStorage
+      initialSaved.forEach(id => addSavedTalent(id));
+      initialContacted.forEach(id => addContactedTalent(id));
+    } else {
+      setSavedTalentIds(saved);
+      setContactedTalentIds(contacted);
+    }
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; isVisible: boolean }>({
@@ -54,6 +71,7 @@ export default function RecruiterDashboard() {
 
   const handleContactTalent = (talentId: string, talentName: string) => {
     if (!contactedTalentIds.includes(talentId)) {
+      addContactedTalent(talentId);
       setContactedTalentIds(prev => [...prev, talentId]);
     }
     setToast({

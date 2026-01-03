@@ -1,100 +1,111 @@
-// localStorage-based Save/Unsave system for recruiters
+// localStorage-based system for saved talents (recruiter dashboard)
 
 const SAVED_TALENTS_KEY = "kily_saved_talents";
-
-interface SavedTalentsState {
-  [recruiterId: string]: string[]; // recruiterId -> array of saved talent user IDs
-}
+const CONTACTED_TALENTS_KEY = "kily_contacted_talents";
 
 // Load saved talents from localStorage
-const loadSavedTalents = (): SavedTalentsState => {
-  if (typeof window === "undefined") return {};
-
+export const loadSavedTalents = (): string[] => {
+  if (typeof window === "undefined") return [];
+  
   const stored = localStorage.getItem(SAVED_TALENTS_KEY);
-  return stored ? JSON.parse(stored) : {};
+  return stored ? JSON.parse(stored) : [];
 };
 
-// Save talents to localStorage
-const saveSavedTalents = (savedTalents: SavedTalentsState): void => {
+// Save saved talents to localStorage
+const saveSavedTalents = (talentIds: string[]): void => {
   if (typeof window === "undefined") return;
-  localStorage.setItem(SAVED_TALENTS_KEY, JSON.stringify(savedTalents));
+  localStorage.setItem(SAVED_TALENTS_KEY, JSON.stringify(talentIds));
 };
 
-// Check if talent is saved by recruiter
-export const isTalentSaved = (recruiterId: string, talentId: string): boolean => {
-  const savedTalents = loadSavedTalents();
-  const recruiterSaves = savedTalents[recruiterId] || [];
-  return recruiterSaves.includes(talentId);
+// Load contacted talents from localStorage
+export const loadContactedTalents = (): string[] => {
+  if (typeof window === "undefined") return [];
+  
+  const stored = localStorage.getItem(CONTACTED_TALENTS_KEY);
+  return stored ? JSON.parse(stored) : [];
+};
+
+// Save contacted talents to localStorage
+const saveContactedTalents = (talentIds: string[]): void => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(CONTACTED_TALENTS_KEY, JSON.stringify(talentIds));
+};
+
+// Add talent to saved
+export const addSavedTalent = (talentId: string): boolean => {
+  const saved = loadSavedTalents();
+  
+  if (!saved.includes(talentId)) {
+    saved.push(talentId);
+    saveSavedTalents(saved);
+    return true;
+  }
+  
+  return false;
+};
+
+// Remove talent from saved
+export const removeSavedTalent = (talentId: string): boolean => {
+  const saved = loadSavedTalents();
+  const index = saved.indexOf(talentId);
+  
+  if (index > -1) {
+    saved.splice(index, 1);
+    saveSavedTalents(saved);
+    return true;
+  }
+  
+  return false;
+};
+
+// Check if talent is saved
+export const isTalentSaved = (talentId: string): boolean => {
+  const saved = loadSavedTalents();
+  return saved.includes(talentId);
+};
+
+// Add talent to contacted
+export const addContactedTalent = (talentId: string): boolean => {
+  const contacted = loadContactedTalents();
+  
+  if (!contacted.includes(talentId)) {
+    contacted.push(talentId);
+    saveContactedTalents(contacted);
+    return true;
+  }
+  
+  return false;
+};
+
+// Remove talent from contacted
+export const removeContactedTalent = (talentId: string): boolean => {
+  const contacted = loadContactedTalents();
+  const index = contacted.indexOf(talentId);
+  
+  if (index > -1) {
+    contacted.splice(index, 1);
+    saveContactedTalents(contacted);
+    return true;
+  }
+  
+  return false;
+};
+
+// Check if talent is contacted
+export const isTalentContacted = (talentId: string): boolean => {
+  const contacted = loadContactedTalents();
+  return contacted.includes(talentId);
 };
 
 // Toggle save/unsave talent
-export const toggleSaveTalent = (
-  recruiterId: string,
-  talentId: string
-): { saved: boolean; savedCount: number } => {
-  const savedTalents = loadSavedTalents();
-
-  if (!savedTalents[recruiterId]) {
-    savedTalents[recruiterId] = [];
-  }
-
-  const alreadySaved = savedTalents[recruiterId].includes(talentId);
-
-  if (alreadySaved) {
-    // Unsave
-    savedTalents[recruiterId] = savedTalents[recruiterId].filter((id) => id !== talentId);
+export const toggleSaveTalent = (talentId: string): { saved: boolean } => {
+  const isSaved = isTalentSaved(talentId);
+  
+  if (isSaved) {
+    removeSavedTalent(talentId);
+    return { saved: false };
   } else {
-    // Save
-    savedTalents[recruiterId].push(talentId);
+    addSavedTalent(talentId);
+    return { saved: true };
   }
-
-  saveSavedTalents(savedTalents);
-
-  return {
-    saved: !alreadySaved,
-    savedCount: savedTalents[recruiterId].length,
-  };
-};
-
-// Get all saved talents for a recruiter
-export const getSavedTalents = (recruiterId: string): string[] => {
-  const savedTalents = loadSavedTalents();
-  return savedTalents[recruiterId] || [];
-};
-
-// Get saved talents count for a recruiter
-export const getSavedTalentsCount = (recruiterId: string): number => {
-  const savedTalents = loadSavedTalents();
-  return (savedTalents[recruiterId] || []).length;
-};
-
-// Remove all saved talents for a recruiter (e.g., when account is deleted)
-export const removeAllSavedTalents = (recruiterId: string): void => {
-  const savedTalents = loadSavedTalents();
-  delete savedTalents[recruiterId];
-  saveSavedTalents(savedTalents);
-};
-
-// Remove a talent from all recruiters' saved lists (e.g., when talent account is deleted)
-export const removeTalentFromAllSaves = (talentId: string): void => {
-  const savedTalents = loadSavedTalents();
-
-  Object.keys(savedTalents).forEach((recruiterId) => {
-    savedTalents[recruiterId] = savedTalents[recruiterId].filter((id) => id !== talentId);
-  });
-
-  saveSavedTalents(savedTalents);
-};
-
-// Check if multiple talents are saved (for bulk operations)
-export const areTalentsSaved = (recruiterId: string, talentIds: string[]): Record<string, boolean> => {
-  const savedTalents = loadSavedTalents();
-  const recruiterSaves = savedTalents[recruiterId] || [];
-
-  const result: Record<string, boolean> = {};
-  talentIds.forEach((talentId) => {
-    result[talentId] = recruiterSaves.includes(talentId);
-  });
-
-  return result;
 };

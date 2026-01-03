@@ -180,6 +180,36 @@ export const isPostLiked = (postId: string, userId: string): boolean => {
   return post ? post.likedBy.includes(userId) : false;
 };
 
+// Update post
+export const updatePost = (
+  postId: string,
+  updates: {
+    content?: string;
+    images?: string[];
+    category?: string;
+  }
+): Post | null => {
+  const posts = loadPosts();
+  const postIndex = posts.findIndex((p) => p.id === postId);
+
+  if (postIndex === -1) return null;
+
+  const updatedPost: Post = {
+    ...posts[postIndex],
+    ...updates,
+  };
+
+  // If images are updated, also update the deprecated image field for backward compatibility
+  if (updates.images !== undefined) {
+    updatedPost.image = updates.images[0];
+  }
+
+  posts[postIndex] = updatedPost;
+  savePosts(posts);
+
+  return updatedPost;
+};
+
 // Delete post
 export const deletePost = (postId: string): boolean => {
   const posts = loadPosts();

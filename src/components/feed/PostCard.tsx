@@ -4,30 +4,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Heart, MessageCircle, Share2, MoreHorizontal, CheckCircle, Send, X, Edit, Trash2, Flag, EyeOff, Copy, UserPlus, UserMinus, Link } from "lucide-react";
 import ShareModal from "@/components/share/ShareModal";
 import ImageLightbox from "@/components/feed/ImageLightbox";
+import EditPostModal from "@/components/feed/EditPostModal";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
-import { togglePostLike, isPostLiked, addComment, loadComments, deletePost } from "@/lib/posts";
+import { togglePostLike, isPostLiked, addComment, loadComments, deletePost, updatePost, Post } from "@/lib/posts";
 import { getCurrentUser, getUserDisplayName } from "@/lib/users";
-
-export interface Post {
-  id: string;
-  author: {
-    id: string;
-    name: string;
-    avatar: string;
-    verified: boolean;
-    skill?: string;
-  };
-  type: "portfolio" | "achievement" | "service";
-  content: string;
-  image?: string; // Deprecated - use images instead
-  images?: string[]; // Array of image URLs (max 5)
-  likes: number;
-  comments: number;
-  timestamp: string;
-}
+import { hidePost } from "@/lib/hiddenContent";
+import { createReport, hasUserReported } from "@/lib/reports";
+import { toggleFollow, isFollowing } from "@/lib/follows";
 
 interface PostCardProps {
   post: Post;
@@ -54,7 +40,9 @@ export default function PostCard({ post }: PostCardProps) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [showEditModal, setShowEditModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
     type: "success",
@@ -79,8 +67,14 @@ export default function PostCard({ post }: PostCardProps) {
     if (currentUserId) {
       const isLiked = isPostLiked(post.id, currentUserId);
       setLiked(isLiked);
+      
+      // Check if following author
+      if (post.author.id && post.author.id !== currentUserId) {
+        const following = isFollowing(currentUserId, post.author.id);
+        setIsFollowingAuthor(following);
+      }
     }
-  }, [post.id, currentUserId]);
+  }, [post.id, currentUserId, post.author.id]);
 
   const handleLike = () => {
     if (!currentUserId) {
@@ -198,52 +192,98 @@ export default function PostCard({ post }: PostCardProps) {
 
   const handleEdit = () => {
     setShowMenu(false);
-    setToast({
-      message: "Fonctionnalité à venir",
-      type: "info",
-      visible: true,
-    });
-    // TODO: Implement edit post functionality
+    setShowEditModal(true);
+  };
+
+  const handlePostUpdated = () => {
+    // Dispatch event to refresh feed
+    window.dispatchEvent(new CustomEvent('postUpdated', { detail: { postId: post.id } }));
   };
 
   const handleReport = () => {
+    if (!currentUserId) return;
+    
     setShowMenu(false);
+    
+    // Check if already reported
+    if (hasUserReported(post.id, currentUserId)) {
+      setToast({
+        message: "Vous avez déjà signalé ce post",
+        type: "info",
+        visible: true,
+      });
+      return;
+    }
+    
+    // Create report
+    createReport(
+      "post",
+      post.id,
+      currentUserId,
+      "Contenu inapproprié",
+      "Signalement depuis le menu du post"
+    );
+    
     setToast({
       message: "Post signalé. Merci pour votre vigilance.",
       type: "success",
       visible: true,
     });
-    // TODO: Implement report functionality
+    
+    // Dispatch event to refresh feed (hide the post)
+    window.dispatchEvent(new CustomEvent('postReported', { detail: { postId: post.id } }));
   };
 
   const handleHide = () => {
     setShowMenu(false);
-    setToast({
-      message: "Post masqué",
-      type: "success",
-      visible: true,
-    });
-    // TODO: Implement hide post functionality
+    
+    // Hide post
+    const hidden = hidePost(post.id);
+    
+    if (hidden) {
+      setToast({
+        message: "Post masqué",
+        type: "success",
+        visible: true,
+      });
+      
+      // Dispatch event to refresh feed
+      window.dispatchEvent(new CustomEvent('postHidden', { detail: { postId: post.id } }));
+    } else {
+      setToast({
+        message: "Erreur lors du masquage",
+        type: "error",
+        visible: true,
+      });
+    }
   };
 
   const handleFollow = () => {
+    if (!currentUserId || !post.author.id) return;
+    
     setShowMenu(false);
+    const result = toggleFollow(currentUserId, post.author.id);
+    setIsFollowingAuthor(result.following);
+    
     setToast({
       message: `Vous suivez maintenant ${post.author.name}`,
       type: "success",
       visible: true,
     });
-    // TODO: Implement follow functionality
   };
 
   const handleUnfollow = () => {
+    if (!currentUserId || !post.author.id) return;
+    
     setShowMenu(false);
+    const result = toggleFollow(currentUserId, post.author.id);
+    setIsFollowingAuthor(result.following);
+    
     setToast({
       message: `Vous ne suivez plus ${post.author.name}`,
       type: "info",
       visible: true,
     });
-    // TODO: Implement unfollow functionality
   };
 
   const getTimeAgo = (timestamp: string) => {
@@ -274,7 +314,7 @@ export default function PostCard({ post }: PostCardProps) {
               alt={post.author.name}
               className="w-12 h-12 rounded-full object-cover"
             />
-            {post.author.verified && (
+            {false && (
               <div className="absolute -bottom-1 -right-1 bg-violet-600 rounded-full p-0.5">
                 <CheckCircle className="w-3 h-3 text-white" />
               </div>
@@ -284,9 +324,6 @@ export default function PostCard({ post }: PostCardProps) {
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-white">{post.author.name}</h3>
             </div>
-            {post.author.skill && (
-              <p className="text-sm text-gray-400">{post.author.skill}</p>
-            )}
             <p className="text-xs text-gray-500">{getTimeAgo(post.timestamp)}</p>
           </div>
         </button>
@@ -344,13 +381,23 @@ export default function PostCard({ post }: PostCardProps) {
                 ) : (
                   // Menu for other users' posts
                   <div className="py-2">
-                    <button
-                      onClick={handleFollow}
-                      className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
-                    >
-                      <UserPlus className="w-4 h-4" />
-                      <span className="text-sm">Suivre</span>
-                    </button>
+                    {isFollowingAuthor ? (
+                      <button
+                        onClick={handleUnfollow}
+                        className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                      >
+                        <UserMinus className="w-4 h-4" />
+                        <span className="text-sm">Ne plus suivre</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleFollow}
+                        className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        <span className="text-sm">Suivre</span>
+                      </button>
+                    )}
                     <div className="border-t border-white/10 my-1" />
                     <button
                       onClick={handleSharePost}
@@ -734,6 +781,14 @@ export default function PostCard({ post }: PostCardProps) {
         type={toast.type}
         isVisible={toast.visible}
         onClose={() => setToast((prev) => ({ ...prev, visible: false }))}
+      />
+
+      {/* Edit Post Modal */}
+      <EditPostModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        post={post}
+        onPostUpdated={handlePostUpdated}
       />
     </motion.div>
   );

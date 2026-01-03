@@ -59,7 +59,7 @@ export default function ProfilePage() {
   // Load saved status from localStorage
   useEffect(() => {
     if (!currentUserId) return;
-    const saved = isTalentSaved(currentUserId, talent.id);
+    const saved = isTalentSaved(talent.id);
     setIsSaved(saved);
   }, [talent.id, currentUserId]);
 
@@ -80,7 +80,7 @@ export default function ProfilePage() {
       });
       return;
     }
-    const result = toggleSaveTalent(currentUserId, talent.id);
+    const result = toggleSaveTalent(talent.id);
     setIsSaved(result.saved);
     setToast({
       message: result.saved

@@ -25,6 +25,7 @@ import CreatePostButton from "@/components/feed/CreatePostButton";
 import { mockStories } from "@/lib/feedData";
 import { loadPosts } from "@/lib/posts";
 import { loadVideos } from "@/lib/videos";
+import { getHiddenPosts, getHiddenVideos } from "@/lib/hiddenContent";
 import VideoCard from "@/components/video/VideoCard";
 import VideoCardFeed from "@/components/video/VideoCardFeed";
 import VideoPlayer from "@/components/video/VideoPlayer";
@@ -98,10 +99,46 @@ function FeedPageContent() {
       setVideos(loadedVideos);
     };
 
+    const handlePostHidden = () => {
+      const loadedPosts = loadPosts();
+      setPosts(loadedPosts);
+    };
+
+    const handleVideoHidden = () => {
+      const loadedVideos = loadVideos();
+      setVideos(loadedVideos);
+    };
+
+    const handlePostReported = () => {
+      const loadedPosts = loadPosts();
+      setPosts(loadedPosts);
+    };
+
+    const handleVideoReported = () => {
+      const loadedVideos = loadVideos();
+      setVideos(loadedVideos);
+    };
+
+    const handlePostUpdated = () => {
+      const loadedPosts = loadPosts();
+      setPosts(loadedPosts);
+    };
+
+    const handleVideoUpdated = () => {
+      const loadedVideos = loadVideos();
+      setVideos(loadedVideos);
+    };
+
     window.addEventListener('postCreated', handlePostCreated);
     window.addEventListener('videoCreated', handleVideoCreated);
     window.addEventListener('postDeleted', handlePostDeleted);
     window.addEventListener('videoDeleted', handleVideoDeleted);
+    window.addEventListener('postHidden', handlePostHidden);
+    window.addEventListener('videoHidden', handleVideoHidden);
+    window.addEventListener('postReported', handlePostReported);
+    window.addEventListener('videoReported', handleVideoReported);
+    window.addEventListener('postUpdated', handlePostUpdated);
+    window.addEventListener('videoUpdated', handleVideoUpdated);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
@@ -109,6 +146,12 @@ function FeedPageContent() {
       window.removeEventListener('videoCreated', handleVideoCreated);
       window.removeEventListener('postDeleted', handlePostDeleted);
       window.removeEventListener('videoDeleted', handleVideoDeleted);
+      window.removeEventListener('postHidden', handlePostHidden);
+      window.removeEventListener('videoHidden', handleVideoHidden);
+      window.removeEventListener('postReported', handlePostReported);
+      window.removeEventListener('videoReported', handleVideoReported);
+      window.removeEventListener('postUpdated', handlePostUpdated);
+      window.removeEventListener('videoUpdated', handleVideoUpdated);
     };
   }, []);
 
@@ -184,35 +227,43 @@ function FeedPageContent() {
     return posts;
   }, [filter, followedTalents, posts]);
 
-  // Create mixed feed of posts and videos, sorted by date (newest first)
+  // Get hidden content IDs
+  const hiddenPosts = getHiddenPosts();
+  const hiddenVideos = getHiddenVideos();
+
+  // Create mixed feed of posts and videos, sorted by date (newest first), excluding hidden content
   const mixedFeed = useMemo(() => {
     const feed: Array<{ type: "post" | "video"; data: any; id: string; timestamp: number }> = [];
 
-    // Add all posts
-    filteredPosts.forEach((post) => {
-      feed.push({
-        type: "post",
-        data: post,
-        id: `post-${post.id}`,
-        timestamp: new Date(post.timestamp || post.createdAt || 0).getTime(),
+    // Add all posts (excluding hidden ones)
+    filteredPosts
+      .filter((post) => !hiddenPosts.includes(post.id))
+      .forEach((post) => {
+        feed.push({
+          type: "post",
+          data: post,
+          id: `post-${post.id}`,
+          timestamp: new Date(post.timestamp || post.createdAt || 0).getTime(),
+        });
       });
-    });
 
-    // Add all videos
-    videos.forEach((video) => {
-      feed.push({
-        type: "video",
-        data: video,
-        id: `video-${video.id}`,
-        timestamp: new Date(video.createdAt || 0).getTime(),
+    // Add all videos (excluding hidden ones)
+    videos
+      .filter((video) => !hiddenVideos.includes(video.id))
+      .forEach((video) => {
+        feed.push({
+          type: "video",
+          data: video,
+          id: `video-${video.id}`,
+          timestamp: new Date(video.createdAt || 0).getTime(),
+        });
       });
-    });
 
     // Sort by timestamp (newest first)
     feed.sort((a, b) => b.timestamp - a.timestamp);
 
     return feed;
-  }, [filteredPosts, videos]);
+  }, [filteredPosts, videos, hiddenPosts, hiddenVideos]);
 
   const handleVideoClick = (videoId: string) => {
     const videoIndex = videos.findIndex((v) => v.id === videoId);

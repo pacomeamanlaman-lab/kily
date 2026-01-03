@@ -11,7 +11,11 @@ import { mockComments } from "@/lib/feedData";
 import Toast from "@/components/ui/Toast";
 import { isVideoLiked, getVideoLikesCount, toggleVideoLike, initVideoLikesCount } from "@/lib/videoLikes";
 import { getCurrentUser } from "@/lib/users";
-import { deleteVideo } from "@/lib/videos";
+import { deleteVideo, updateVideo } from "@/lib/videos";
+import EditVideoModal from "@/components/video/EditVideoModal";
+import { toggleFollow, isFollowing } from "@/lib/follows";
+import { hideVideo } from "@/lib/hiddenContent";
+import { createReport, hasUserReported } from "@/lib/reports";
 
 interface VideoCardFeedProps {
   video: Video;
@@ -37,6 +41,8 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
   const [commentText, setCommentText] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
@@ -70,7 +76,13 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
     // Load liked state and count from localStorage
     setLiked(isVideoLiked(video.id));
     setLikesCount(getVideoLikesCount(video.id, video.likes));
-  }, [video.id, video.likes]);
+    
+    // Check if following author
+    if (currentUserId && video.author.id && video.author.id !== currentUserId) {
+      const following = isFollowing(currentUserId, video.author.id);
+      setIsFollowingAuthor(following);
+    }
+  }, [video.id, video.likes, currentUserId, video.author.id]);
 
   const handleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -147,56 +159,102 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(false);
-    setToast({
-      message: "Fonctionnalité à venir",
-      type: "info",
-      visible: true,
-    });
-    // TODO: Implement edit video functionality
+    setShowEditModal(true);
+  };
+
+  const handleVideoUpdated = () => {
+    // Dispatch event to refresh feed
+    window.dispatchEvent(new CustomEvent('videoUpdated', { detail: { videoId: video.id } }));
   };
 
   const handleReport = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!currentUserId) return;
+    
     setShowMenu(false);
+    
+    // Check if already reported
+    if (hasUserReported(video.id, currentUserId)) {
+      setToast({
+        message: "Vous avez déjà signalé cette vidéo",
+        type: "info",
+        visible: true,
+      });
+      return;
+    }
+    
+    // Create report
+    createReport(
+      "video",
+      video.id,
+      currentUserId,
+      "Contenu inapproprié",
+      "Signalement depuis le menu de la vidéo"
+    );
+    
     setToast({
       message: "Vidéo signalée. Merci pour votre vigilance.",
       type: "success",
       visible: true,
     });
-    // TODO: Implement report functionality
+    
+    // Dispatch event to refresh feed (hide the video)
+    window.dispatchEvent(new CustomEvent('videoReported', { detail: { videoId: video.id } }));
   };
 
   const handleHide = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(false);
-    setToast({
-      message: "Vidéo masquée",
-      type: "success",
-      visible: true,
-    });
-    // TODO: Implement hide video functionality
+    
+    // Hide video
+    const hidden = hideVideo(video.id);
+    
+    if (hidden) {
+      setToast({
+        message: "Vidéo masquée",
+        type: "success",
+        visible: true,
+      });
+      
+      // Dispatch event to refresh feed
+      window.dispatchEvent(new CustomEvent('videoHidden', { detail: { videoId: video.id } }));
+    } else {
+      setToast({
+        message: "Erreur lors du masquage",
+        type: "error",
+        visible: true,
+      });
+    }
   };
 
   const handleFollow = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!currentUserId || !video.author.id) return;
+    
     setShowMenu(false);
+    const result = toggleFollow(currentUserId, video.author.id);
+    setIsFollowingAuthor(result.following);
+    
     setToast({
       message: `Vous suivez maintenant ${video.author.name}`,
       type: "success",
       visible: true,
     });
-    // TODO: Implement follow functionality
   };
 
   const handleUnfollow = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!currentUserId || !video.author.id) return;
+    
     setShowMenu(false);
+    const result = toggleFollow(currentUserId, video.author.id);
+    setIsFollowingAuthor(result.following);
+    
     setToast({
       message: `Vous ne suivez plus ${video.author.name}`,
       type: "info",
       visible: true,
     });
-    // TODO: Implement unfollow functionality
   };
 
   const handleAddComment = () => {
@@ -595,6 +653,14 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
         url={`${typeof window !== 'undefined' ? window.location.origin : ''}/video/${video.id}`}
         title={video.title}
         description={video.description}
+      />
+
+      {/* Edit Video Modal */}
+      <EditVideoModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        video={video}
+        onVideoUpdated={handleVideoUpdated}
       />
 
       {/* Toast */}

@@ -2,6 +2,9 @@
 
 import { Video, mockVideos } from "./videoData";
 
+// Re-export Video type
+export type { Video };
+
 const VIDEOS_KEY = "kily_videos";
 
 // Initialize with default videos if empty
@@ -126,6 +129,31 @@ export const createVideo = (videoData: {
 export const getVideoById = (videoId: string): Video | null => {
   const videos = loadVideos();
   return videos.find((v) => v.id === videoId) || null;
+};
+
+// Update video
+export const updateVideo = (
+  videoId: string,
+  updates: {
+    title?: string;
+    description?: string;
+    category?: string;
+  }
+): Video | null => {
+  const videos = loadVideos();
+  const videoIndex = videos.findIndex((v) => v.id === videoId);
+
+  if (videoIndex === -1) return null;
+
+  const updatedVideo: Video = {
+    ...videos[videoIndex],
+    ...updates,
+  };
+
+  videos[videoIndex] = updatedVideo;
+  saveVideos(videos);
+
+  return updatedVideo;
 };
 
 // Delete video
