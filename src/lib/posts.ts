@@ -9,7 +9,8 @@ export interface Post {
     avatar: string;
   };
   content: string;
-  image?: string;
+  image?: string; // Deprecated - use images instead
+  images?: string[]; // Array of image URLs (max 5)
   category: string;
   likes: number;
   comments: number;
@@ -111,17 +112,22 @@ const savePosts = (posts: Post[]): void => {
 // Create new post
 export const createPost = (postData: {
   content: string;
-  image?: string;
+  image?: string; // Deprecated - use images instead
+  images?: string[]; // Array of image URLs (max 5)
   category: string;
   author: Post["author"];
 }): Post => {
   const posts = loadPosts();
 
+  // Convert single image to array for backward compatibility
+  const images = postData.images || (postData.image ? [postData.image] : undefined);
+
   const newPost: Post = {
     id: Date.now().toString(),
     author: postData.author,
     content: postData.content,
-    image: postData.image,
+    images: images,
+    image: postData.image, // Keep for backward compatibility
     category: postData.category,
     likes: 0,
     comments: 0,

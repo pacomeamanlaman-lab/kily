@@ -3,11 +3,12 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, MessageCircle, Share2, MoreHorizontal, CheckCircle, Send, X, Edit, Trash2, Flag, EyeOff, Copy, UserPlus, UserMinus, Link } from "lucide-react";
 import ShareModal from "@/components/share/ShareModal";
+import ImageLightbox from "@/components/feed/ImageLightbox";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
-import { togglePostLike, isPostLiked, addComment, loadComments } from "@/lib/posts";
+import { togglePostLike, isPostLiked, addComment, loadComments, deletePost } from "@/lib/posts";
 import { getCurrentUser, getUserDisplayName } from "@/lib/users";
 
 export interface Post {
@@ -21,7 +22,8 @@ export interface Post {
   };
   type: "portfolio" | "achievement" | "service";
   content: string;
-  image?: string;
+  image?: string; // Deprecated - use images instead
+  images?: string[]; // Array of image URLs (max 5)
   likes: number;
   comments: number;
   timestamp: string;
@@ -50,6 +52,8 @@ export default function PostCard({ post }: PostCardProps) {
   const [commentText, setCommentText] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showLightbox, setShowLightbox] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
@@ -170,12 +174,26 @@ export default function PostCard({ post }: PostCardProps) {
 
   const handleDelete = () => {
     setShowMenu(false);
-    setToast({
-      message: "Post supprimé",
-      type: "success",
-      visible: true,
-    });
-    // TODO: Implement delete post functionality
+    
+    // Delete post from localStorage
+    const deleted = deletePost(post.id);
+    
+    if (deleted) {
+      setToast({
+        message: "Post supprimé",
+        type: "success",
+        visible: true,
+      });
+      
+      // Dispatch event to refresh feed
+      window.dispatchEvent(new CustomEvent('postDeleted', { detail: { postId: post.id } }));
+    } else {
+      setToast({
+        message: "Erreur lors de la suppression",
+        type: "error",
+        visible: true,
+      });
+    }
   };
 
   const handleEdit = () => {
@@ -376,16 +394,174 @@ export default function PostCard({ post }: PostCardProps) {
         <p className="text-white">{post.content}</p>
       </div>
 
-      {/* Image */}
-      {post.image && (
-        <div className="relative aspect-square sm:aspect-video overflow-hidden">
-          <img
-            src={post.image}
-            alt="Post"
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
+      {/* Images Grid - Facebook Style */}
+      {(() => {
+        // Get images array (support both old single image and new images array)
+        const images = post.images || (post.image ? [post.image] : []);
+        
+        if (images.length === 0) return null;
+
+        const handleImageClick = (index: number) => {
+          setLightboxIndex(index);
+          setShowLightbox(true);
+        };
+
+        // Single image - full width
+        if (images.length === 1) {
+          return (
+            <div
+              className="relative aspect-square sm:aspect-video overflow-hidden cursor-pointer"
+              onClick={() => handleImageClick(0)}
+            >
+              <img
+                src={images[0]}
+                alt="Post"
+                className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+              />
+            </div>
+          );
+        }
+
+        // Two images - side by side
+        if (images.length === 2) {
+          return (
+            <div className="grid grid-cols-2 gap-1">
+              {images.map((img, index) => (
+                <div
+                  key={index}
+                  className="relative aspect-square overflow-hidden cursor-pointer"
+                  onClick={() => handleImageClick(index)}
+                >
+                  <img
+                    src={img}
+                    alt={`Post ${index + 1}`}
+                    className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                  />
+                </div>
+              ))}
+            </div>
+          );
+        }
+
+        // Five images - 2 on top, 3 on bottom (first bottom left, 2 others stacked right)
+        if (images.length === 5) {
+          const remainingCount = images.length > 5 ? images.length - 5 : 0;
+          
+          return (
+            <div className="grid grid-cols-2 gap-1 aspect-video sm:aspect-[16/9]">
+              {/* Top row - 2 images side by side */}
+              {images.slice(0, 2).map((img, index) => (
+                <div
+                  key={index}
+                  className="relative overflow-hidden cursor-pointer"
+                  onClick={() => handleImageClick(index)}
+                >
+                  <img
+                    src={img}
+                    alt={`Post ${index + 1}`}
+                    className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                  />
+                </div>
+              ))}
+              
+              {/* Bottom row - first image left, 2 others stacked right */}
+              <div
+                className="relative overflow-hidden cursor-pointer"
+                onClick={() => handleImageClick(2)}
+              >
+                <img
+                  src={images[2]}
+                  alt="Post 3"
+                  className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                />
+              </div>
+              
+              {/* Right side - 2 images stacked */}
+              <div className="flex flex-col gap-1">
+                {images.slice(3, 5).map((img, index) => {
+                  const actualIndex = index + 3;
+                  const isLast = index === 1;
+                  const showBadge = isLast && remainingCount > 0;
+                  
+                  return (
+                    <div
+                      key={actualIndex}
+                      className="relative flex-1 overflow-hidden cursor-pointer min-h-0"
+                      onClick={() => handleImageClick(actualIndex)}
+                    >
+                      <img
+                        src={img}
+                        alt={`Post ${actualIndex + 1}`}
+                        className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                      />
+                      {showBadge && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <span className="text-xl sm:text-2xl font-bold text-white">
+                            +{remainingCount}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
+
+        // Multiple images (3, 4, 6+) - Facebook style: main image left, others right stacked
+        const mainImage = images[0];
+        // Show max 3 images on the right
+        const maxRightImages = 3;
+        const rightImages = images.slice(1, maxRightImages + 1);
+        const remainingCount = images.length > (1 + maxRightImages) ? images.length - (1 + maxRightImages) : 0;
+
+        return (
+          <div className="grid grid-cols-2 gap-1 aspect-video sm:aspect-[16/9]">
+            {/* Main image - left side */}
+            <div
+              className="relative overflow-hidden cursor-pointer"
+              onClick={() => handleImageClick(0)}
+            >
+              <img
+                src={mainImage}
+                alt="Post 1"
+                className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+              />
+            </div>
+
+            {/* Right side - stacked images */}
+            <div className="flex flex-col gap-1">
+              {rightImages.map((img, index) => {
+                const actualIndex = index + 1;
+                const isLast = index === rightImages.length - 1;
+                const showBadge = isLast && remainingCount > 0;
+                
+                return (
+                  <div
+                    key={actualIndex}
+                    className="relative flex-1 overflow-hidden cursor-pointer min-h-0"
+                    onClick={() => handleImageClick(actualIndex)}
+                  >
+                    <img
+                      src={img}
+                      alt={`Post ${actualIndex + 1}`}
+                      className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                    />
+                    {showBadge && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <span className="text-2xl sm:text-3xl font-bold text-white">
+                          +{remainingCount}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Actions */}
       <div className="p-4 border-t border-white/10">
@@ -536,6 +712,21 @@ export default function PostCard({ post }: PostCardProps) {
         title={post.content.substring(0, 100)}
         description={post.content}
       />
+
+      {/* Image Lightbox */}
+      {(() => {
+        const images = post.images || (post.image ? [post.image] : []);
+        if (images.length === 0) return null;
+        
+        return (
+          <ImageLightbox
+            images={images}
+            initialIndex={lightboxIndex}
+            isOpen={showLightbox}
+            onClose={() => setShowLightbox(false)}
+          />
+        );
+      })()}
 
       {/* Toast */}
       <Toast

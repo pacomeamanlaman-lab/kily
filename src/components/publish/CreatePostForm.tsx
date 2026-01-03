@@ -22,28 +22,85 @@ const categories = [
   "Autre",
 ];
 
+const MAX_IMAGES = 8;
+
 export default function CreatePostForm({ onSuccess, onCancel }: CreatePostFormProps) {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
+  const processFiles = (files: File[]) => {
+    if (files.length === 0) return;
+
+    // Filter only image files
+    const validImageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+
+    if (validImageFiles.length === 0) {
+      showToast("Veuillez sélectionner uniquement des images", "error");
+      return;
+    }
+
+    // Check total count
+    if (imageFiles.length + validImageFiles.length > MAX_IMAGES) {
+      showToast(`Maximum ${MAX_IMAGES} images autorisées`, "error");
+      return;
+    }
+
+    // Limit to MAX_IMAGES
+    const filesToAdd = validImageFiles.slice(0, MAX_IMAGES - imageFiles.length);
+    const newFiles = [...imageFiles, ...filesToAdd];
+
+    // Read all files
+    const newPreviews: string[] = [];
+    let loadedCount = 0;
+
+    filesToAdd.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        newPreviews.push(reader.result as string);
+        loadedCount++;
+        
+        if (loadedCount === filesToAdd.length) {
+          setImagePreviews([...imagePreviews, ...newPreviews]);
+          setImageFiles(newFiles);
+        }
       };
       reader.readAsDataURL(file);
-    }
+    });
   };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    processFiles(files);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    processFiles(files);
+  };
+
+  const removeImage = (index: number) => {
+    setImagePreviews(imagePreviews.filter((_, i) => i !== index));
+    setImageFiles(imageFiles.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,7 +133,7 @@ export default function CreatePostForm({ onSuccess, onCancel }: CreatePostFormPr
     const newPost = createPost({
       content,
       category,
-      image: imagePreview || undefined,
+      images: imagePreviews.length > 0 ? imagePreviews : undefined,
       author: {
         id: currentUser.id,
         name: getUserDisplayName(currentUser),
@@ -134,33 +191,78 @@ export default function CreatePostForm({ onSuccess, onCancel }: CreatePostFormPr
 
       {/* Image Upload */}
       <div>
-        {imagePreview ? (
-          <div className="relative">
-            <img
-              src={imagePreview}
-              alt="Preview"
-              className="w-full h-48 object-cover rounded-xl"
-            />
-            <button
-              type="button"
-              onClick={removeImage}
-              className="absolute top-2 right-2 p-2 bg-black/80 rounded-full hover:bg-black transition-colors"
-            >
-              <X className="w-4 h-4 text-white" />
-            </button>
+        {imagePreviews.length > 0 ? (
+          <div className="space-y-3">
+            {/* Image Grid Preview - Small thumbnails */}
+            <div className="flex flex-wrap gap-2">
+              {imagePreviews.map((preview, index) => (
+                <div key={index} className="relative w-20 h-20 group">
+                  <img
+                    src={preview}
+                    alt={`Preview ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute -top-1 -right-1 p-1 bg-red-600 hover:bg-red-700 rounded-full transition-colors shadow-lg"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add More Button */}
+            {imagePreviews.length < MAX_IMAGES && (
+              <label
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`block w-full p-4 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+                  isDragging
+                    ? "border-violet-500 bg-violet-500/10"
+                    : "border-white/10 hover:border-violet-500/50"
+                }`}
+              >
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <div className="flex flex-col items-center gap-2">
+                  <ImageIcon className="w-6 h-6 text-gray-500" />
+                  <p className="text-xs text-gray-400">
+                    {isDragging ? "Déposez les images ici" : `Ajouter des images (${imagePreviews.length}/${MAX_IMAGES})`}
+                  </p>
+                </div>
+              </label>
+            )}
           </div>
         ) : (
-          <label className="block w-full p-6 border-2 border-dashed border-white/10 rounded-xl cursor-pointer hover:border-violet-500/50 transition-colors">
+          <label
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`block w-full p-6 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
+              isDragging
+                ? "border-violet-500 bg-violet-500/10"
+                : "border-white/10 hover:border-violet-500/50"
+            }`}
+          >
             <input
               type="file"
               accept="image/*"
+              multiple
               onChange={handleImageChange}
               className="hidden"
             />
             <div className="flex flex-col items-center gap-2">
               <ImageIcon className="w-8 h-8 text-gray-500" />
               <p className="text-sm text-gray-400">
-                Ajouter une image (optionnel)
+                {isDragging ? "Déposez les images ici" : `Ajouter des images (optionnel, max ${MAX_IMAGES})`}
               </p>
             </div>
           </label>

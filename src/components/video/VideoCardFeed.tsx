@@ -11,6 +11,7 @@ import { mockComments } from "@/lib/feedData";
 import Toast from "@/components/ui/Toast";
 import { isVideoLiked, getVideoLikesCount, toggleVideoLike, initVideoLikesCount } from "@/lib/videoLikes";
 import { getCurrentUser } from "@/lib/users";
+import { deleteVideo } from "@/lib/videos";
 
 interface VideoCardFeedProps {
   video: Video;
@@ -121,12 +122,26 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowMenu(false);
-    setToast({
-      message: "Vidéo supprimée",
-      type: "success",
-      visible: true,
-    });
-    // TODO: Implement delete video functionality
+    
+    // Delete video from localStorage
+    const deleted = deleteVideo(video.id);
+    
+    if (deleted) {
+      setToast({
+        message: "Vidéo supprimée",
+        type: "success",
+        visible: true,
+      });
+      
+      // Dispatch event to refresh feed
+      window.dispatchEvent(new CustomEvent('videoDeleted', { detail: { videoId: video.id } }));
+    } else {
+      setToast({
+        message: "Erreur lors de la suppression",
+        type: "error",
+        visible: true,
+      });
+    }
   };
 
   const handleEdit = (e: React.MouseEvent) => {

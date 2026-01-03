@@ -84,13 +84,31 @@ function FeedPageContent() {
       setVideos(loadedVideos);
     };
 
+    const handlePostDeleted = () => {
+      const loadedPosts = loadPosts();
+      const loadedVideos = loadVideos();
+      setPosts(loadedPosts);
+      setVideos(loadedVideos);
+    };
+
+    const handleVideoDeleted = () => {
+      const loadedPosts = loadPosts();
+      const loadedVideos = loadVideos();
+      setPosts(loadedPosts);
+      setVideos(loadedVideos);
+    };
+
     window.addEventListener('postCreated', handlePostCreated);
     window.addEventListener('videoCreated', handleVideoCreated);
+    window.addEventListener('postDeleted', handlePostDeleted);
+    window.addEventListener('videoDeleted', handleVideoDeleted);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('postCreated', handlePostCreated);
       window.removeEventListener('videoCreated', handleVideoCreated);
+      window.removeEventListener('postDeleted', handlePostDeleted);
+      window.removeEventListener('videoDeleted', handleVideoDeleted);
     };
   }, []);
 
