@@ -20,6 +20,7 @@ export interface User {
   completedProjects: number;
   portfolio: Array<{ id: string; title: string; description: string; imageUrl: string }>;
   joinedDate: string;
+  hasCompletedOnboarding?: boolean; // Flag for onboarding completion
   createdAt: string;
   updatedAt: string;
 }
@@ -42,10 +43,46 @@ const loadUsers = (): User[] => {
   return JSON.parse(stored);
 };
 
-// Save users to localStorage
+// Save users to localStorage with quota management
 const saveUsers = (users: User[]): void => {
   if (typeof window === "undefined") return;
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+
+  try {
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      console.warn('localStorage quota exceeded. Cleaning up old data...');
+
+      // Strategy: Keep only essential user data, remove heavy fields like portfolio images
+      const lightUsers = users.map(user => ({
+        ...user,
+        portfolio: user.portfolio.map(p => ({
+          ...p,
+          imageUrl: p.imageUrl.startsWith('data:') ? '' : p.imageUrl, // Remove base64 images
+        })),
+        avatar: user.avatar?.startsWith('data:') ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.firstName}${user.lastName}` : user.avatar,
+        coverImage: user.coverImage?.startsWith('data:') ? "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200" : user.coverImage,
+      }));
+
+      try {
+        localStorage.setItem(USERS_KEY, JSON.stringify(lightUsers));
+        console.warn('Saved lightweight user data (images removed)');
+      } catch (secondError) {
+        console.error('Failed to save even after cleanup:', secondError);
+        // Keep only the current user if still failing
+        const currentUserId = localStorage.getItem(CURRENT_USER_KEY);
+        if (currentUserId) {
+          const currentUser = lightUsers.find(u => u.id === currentUserId);
+          if (currentUser) {
+            localStorage.setItem(USERS_KEY, JSON.stringify([currentUser]));
+            console.warn('Saved only current user to stay within quota');
+          }
+        }
+      }
+    } else {
+      throw error;
+    }
+  }
 };
 
 // Create new user from registration data
@@ -92,6 +129,7 @@ export const createUser = (userData: {
     completedProjects: 0,
     portfolio: [],
     joinedDate: now,
+    hasCompletedOnboarding: false, // New users need to complete onboarding
     createdAt: now,
     updatedAt: now,
   };

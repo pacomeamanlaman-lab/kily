@@ -305,8 +305,8 @@ export default function RegisterPage() {
           login(formData.email);
         });
 
-        // Rediriger vers feed
-        router.push("/feed");
+        // Rediriger vers onboarding (nouvel utilisateur)
+        router.push("/onboarding");
       } catch (error: any) {
         // Handle error (e.g., email already exists)
         setErrors({ email: error.message || "Une erreur est survenue" });
