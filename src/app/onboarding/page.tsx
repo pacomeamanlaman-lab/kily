@@ -16,12 +16,16 @@ import {
   Image as ImageIcon,
   User,
   Briefcase,
+  TrendingUp,
+  Plus,
+  Check,
+  Search,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { getCurrentUser, updateUser } from "@/lib/users";
 import { isLoggedIn } from "@/lib/auth";
 
-type OnboardingStep = 1 | 2 | 3 | 4 | 5;
+type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6;
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -37,8 +41,12 @@ export default function OnboardingPage() {
   const [formData, setFormData] = useState({
     avatar: currentUser?.avatar || "",
     bio: currentUser?.bio || "",
+    selectedSkills: currentUser?.selectedSkills || [] as Array<{name: string, category: string}>,
     portfolioItems: [] as string[],
   });
+
+  const [customSkill, setCustomSkill] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Redirect if not logged in
   if (!isLoggedIn() || !currentUser) {
@@ -52,7 +60,7 @@ export default function OnboardingPage() {
     return null;
   }
 
-  const totalSteps = isTalent ? 5 : 3; // 5 for Talents, 3 for Voisins/Recruteurs
+  const totalSteps = isTalent ? 6 : 3; // 6 for Talents (added skills), 3 for Voisins/Recruteurs
   const progress = (currentStep / totalSteps) * 100;
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,6 +139,7 @@ export default function OnboardingPage() {
       updateUser(currentUser.id, {
         avatar: avatarUrl,
         bio: formData.bio || currentUser.bio,
+        selectedSkills: formData.selectedSkills,
         portfolio: [...(currentUser.portfolio || []), ...portfolioData],
         hasCompletedOnboarding: true,
       });
@@ -141,8 +150,68 @@ export default function OnboardingPage() {
     }, 500);
   };
 
+  // Compétences prédéfinies par catégorie
+  const predefinedSkills = {
+    cuisine: ["Pâtisserie", "Cuisine africaine", "Street food", "Traiteur", "Boulangerie"],
+    tech: ["Développement Web", "Design UI/UX", "Réparation téléphones", "Maintenance PC", "Photoshop"],
+    artisanat: ["Bijoux", "Sculpture", "Poterie", "Décoration", "Vannerie"],
+    bricolage: ["Plomberie", "Électricité", "Menuiserie", "Peinture", "Maçonnerie"],
+    mecanique: ["Réparation auto", "Mécanique moto", "Soudure", "Carrosserie", "Climatisation"],
+    photographie: ["Photo événementiel", "Portrait", "Retouche photo", "Vidéographie", "Drone"],
+    couture: ["Couture sur mesure", "Retouche vêtements", "Mode africaine", "Broderie", "Tapisserie"],
+    coiffure: ["Coiffure afro", "Barbier", "Tresses", "Mèches", "Maquillage"],
+    education: ["Cours particuliers", "Langues", "Musique", "Sport", "Informatique"],
+  };
+
+  const toggleSkill = (skillName: string, category: string) => {
+    const exists = formData.selectedSkills.find(s => s.name === skillName);
+    if (exists) {
+      setFormData({
+        ...formData,
+        selectedSkills: formData.selectedSkills.filter(s => s.name !== skillName)
+      });
+    } else {
+      setFormData({
+        ...formData,
+        selectedSkills: [...formData.selectedSkills, { name: skillName, category }]
+      });
+    }
+  };
+
+  const addCustomSkill = () => {
+    if (!customSkill.trim()) return;
+
+    const exists = formData.selectedSkills.find(s => s.name.toLowerCase() === customSkill.toLowerCase());
+    if (!exists) {
+      setFormData({
+        ...formData,
+        selectedSkills: [...formData.selectedSkills, { name: customSkill, category: "autre" }]
+      });
+      setCustomSkill("");
+    }
+  };
+
+  const getFilteredSkills = () => {
+    if (!searchQuery.trim()) return predefinedSkills;
+
+    const query = searchQuery.toLowerCase();
+    const filtered: any = {};
+
+    Object.entries(predefinedSkills).forEach(([category, skills]) => {
+      const matchingSkills = skills.filter(skill =>
+        skill.toLowerCase().includes(query)
+      );
+      if (matchingSkills.length > 0) {
+        filtered[category] = matchingSkills;
+      }
+    });
+
+    return filtered;
+  };
+
   const canProceedStep2 = formData.avatar && formData.bio.length >= 20;
-  const canProceedStep3 = formData.portfolioItems.length >= 2;
+  const canProceedStep3 = isTalent ? formData.selectedSkills.length >= 1 : true; // Talents need at least 1 skill
+  const canProceedStep4 = formData.portfolioItems.length >= 2;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-violet-950/20 to-black text-white overflow-hidden relative">
@@ -322,10 +391,155 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {/* Step 3: Add Portfolio (Talents only) */}
+          {/* Step 3: Skills Selection (Talents only) */}
           {currentStep === 3 && isTalent && (
             <motion.div
               key="step3"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              className="max-w-2xl w-full"
+            >
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 sm:p-12">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-12 h-12 bg-violet-500/20 rounded-full flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-violet-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold">Tes compétences</h2>
+                    <p className="text-white/60">Sélectionne au moins 1 compétence</p>
+                  </div>
+                </div>
+
+                {/* Barre de recherche */}
+                <div className="relative mb-6">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Rechercher une compétence..."
+                    className="w-full pl-12 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <X className="w-4 h-4 text-white/60" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Compétences sélectionnées */}
+                {formData.selectedSkills.length > 0 && (
+                  <div className="mb-6 p-4 bg-violet-500/10 border border-violet-500/30 rounded-xl">
+                    <p className="text-sm text-violet-400 mb-3">
+                      {formData.selectedSkills.length} compétence(s) sélectionnée(s)
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.selectedSkills.map((skill) => (
+                        <button
+                          key={skill.name}
+                          onClick={() => toggleSkill(skill.name, skill.category)}
+                          className="px-3 py-1.5 bg-violet-500 text-white rounded-full text-sm font-medium flex items-center gap-1 hover:bg-violet-600 transition-colors"
+                        >
+                          <Check className="w-3 h-3" />
+                          {skill.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Compétences prédéfinies */}
+                <div className="space-y-4 max-h-[35vh] overflow-y-auto pr-2 mb-6">
+                  {Object.entries(getFilteredSkills()).length > 0 ? (
+                    Object.entries(getFilteredSkills()).map(([category, skills]) => (
+                      <div key={category}>
+                        <h3 className="text-sm font-semibold text-white/70 mb-2 capitalize">
+                          {category === "tech" ? "Technologie" : category}
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {(skills as string[]).map((skillName) => {
+                            const isSelected = formData.selectedSkills.some(s => s.name === skillName);
+                            return (
+                              <button
+                                key={skillName}
+                                onClick={() => toggleSkill(skillName, category)}
+                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                                  isSelected
+                                    ? "bg-violet-500 text-white"
+                                    : "bg-white/5 text-white/80 hover:bg-white/10 border border-white/10"
+                                }`}
+                              >
+                                {isSelected && <Check className="w-4 h-4 inline mr-1" />}
+                                {skillName}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    searchQuery && (
+                      <div className="text-center py-8 text-white/60">
+                        <p>Aucune compétence trouvée pour "{searchQuery}"</p>
+                        <p className="text-sm mt-2">Ajoutez-la manuellement ci-dessous</p>
+                      </div>
+                    )
+                  )}
+                </div>
+
+                {/* Input personnalisé */}
+                <div className="border-t border-white/10 pt-4 mb-8">
+                  <label className="block text-sm font-medium mb-2">Autre compétence ?</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customSkill}
+                      onChange={(e) => setCustomSkill(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addCustomSkill();
+                        }
+                      }}
+                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      placeholder="Ex: Menuiserie d'art..."
+                    />
+                    <button
+                      onClick={addCustomSkill}
+                      className="px-4 py-3 bg-violet-500 hover:bg-violet-600 rounded-xl transition-colors"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Navigation */}
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={handleBack} className="flex-1">
+                    Retour
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleNext}
+                    disabled={!canProceedStep3}
+                    className="flex-1"
+                  >
+                    Suivant
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 4: Add Portfolio (Talents only) */}
+          {currentStep === 4 && isTalent && (
+            <motion.div
+              key="step4"
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
@@ -387,7 +601,7 @@ export default function OnboardingPage() {
                   <Button
                     variant="primary"
                     onClick={handleNext}
-                    disabled={!canProceedStep3}
+                    disabled={!canProceedStep4}
                     className="flex-1"
                   >
                     Suivant
@@ -398,8 +612,8 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {/* Step 3 for non-Talents / Step 4 for Talents: App Tour */}
-          {((currentStep === 3 && !isTalent) || (currentStep === 4 && isTalent)) && (
+          {/* Step 3 for non-Talents / Step 5 for Talents: App Tour */}
+          {((currentStep === 3 && !isTalent) || (currentStep === 5 && isTalent)) && (
             <motion.div
               key="step4"
               initial={{ opacity: 0, x: 50 }}
@@ -463,7 +677,7 @@ export default function OnboardingPage() {
           )}
 
           {/* Final Step: Ready! */}
-          {((currentStep === 3 && !isTalent) || (currentStep === 5 && isTalent)) && (
+          {((currentStep === 3 && !isTalent) || (currentStep === 6 && isTalent)) && (
             <motion.div
               key="step5"
               initial={{ opacity: 0, scale: 0.9 }}
