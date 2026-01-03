@@ -415,9 +415,9 @@ export default function ProfilePage() {
         </button>
         <button
           onClick={() => coverInputRef.current?.click()}
-          className="absolute bottom-4 right-4 bg-black/50 backdrop-blur-sm hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+          className="absolute bottom-4 right-4 bg-black/50 backdrop-blur-sm hover:bg-black/70 text-white p-2.5 sm:p-3 rounded-full transition-colors z-10 active:scale-95"
         >
-          <Camera className="w-5 h-5" />
+          <Camera className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
         <input
           ref={coverInputRef}
