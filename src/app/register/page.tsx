@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, User, Users, Briefcase, ChevronRight, Plus, Check, Search, X, Sparkles } from "lucide-react";
+import { ArrowLeft, User, Users, Briefcase, ChevronRight, Sparkles } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
-import Badge from "@/components/ui/Badge";
 import StepIndicator from "@/components/ui/StepIndicator";
 import { countries, getCitiesByCountry, abidjanCommunes, requiresCommune } from "@/lib/locationData";
 
@@ -22,8 +21,6 @@ interface FormData {
   country: string;
   city: string;
   commune: string;
-  bio: string;
-  selectedSkills: Array<{name: string, category: string}>;
 }
 
 export default function RegisterPage() {
@@ -38,19 +35,13 @@ export default function RegisterPage() {
     country: "Côte d'Ivoire", // Pays pilote pré-sélectionné
     city: "",
     commune: "",
-    bio: "",
-    selectedSkills: [],
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const [customSkill, setCustomSkill] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const buttonsRef = useRef<HTMLDivElement>(null);
 
   const steps = [
     { title: "Type de compte", description: "Choisissez votre profil" },
     { title: "Informations", description: "Vos coordonnées" },
-    { title: "Compétences", description: "Vos talents" },
   ];
 
   const userTypes = [
@@ -219,16 +210,6 @@ export default function RegisterPage() {
     setErrors(newErrors);
   };
 
-  // Validation Step 3
-  const validateStep3 = () => {
-    if (formData.userType === "talent" && formData.selectedSkills.length === 0) {
-      setErrors({ skills: "Veuillez sélectionner au moins une compétence" });
-      return false;
-    }
-    setErrors({});
-    return true;
-  };
-
   const handleNext = () => {
     let isValid = false;
 
@@ -254,18 +235,7 @@ export default function RegisterPage() {
       
       isValid = validateStep2();
       if (isValid) {
-        if (formData.userType === "talent") {
-          setCurrentStep(3);
-        } else {
-          handleSubmit();
-        }
-      }
-    } else if (currentStep === 3) {
-      // Marquer le champ skills comme touché pour afficher l'erreur
-      setTouched({ ...touched, skills: true });
-      
-      isValid = validateStep3();
-      if (isValid) {
+        // Tous les utilisateurs vont directement à l'onboarding après step 2
         handleSubmit();
       }
     }
@@ -283,7 +253,7 @@ export default function RegisterPage() {
     // Import createUser dynamically to avoid SSR issues
     import("@/lib/users").then(({ createUser }) => {
       try {
-        // Create user in the system
+        // Create user in the system (bio and skills will be filled in onboarding)
         const newUser = createUser({
           email: formData.email,
           firstName: formData.firstName,
@@ -292,14 +262,14 @@ export default function RegisterPage() {
           country: formData.country,
           city: formData.city,
           commune: formData.commune || undefined,
-          bio: formData.bio,
+          bio: "", // Will be filled in onboarding
           userType: formData.userType!,
-          selectedSkills: formData.selectedSkills,
+          selectedSkills: [], // Will be filled in onboarding
         });
 
         // Also save in old format for backward compatibility
         localStorage.setItem("kily_user_data", JSON.stringify(formData));
-        
+
         // Login the user
         import("@/lib/auth").then(({ login }) => {
           login(formData.email);
@@ -312,66 +282,6 @@ export default function RegisterPage() {
         setErrors({ email: error.message || "Une erreur est survenue" });
       }
     });
-  };
-
-  // Compétences prédéfinies par catégorie (même que profile)
-  const predefinedSkills = {
-    cuisine: ["Pâtisserie", "Cuisine africaine", "Street food", "Traiteur", "Boulangerie"],
-    tech: ["Développement Web", "Design UI/UX", "Réparation téléphones", "Maintenance PC", "Photoshop"],
-    artisanat: ["Bijoux", "Sculpture", "Poterie", "Décoration", "Vannerie"],
-    bricolage: ["Plomberie", "Électricité", "Menuiserie", "Peinture", "Maçonnerie"],
-    mecanique: ["Réparation auto", "Mécanique moto", "Soudure", "Carrosserie", "Climatisation"],
-    photographie: ["Photo événementiel", "Portrait", "Retouche photo", "Vidéographie", "Drone"],
-    couture: ["Couture sur mesure", "Retouche vêtements", "Mode africaine", "Broderie", "Tapisserie"],
-    coiffure: ["Coiffure afro", "Barbier", "Tresses", "Mèches", "Maquillage"],
-    education: ["Cours particuliers", "Langues", "Musique", "Sport", "Informatique"],
-  };
-
-  const toggleSkill = (skillName: string, category: string) => {
-    const exists = formData.selectedSkills.find(s => s.name === skillName);
-    if (exists) {
-      setFormData({
-        ...formData,
-        selectedSkills: formData.selectedSkills.filter(s => s.name !== skillName)
-      });
-    } else {
-      setFormData({
-        ...formData,
-        selectedSkills: [...formData.selectedSkills, { name: skillName, category }]
-      });
-    }
-  };
-
-  const addCustomSkill = () => {
-    if (!customSkill.trim()) return;
-
-    const exists = formData.selectedSkills.find(s => s.name.toLowerCase() === customSkill.toLowerCase());
-    if (!exists) {
-      setFormData({
-        ...formData,
-        selectedSkills: [...formData.selectedSkills, { name: customSkill, category: "autre" }]
-      });
-      setCustomSkill("");
-    }
-  };
-
-  // Filtrer les compétences selon la recherche
-  const getFilteredSkills = () => {
-    if (!searchQuery.trim()) return predefinedSkills;
-
-    const query = searchQuery.toLowerCase();
-    const filtered: any = {};
-
-    Object.entries(predefinedSkills).forEach(([category, skills]) => {
-      const matchingSkills = skills.filter(skill =>
-        skill.toLowerCase().includes(query)
-      );
-      if (matchingSkills.length > 0) {
-        filtered[category] = matchingSkills;
-      }
-    });
-
-    return filtered;
   };
 
   return (
@@ -672,164 +582,6 @@ export default function RegisterPage() {
             </div>
           </motion.div>
         )}
-
-        {/* Step 3: Compétences (talents uniquement) */}
-        {currentStep === 3 && formData.userType === "talent" && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-          >
-            <h2 className="text-2xl font-bold mb-2">Vos compétences</h2>
-            <p className="text-gray-400 mb-6">
-              Sélectionnez ou ajoutez les compétences que vous maîtrisez
-            </p>
-
-            {/* Message d'erreur global si aucune compétence n'est sélectionnée */}
-            {errors.skills && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl"
-              >
-                <p className="text-red-400 font-semibold">
-                  {errors.skills}
-                </p>
-                <p className="text-red-300 text-sm mt-2">
-                  Veuillez sélectionner au moins une compétence dans la liste ci-dessous ou en ajouter une personnalisée.
-                </p>
-              </motion.div>
-            )}
-
-            <div className="space-y-6">
-              {/* Barre de recherche */}
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher une compétence..."
-                  className="w-full pl-12 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors"
-                  >
-                    <X className="w-4 h-4 text-white/60" />
-                  </button>
-                )}
-              </div>
-
-              {/* Compétences personnalisées ajoutées */}
-              {formData.selectedSkills.filter(s => s.category === "autre").length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-white/70 mb-2">
-                    Compétences personnalisées
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.selectedSkills
-                      .filter(s => s.category === "autre")
-                      .map((skill) => (
-                        <button
-                          key={skill.name}
-                          type="button"
-                          onClick={() => toggleSkill(skill.name, skill.category)}
-                          className="px-4 py-2 rounded-full text-sm font-medium transition-all bg-violet-500 text-white cursor-pointer"
-                        >
-                          <Check className="w-4 h-4 inline mr-1" />
-                          {skill.name}
-                        </button>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Compétences prédéfinies */}
-              <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 lg:max-h-[50vh]">
-                {Object.entries(getFilteredSkills()).length > 0 ? (
-                  Object.entries(getFilteredSkills()).map(([category, skills]) => (
-                    <div key={category}>
-                      <h3 className="text-sm font-semibold text-white/70 mb-2 capitalize">
-                        {category === "tech" ? "Technologie" : category}
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {(skills as string[]).map((skillName) => {
-                          const isSelected = formData.selectedSkills.some(s => s.name === skillName);
-                          return (
-                            <button
-                              key={skillName}
-                              type="button"
-                              onClick={() => toggleSkill(skillName, category)}
-                              className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${
-                                isSelected
-                                  ? "bg-violet-500 text-white"
-                                  : "bg-white/5 text-white/80 hover:bg-white/10 border border-white/10"
-                              }`}
-                            >
-                              {isSelected && <Check className="w-4 h-4 inline mr-1" />}
-                              {skillName}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  searchQuery && (
-                    <div className="text-center py-8 text-white/60">
-                      <p>Aucune compétence trouvée pour "{searchQuery}"</p>
-                      <p className="text-sm mt-2">Ajoutez-la manuellement ci-dessous</p>
-                    </div>
-                  )
-                )}
-              </div>
-
-              {/* Input personnalisé */}
-              <div className="border-t border-white/10 pt-4">
-                <label className="block text-sm font-medium mb-2">Autre compétence ?</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={customSkill}
-                    onChange={(e) => setCustomSkill(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addCustomSkill();
-                      }
-                    }}
-                    className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                    placeholder="Ex: Menuiserie d'art..."
-                  />
-                  <button
-                    type="button"
-                    onClick={addCustomSkill}
-                    className="px-4 py-3 bg-violet-500 hover:bg-violet-600 rounded-xl transition-colors"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {formData.selectedSkills.length > 0 && (
-              <div className="mt-6 p-4 bg-violet-600/10 border border-violet-500/30 rounded-xl">
-                <p className="text-sm text-violet-400 mb-2">
-                  {formData.selectedSkills.length} compétence(s) sélectionnée(s)
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {formData.selectedSkills.map((skill) => (
-                    <Badge key={skill.name} variant="primary" size="sm">
-                      {skill.name}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </motion.div>
-        )}
       </div>
 
       {/* Buttons - Sticky en bas */}
@@ -840,9 +592,7 @@ export default function RegisterPage() {
               Retour
             </Button>
             <Button variant="primary" onClick={handleNext} className="flex-1 lg:flex-none lg:min-w-[200px]">
-              {currentStep === 3 || (currentStep === 2 && formData.userType !== "talent")
-                ? "Terminer"
-                : "Continuer"}
+              {currentStep === 2 ? "Créer mon compte" : "Continuer"}
             </Button>
           </div>
         </div>
