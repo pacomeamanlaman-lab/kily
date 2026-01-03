@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
@@ -30,35 +30,53 @@ type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6;
 export default function OnboardingPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const portfolioInputRef = useRef<HTMLInputElement>(null);
 
-  const currentUser = getCurrentUser();
   const isTalent = currentUser?.userType === "talent";
 
   // Form data
   const [formData, setFormData] = useState({
-    avatar: currentUser?.avatar || "",
-    bio: currentUser?.bio || "",
-    selectedSkills: currentUser?.selectedSkills || [] as Array<{name: string, category: string}>,
+    avatar: "",
+    bio: "",
+    selectedSkills: [] as Array<{name: string, category: string}>,
     portfolioItems: [] as string[],
   });
 
   const [customSkill, setCustomSkill] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Redirect if not logged in
-  if (!isLoggedIn() || !currentUser) {
-    router.push("/login");
-    return null;
-  }
+  // Check auth and load user on client-side only
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
-  // Redirect if onboarding already completed
-  if (currentUser.hasCompletedOnboarding) {
-    router.push("/feed");
-    return null;
-  }
+    if (!isLoggedIn()) {
+      router.push("/login");
+      return;
+    }
+
+    const user = getCurrentUser();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    if (user.hasCompletedOnboarding) {
+      router.push("/feed");
+      return;
+    }
+
+    setCurrentUser(user);
+    setFormData({
+      avatar: user.avatar || "",
+      bio: user.bio || "",
+      selectedSkills: user.selectedSkills || [],
+      portfolioItems: [],
+    });
+    setLoading(false);
+  }, [router]);
 
   const totalSteps = isTalent ? 6 : 3; // 6 for Talents (added skills), 3 for Voisins/Recruteurs
   const progress = (currentStep / totalSteps) * 100;
@@ -131,13 +149,8 @@ export default function OnboardingPage() {
         imageUrl: `https://images.unsplash.com/photo-${1500000000000 + i}?w=800`,
       }));
 
-      // Use placeholder for avatar if it's base64
-      const avatarUrl = formData.avatar?.startsWith('data:')
-        ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.firstName}${currentUser.lastName}&${Date.now()}`
-        : formData.avatar || currentUser.avatar;
-
       updateUser(currentUser.id, {
-        avatar: avatarUrl,
+        avatar: formData.avatar || currentUser.avatar,
         bio: formData.bio || currentUser.bio,
         selectedSkills: formData.selectedSkills,
         portfolio: [...(currentUser.portfolio || []), ...portfolioData],
@@ -212,6 +225,18 @@ export default function OnboardingPage() {
   const canProceedStep2 = formData.avatar && formData.bio.length >= 20;
   const canProceedStep3 = isTalent ? formData.selectedSkills.length >= 1 : true; // Talents need at least 1 skill
   const canProceedStep4 = formData.portfolioItems.length >= 2;
+
+  // Show loading state while checking auth
+  if (loading || !currentUser) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-violet-950/20 to-black text-white overflow-hidden relative">

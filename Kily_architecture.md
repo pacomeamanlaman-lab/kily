@@ -2,14 +2,15 @@
 
 ## 📊 État Actuel du Projet
 
-**Dernière mise à jour : 31 Décembre 2024**
+**Dernière mise à jour : 3 Janvier 2026**
 
 ### Statistiques
-- **Commits :** 20+ (main branch)
+- **Commits :** 30+ (main branch)
 - **Avancement MVP :** 100% ✅
-- **Pages complètes :** 13/13
-- **Composants créés :** 28+
-- **Lignes de code :** ~10500+
+- **Pages complètes :** 21/21
+- **Composants créés :** 45+
+- **Fichiers TypeScript :** 82
+- **Lignes de code :** ~15000+
 
 ### Fonctionnalités Opérationnelles ✅
 ✅ Landing page complète avec animations
@@ -19,10 +20,11 @@
 ✅ Bottom sheets pour mobile (portfolio, reviews)
 ✅ Design system violet dark mode complet
 ✅ Authentification simulée (login/register)
-✅ Feed d'actualité avec stories et posts
-✅ Recherche globale avec filtres
+✅ Feed d'actualité avec stories et posts (texte + multi-images)
+✅ Système vidéo TikTok-like (swipe vertical, commentaires sidebar)
+✅ Recherche globale avec filtres et tabs (Talents/Posts/Users/Vidéos)
 ✅ Système de messaging 1-to-1 avec conversations
-✅ Dashboard recruteur avec statistiques
+✅ Dashboard recruteur avec statistiques et filtres avancés
 ✅ Page paramètres complète (4 sections)
 ✅ Validation formulaires temps réel
 ✅ Page 404 personnalisée
@@ -33,19 +35,85 @@
 ✅ Bouton Save/Unsave sur profils
 ✅ Notifications Toast avec animations
 ✅ Layout 3 colonnes desktop (sidebar gauche + feed + sidebar droite)
+✅ Header desktop global avec notifications badge
+✅ Auto-hide header sur scroll mobile
+✅ Système de publication (Posts/Vidéos/Stories)
+✅ Upload multi-images (max 8) avec drag & drop
+✅ Édition/suppression posts et vidéos avec persistence localStorage
+✅ Génération thumbnails vidéo + calcul durée réelle
+✅ Layout multi-images optimisé (5 images = 2 top + 3 bottom)
+✅ Infinite scroll sur discover (tous les tabs)
+✅ Pull to refresh mobile (feed + discover)
+✅ Dashboard Super Admin complet (9 pages)
+✅ Admin responsive mobile avec drawer navigation
+✅ Stats carousel mobile avec swipe
+✅ Modération de contenu (posts/vidéos)
+✅ Gestion utilisateurs, catégories et villes
+✅ Formulaire inscription adapté Côte d'Ivoire
+✅ Bottom sheet menu mobile pour navigation feed
+✅ Profile navigation depuis vidéos
+✅ Partage posts/vidéos via ShareModal
+✅ Menu contextuel posts/vidéos (éditer/supprimer/signaler)
 
 ### MVP Phase 1 - TERMINÉ 🎉
-✅ Toutes les pages essentielles (13/13)
+✅ Toutes les pages essentielles (21/21)
 ✅ Navigation complète et fonctionnelle
 ✅ Design responsive mobile-first
 ✅ Layout desktop 3 colonnes façon Facebook
 ✅ Interactions utilisateur (likes, follows, save, messages)
-✅ Données mockées complètes
+✅ Données mockées complètes avec localStorage
 ✅ Toast notifications pour feedback utilisateur
 ✅ Sidebars avec navigation, tendances, et suggestions
+✅ Système vidéo complet (création, lecture, édition)
+✅ Dashboard Super Admin multi-pages
+✅ CRUD complet posts et vidéos
+✅ Infinite scroll et pull to refresh
 
 ### URL GitHub
 https://github.com/pacomeamanlaman-lab/kily
+
+---
+
+## 🎯 Résumé Exécutif - Janvier 2026
+
+### État du Projet
+**Kily** est une plateforme de mise en avant des talents africains sans barrière de diplômes. Le **MVP frontend est 100% terminé** avec 21 pages complètes, 45+ composants, et un système complet de posts/vidéos TikTok-like.
+
+### Accomplissements Clés (Décembre 2024 - Janvier 2026)
+- ✅ **MVP Frontend complet** : 21 pages, 82 fichiers TypeScript, ~15 000 lignes
+- ✅ **Système vidéo TikTok-like** : Swipe vertical, commentaires sidebar, génération thumbnails
+- ✅ **CRUD localStorage** : Posts, vidéos, likes, commentaires, follows, messages
+- ✅ **Dashboard Super Admin** : 9 pages responsive (mobile + desktop)
+- ✅ **UX optimisée** : Infinite scroll, pull-to-refresh, drag & drop upload
+- ✅ **Adaptation CI** : Formulaire inscription spécifique Côte d'Ivoire
+
+### Récentes Corrections (10 derniers commits)
+1. Fix navigation profile non-auth → redirect /login
+2. Fix deletion persistence posts/vidéos localStorage
+3. Fix type conflicts Post interface
+4. Amélioration layout 5 images (2 top + 3 bottom)
+5. Génération thumbnails vidéo + calcul durée réelle
+6. Auto-hide header scroll mobile
+7. Dashboard admin responsive mobile avec drawer
+8. Menu contextuel posts/vidéos (éditer/supprimer/signaler)
+9. ShareModal pour partage contenu
+10. Fix admin logout implementation
+
+### Prochaine Phase (Phase 2 - Backend)
+**Objectif** : Migration localStorage → Supabase
+**Durée estimée** : 6-8 semaines
+**Priorités** :
+1. Setup Supabase (BDD + Auth + Storage)
+2. Migration données (posts, vidéos, users, messages)
+3. Upload réel images/vidéos
+4. Chat temps réel
+5. Notifications push
+
+### Stack Technique
+- Frontend : Next.js 16 + React 19 + TypeScript 5.9 + Tailwind 4
+- State : localStorage (temporaire) → Supabase (Phase 2)
+- Animations : Framer Motion
+- Charts : Recharts
 
 ---
 
@@ -308,32 +376,43 @@ src/
 ### 7.1 Phase 1 - MVP (✅ TERMINÉ - 100%)
 **Objectif : Lancement rapide avec fonctionnalités essentielles**
 
-#### 📱 Pages Complétées (13/13)
+#### 📱 Pages Complétées (21/21)
 
 **Pages Publiques :**
 1. ✅ Landing page (/) - Hero avec parallax, talents populaires, catégories cliquables, features, footer
 2. ✅ Login (/login) - Auth avec validation temps réel, OAuth mockés, loading state
-3. ✅ Register (/register) - Formulaire 3 étapes (type, infos, compétences), validation dynamique
+3. ✅ Register (/register) - Formulaire adapté Côte d'Ivoire, compétences 45+ prédéfinies
 4. ✅ 404 (/not-found) - Page erreur personnalisée avec animations
 
 **Pages Authentifiées :**
-5. ✅ Feed (/feed) - Stories carousel, posts avec likes/comments, suggestions talents
-6. ✅ Discover (/discover) - Recherche, filtres (catégories, villes), grille responsive
-7. ✅ Search (/search) - Recherche globale, tabs, états vides, suggestions
-8. ✅ Profile Talent (/profile/[id]) - Header immersif, portfolio, avis, bottom sheets mobile
-9. ✅ Profile User (/profile) - Profil personnel éditable, stats, settings preview
+5. ✅ Feed (/feed) - Stories, posts multi-images, vidéos feed, infinite scroll, pull-to-refresh
+6. ✅ Discover (/discover) - 4 tabs (Tous/Populaires/Récents/Vidéos), filtres, infinite scroll
+7. ✅ Search (/search) - 4 tabs (Talents/Posts/Users/Vidéos), recherche temps réel, compteurs
+8. ✅ Profile Talent (/profile/[id]) - Portfolio multi-upload, avis, compétences, bottom sheets
+9. ✅ Profile User (/profile) - Édition complète, upload avatar/cover, portfolio drag & drop
 
 **Pages Messaging :**
-10. ✅ Messages List (/messages) - Liste conversations mockées, recherche, online status, unread badges
-11. ✅ Conversation (/messages/[id]) - Chat 1-to-1, messages temps réel mockés, auto-scroll
+10. ✅ Messages List (/messages) - Conversations, recherche, online status, unread badges
+11. ✅ Conversation (/messages/[id]) - Chat 1-to-1, temps réel mocké, auto-scroll
 
 **Pages Recruteur :**
-12. ✅ Recruiter Dashboard (/recruiter/dashboard) - Stats, sauvegardés, contactés, actions rapides
+12. ✅ Recruiter Dashboard (/recruiter/dashboard) - 3 tabs, filtres avancés, actions bulk
 
 **Pages Settings :**
-13. ✅ Settings (/settings) - 4 tabs (profil, notifications, confidentialité, sécurité)
+13. ✅ Settings (/settings) - 4 sections (profil, notifications, confidentialité, sécurité)
 
-#### 🎨 Composants Créés (20+)
+**Pages Super Admin (9 pages) :**
+14. ✅ Admin Dashboard (/admin/dashboard) - Vue d'ensemble, stats clés, graphiques
+15. ✅ Admin Users (/admin/dashboard/users) - Gestion utilisateurs, filtres, actions
+16. ✅ Admin Content (/admin/dashboard/content) - Modération posts/vidéos
+17. ✅ Admin Moderation (/admin/dashboard/moderation) - Signalements, actions rapides
+18. ✅ Admin Messages (/admin/dashboard/messages) - Support client
+19. ✅ Admin Reputation (/admin/dashboard/reputation) - Système de badges
+20. ✅ Admin Categories (/admin/dashboard/categories) - Gestion catégories
+21. ✅ Admin Cities (/admin/dashboard/cities) - Gestion villes actives
+22. ✅ Admin Settings (/admin/dashboard/settings) - Configuration plateforme
+
+#### 🎨 Composants Créés (45+)
 
 **UI de Base :**
 * Button (4 variants: primary, secondary, outline, ghost)
@@ -346,50 +425,142 @@ src/
 * Toast (notifications avec 3 types: success, error, info)
 
 **Navigation :**
-* BottomNav (global, 4 tabs avec routing)
-* TopNav (landing page)
+* BottomNav (global, 5 tabs avec bouton publish central)
+* BottomNavWrapper (wrapper client pour gestion état)
+* DesktopHeader (header global desktop avec search + notifications)
+* ConditionalDesktopHeader (affichage conditionnel desktop header)
+* AdminBottomNav (navigation admin mobile)
+* AdminSidebar (sidebar admin desktop avec drawer mobile)
+* AdminHeader (header admin avec breadcrumbs)
 
-**Composants Métier :**
+**Composants Feed :**
+* PostCard (posts multi-images, likes, commentaires, menu contextuel)
+* VideoCardFeed (vidéos feed avec play, synchronisation likes)
+* StoryCarousel (stories horizontal scroll + bouton "Ajouter")
+* CreatePostButton (input "Quoi de neuf" avec raccourcis photo/vidéo)
+* FeedBottomSheet (bottom sheet menu mobile pour filtres feed)
+* ImageLightbox (lightbox fullscreen pour images posts)
+* EditPostModal (modal édition post avec multi-upload)
+
+**Composants Vidéo :**
+* VideoCard (card vidéo discover avec thumbnail, stats)
+* VideoPlayer (player TikTok-like, swipe vertical, commentaires sidebar)
+* EditVideoModal (modal édition vidéo titre/description)
+
+**Composants Publication :**
+* PublishModal (modal choix post/vidéo)
+* CreatePostForm (formulaire création post avec multi-upload)
+* CreateVideoForm (formulaire upload vidéo avec preview)
+* CreateStoryModal (modal création story format 9:16)
+
+**Composants Talent :**
 * TalentCard (card talent cliquable avec hover effects)
 * SkillBadge (compétence + niveau d'expertise)
 * ReputationScore (rating étoiles avec count)
-* PostCard (posts feed avec interactions)
-* StoryCarousel (stories horizontal scroll)
 
-#### 🗄️ Types & Data
-* Types TypeScript complets (Talent, Skill, Review, Post, Story, etc.)
-* Mock data : 12 talents africains, 10+ skills, reviews, 5 posts, 4 stories
-* Villes africaines (14 villes)
-* Catégories de compétences (10 catégories)
+**Composants Admin :**
+* StatsCardsCarousel (carousel stats mobile avec swipe)
 
-#### ✨ Features Implémentées
+**Composants Autres :**
+* ShareModal (modal partage posts/vidéos)
+* ProtectedRoute (HOC protection routes authentifiées)
+* NotificationsSidebar (sidebar notifications desktop)
+
+#### 🗄️ Types & Data (17 fichiers lib/)
+* Types TypeScript complets (Talent, Skill, Review, Post, Video, Story, Message, User, Report)
+* **posts.ts** - CRUD posts avec localStorage (create, update, delete, like, comments)
+* **videos.ts** - CRUD vidéos avec localStorage (create, update, delete, limite 100 vidéos)
+* **videoData.ts** - 8 vidéos mockées + 15 commentaires par vidéo
+* **videoLikes.ts** - Gestion likes vidéos synchronisés localStorage
+* **stories.ts** - Gestion stories avec expiration 24h
+* **messages.ts** - Gestion conversations et messages
+* **messagesData.ts** - Conversations mockées
+* **users.ts** - Gestion profils utilisateurs
+* **auth.ts** - Authentification simulée localStorage
+* **follows.ts** - Système follow/unfollow
+* **savedTalents.ts** - Favoris talents (toggle save/unsave)
+* **hiddenContent.ts** - Masquage posts/vidéos
+* **reports.ts** - Signalements contenus
+* **feedData.ts** - Mock data feed mixte posts + vidéos
+* **mockData.ts** - 12 talents africains, skills, reviews, posts
+* **locationData.ts** - 14 villes africaines
+* **toast.ts** - Utilitaire notifications feedback
+
+#### ✨ Features Implémentées (MVP Complet)
+**Core Features :**
 * ✅ Dark mode complet avec thème violet (#8b5cf6)
-* ✅ Authentification simulée (localStorage)
+* ✅ Authentification simulée (localStorage + redirect /login si non-auth)
 * ✅ Navigation complète inter-pages
-* ✅ Filtres avancés (recherche, catégories, villes)
-* ✅ Validation formulaires temps réel
-* ✅ Interactions sociales (likes, follows avec toggle, save talents, messages)
+* ✅ Design responsive mobile-first (breakpoints optimisés)
+* ✅ Layout desktop 3 colonnes (sidebar gauche + feed + sidebar droite)
+* ✅ Header desktop auto-hide sur scroll mobile
+* ✅ SEO basique (metadata, lang fr)
+
+**Système de Contenu :**
+* ✅ Posts texte + multi-images (max 8, drag & drop)
+* ✅ Vidéos TikTok-like (swipe vertical, commentaires sidebar)
+* ✅ Stories format 9:16 avec expiration 24h
+* ✅ CRUD complet posts/vidéos avec persistence localStorage
+* ✅ Génération thumbnails vidéo + calcul durée réelle
+* ✅ Layout multi-images optimisé (5 images = 2 top + 3 bottom)
+* ✅ Édition/suppression avec confirmation
+* ✅ Menu contextuel (éditer/supprimer/signaler/masquer)
+
+**Interactions Sociales :**
+* ✅ Likes posts/vidéos synchronisés localStorage
+* ✅ Commentaires avec ajout temps réel
+* ✅ Partage via ShareModal (copier lien/Twitter/Facebook/WhatsApp)
+* ✅ Follow/Unfollow talents avec feedback Toast
+* ✅ Save/Unsave profils (favoris recruteur)
+* ✅ Messages 1-to-1 avec conversations mockées
+
+**Filtres & Recherche :**
+* ✅ Filtres avancés (catégories, villes, recherche temps réel)
+* ✅ Tabs multiples (Tous/Populaires/Récents/Vidéos)
+* ✅ Search globale avec 4 tabs (Talents/Posts/Users/Vidéos)
+* ✅ Compteurs dynamiques sur tous les tabs
+* ✅ États vides personnalisés par contexte
+
+**UX Optimisations :**
+* ✅ Infinite scroll (tous les tabs discover/search)
+* ✅ Pull to refresh mobile (feed + discover)
 * ✅ Bottom sheets pour mobile UX
 * ✅ Loading states avec skeletons
-* ✅ Page 404 personnalisée
-* ✅ Modal de contact interactif
-* ✅ Stories et posts feed
-* ✅ Dashboard recruteur
-* ✅ Système de messaging avec conversations mockées
-* ✅ Settings complets (4 sections)
-* ✅ Design responsive mobile-first
-* ✅ Layout desktop 3 colonnes (sidebar gauche + feed + sidebar droite)
-* ✅ Sidebar gauche avec navigation principale (6 items)
-* ✅ Sidebar droite avec suggestions, tendances, villes actives
 * ✅ Animations Framer Motion partout
 * ✅ Notifications Toast avec auto-dismiss
-* ✅ Follow/Unfollow talents avec feedback
-* ✅ Save/Unsave profils (favoris)
-* ✅ SEO basique (metadata, lang fr)
+* ✅ Validation formulaires temps réel
+* ✅ Badge notifications (messages, notifs bell)
+
+**Profile & Settings :**
+* ✅ Upload avatar/cover avec preview base64
+* ✅ Portfolio multi-upload drag & drop
+* ✅ Édition portfolio (titre/description)
+* ✅ Ajout compétences (45+ prédéfinies + personnalisées)
+* ✅ Settings complets (4 sections avec toggles fonctionnels)
+* ✅ Changement mot de passe/email/phone
+
+**Dashboard Recruteur :**
+* ✅ 3 tabs (Vue d'ensemble/Sauvegardés/Contactés)
+* ✅ Filtres avancés multi-critères
+* ✅ Actions bulk (retirer, contacter)
+* ✅ Stats dynamiques temps réel
+
+**Super Admin Dashboard :**
+* ✅ 9 pages dédiées (users, content, moderation, messages, etc.)
+* ✅ Responsive mobile avec drawer navigation
+* ✅ Stats carousel mobile avec swipe
+* ✅ Modération posts/vidéos avec actions rapides
+* ✅ Gestion catégories et villes actives
+
+**Formulaire Inscription :**
+* ✅ Adapté marché Côte d'Ivoire
+* ✅ 45+ compétences prédéfinies en 9 catégories
+* ✅ Saisie compétences personnalisées
+* ✅ Validation dynamique 3 étapes
 
 ---
 
-### 7.2 Phase 1.5 - Interactions Frontend (EN COURS - 90%)
+### 7.2 Phase 1.5 - Interactions Frontend ✅ TERMINÉ (100%)
 **Objectif : Finaliser toutes les interactions avant l'intégration backend**
 
 #### 🎯 Feed Interactions ✅ TERMINÉ
@@ -547,6 +718,45 @@ src/
   * Distance de pull: 80px minimum pour trigger
   * Max distance: 100px
 
+---
+
+### 🎉 NOUVEAU : Récentes Améliorations (Janvier 2026)
+
+#### 🔧 Corrections Critiques
+* ✅ **Fix deletion persistence** - Posts/vidéos supprimés persistent dans localStorage
+* ✅ **Fix type conflicts** - Harmonisation types Post entre PostCard et lib/posts
+* ✅ **Fix navigation** - Bouton profile BottomNav redirect /login si non-auth
+* ✅ **Fix handlers** - handlePostUpdated/handleVideoUpdated dans feed
+* ✅ **Fix video sorting** - Tri vidéos par date (newest first)
+* ✅ **Fix hooks order** - VideoPlayer hooks order issue résolu
+* ✅ **Fix hydration error** - Bottom sheet menu mobile
+* ✅ **Fix admin logout** - Implémentation logout admin complète
+
+#### 🎨 Améliorations UI/UX
+* ✅ **Multi-image layout** - 5 images = 2 top + 3 bottom (stacked right)
+* ✅ **Max upload** - Limite passée de 5 à 8 images
+* ✅ **Video thumbnails** - Génération depuis video frames
+* ✅ **Real duration** - Calcul durée vidéo réelle
+* ✅ **localStorage quota** - Gestion quota vidéos (limite 100)
+* ✅ **Event listeners** - postDeleted/videoDeleted refresh feed
+* ✅ **Profile menu** - Logout, share modal, post/video menu
+* ✅ **Auto-hide header** - Header scroll mobile optimisé
+* ✅ **Desktop layout** - Fix feed desktop layout
+* ✅ **Profile navigation** - Navigation profil depuis vidéos
+
+#### 🌍 Adaptation Côte d'Ivoire
+* ✅ **Register form** - Formulaire adapté marché CI
+* ✅ **45+ skills** - Compétences prédéfinies organisées en 9 catégories
+* ✅ **Custom skills** - Saisie manuelle compétences personnalisées
+
+#### 🛡️ Super Admin Mobile
+* ✅ **Drawer navigation** - Sidebar mobile responsive
+* ✅ **Stats carousel** - Carousel stats avec swipe mobile
+* ✅ **Responsive tables** - Tables admin adaptées mobile
+* ✅ **9 pages admin** - Dashboard complet multi-sections
+
+---
+
 ### 🎉 Phase 1.5 - Frontend Interactions TERMINÉE
 Toutes les interactions frontend MVP sont complétées :
 - ✅ Profile interactions (avatar/cover upload, skills, portfolio)
@@ -555,6 +765,11 @@ Toutes les interactions frontend MVP sont complétées :
 - ✅ Register Skills uniformization
 - ✅ Settings (toggles, password/email/phone forms)
 - ✅ Micro-interactions (notifications badge, pull to refresh)
+- ✅ CRUD posts/vidéos avec persistence localStorage
+- ✅ Menu contextuel posts/vidéos (éditer/supprimer/signaler)
+- ✅ Bottom sheet menu mobile pour filtres feed
+- ✅ ShareModal pour partage contenu
+- ✅ Super Admin dashboard 9 pages responsive
 
 ### 🎥 Phase 1.75 - Système Vidéo (TikTok-like) ✅
 **Objectif : Intégration de vidéos talents dans l'app**
@@ -772,43 +987,87 @@ Toutes les interactions frontend MVP sont complétées :
 
 ---
 
-### 7.3 Phase 2 - Backend & Intégration
+### 7.3 Phase 2 - Backend & Intégration (PROCHAINE ÉTAPE)
 **Objectif : Connexion backend + données réelles**
+**Statut : ⏳ EN ATTENTE (Frontend MVP 100% terminé)**
 
-#### Features Backend
-* ⏳ Setup Supabase complet
-* ⏳ Auth complète (email + phone + OAuth réels)
+#### 🎯 Prochaines Étapes Prioritaires
+
+**Setup Supabase (Semaine 1-2) :**
+* ⏳ Setup projet Supabase
+* ⏳ Configuration base de données PostgreSQL (tables définies dans section 3)
+* ⏳ Row Level Security (RLS) policies
+* ⏳ Storage buckets (avatars, portfolio, videos, thumbnails)
+
+**Authentification Backend (Semaine 2-3) :**
+* ⏳ Auth complète Supabase (email + phone + OAuth Google/Facebook)
+* ⏳ Migration localStorage auth vers Supabase Auth
+* ⏳ Protected routes server-side
+* ⏳ Session management
+
+**Migration localStorage → Supabase (Semaine 3-4) :**
+* ⏳ Migration posts vers table `posts`
+* ⏳ Migration vidéos vers table `videos`
+* ⏳ Migration likes vers tables `post_likes`, `video_likes`
+* ⏳ Migration comments vers table `comments`
+* ⏳ Migration follows vers table `follows`
+* ⏳ Migration messages vers table `messages`
+* ⏳ Migration saved_talents vers table `saved_talents`
+
+**Upload Fichiers (Semaine 4-5) :**
+* ⏳ Upload images vers Supabase Storage
+* ⏳ Upload vidéos (compression, transcoding)
+* ⏳ Génération thumbnails côté serveur
+* ⏳ Optimisation Next.js Image
+
+**Temps Réel (Semaine 5-6) :**
 * ⏳ Chat temps réel avec Supabase Realtime
-* ⏳ Upload images (avatar, portfolio)
-* ⏳ Base de données PostgreSQL
-* ⏳ Système de notifications
-* ⏳ Toggle Light/Dark mode
-* ⏳ Paiements (Mobile Money)
+* ⏳ Notifications temps réel
+* ⏳ Online status users
+* ⏳ Typing indicators
 
-#### Optimisations Techniques
+**Features Avancées (Semaine 6+) :**
+* ⏳ Système de notifications push
+* ⏳ Toggle Light/Dark mode (persistance user preferences)
+* ⏳ Paiements Mobile Money (Orange Money, MTN, Moov)
+* ⏳ Analytics utilisateurs
+* ⏳ Map interactive (talents à proximité)
+
+#### 🔧 Optimisations Techniques
 * ⏳ Next.js Image pour optimisation
 * ⏳ Meta tags SEO dynamiques
 * ⏳ Accessibilité (ARIA labels)
-* ⏳ Tests unitaires (Jest)
-* ⏳ Performance optimization
+* ⏳ Tests unitaires (Jest/Vitest)
+* ⏳ Performance optimization (code splitting, lazy loading)
+* ⏳ Lighthouse score > 90
+* ⏳ CDN pour assets statiques
 
 ---
 
-### 7.3 Phase 3 - Features Avancées
+### 7.4 Phase 3 - Features Avancées & Scalabilité
 **Objectif : Différenciation et scalabilité**
+**Statut : ⏳ EN ATTENTE (après Phase 2)**
 
-#### Features
-* ✅ Map interactive (talents à proximité)
-* ✅ Paiements intégrés (Mobile Money)
-* ✅ Analytics utilisateurs
-* ✅ Notifications push
-* ✅ Groupes de compétences
-* ✅ Stories/mises en avant
+#### 🚀 Features Différenciatrices
+* ⏳ Map interactive (talents à proximité avec geolocation)
+* ⏳ Paiements intégrés Mobile Money (Orange Money, MTN, Moov Money)
+* ⏳ Analytics utilisateurs (dashboard analytics pour talents)
+* ⏳ Notifications push (PWA)
+* ⏳ Groupes de compétences / communautés
+* ⏳ Lives / streaming vidéo (talents en direct)
+* ⏳ Marketplace services (acheter/vendre prestations)
+* ⏳ Système de réputation avancé (badges, certifications communautaires)
+* ⏳ Recommandations IA (talents suggérés basés sur recherches)
 
-#### Optimisations
-* Microservices
-* Scalabilité horizontale
-* Cache stratégies avancées
+#### 🏗️ Optimisations Scalabilité
+* ⏳ Microservices architecture
+* ⏳ Scalabilité horizontale (Kubernetes)
+* ⏳ Cache stratégies avancées (Redis)
+* ⏳ CDN global (CloudFlare)
+* ⏳ Queue jobs (BullMQ pour traitement async)
+* ⏳ Monitoring & alerting (Sentry, DataDog)
+* ⏳ Load balancing
+* ⏳ Database sharding si nécessaire
 
 ## 8. Internationalisation
 
@@ -832,26 +1091,55 @@ Toutes les interactions frontend MVP sont complétées :
 
 ## 10. Annexes Techniques
 
-### 10.1 Stack Technique
-* Languages : TypeScript
-* Frontend : React
-* Backend : Node.js
-* Base de données : PostgreSQL
-* ORM : Prisma
-* API : GraphQL
+### 10.1 Stack Technique Actuelle
+**Frontend :**
+* Framework : Next.js 16.1.1 (App Router)
+* Language : TypeScript 5.9.3
+* UI Library : React 19.2.3
+* Styling : Tailwind CSS 4.1.18
+* Animations : Framer Motion 12.23.26
+* Icons : Lucide React 0.562.0
+* Charts : Recharts 3.6.0
+
+**Backend (À implémenter Phase 2) :**
+* BaaS : Supabase (PostgreSQL + Auth + Storage + Realtime)
+* ORM : Prisma (optionnel, Supabase client suffit)
+* API : REST (via Supabase Auto-generated API)
+
+**État Actuel :**
+* Storage : localStorage (mock data)
+* Auth : localStorage (simulée)
 
 ### 10.2 Outils de Développement
-* ESLint
-* Prettier
-* Jest (tests)
-* Storybook
-* TypeScript
+**Actuels :**
+* ESLint 9.39.2
+* TypeScript 5.9.3
+* PostCSS 8.5.6
+* Autoprefixer 10.4.23
 
-### 10.3 Performance
-* Code Splitting
-* Lazy Loading
-* Cache Stratégies
-* Optimisation images
+**À Ajouter (Phase 2) :**
+* Prettier (formatage code)
+* Jest/Vitest (tests unitaires)
+* Playwright (tests E2E)
+* Storybook (documentation composants)
+* Husky (pre-commit hooks)
+
+### 10.3 Performance & Optimisations
+**Implémenté :**
+* Code Splitting (Next.js automatique)
+* Lazy Loading composants (React.lazy)
+* Infinite scroll (pagination)
+* Pull to refresh mobile
+* Animations optimisées (Framer Motion)
+* Images base64 (temporaire, localStorage)
+
+**À Implémenter (Phase 2) :**
+* Next.js Image optimisation
+* CDN pour assets
+* Service Worker (PWA)
+* Cache stratégies (Redis)
+* Compression images serveur
+* Video transcoding (FFmpeg)
 
 ## 11. Design System
 

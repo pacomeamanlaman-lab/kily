@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, User, Users, Briefcase, ChevronRight, Sparkles } from "lucide-react";
@@ -26,6 +26,7 @@ interface FormData {
 export default function RegisterPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
+  const buttonsRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState<FormData>({
     userType: null,
     firstName: "",
@@ -563,20 +564,6 @@ export default function RegisterPage() {
                     ))}
                   </select>
                   {touched.commune && errors.commune && <p className="text-red-400 text-sm mt-1">{errors.commune}</p>}
-                </div>
-              )}
-              {formData.userType === "talent" && (
-                <div className="lg:col-span-2">
-                  <label className="block text-sm lg:text-base font-medium text-gray-300 mb-2 lg:mb-3">
-                    Bio (optionnel)
-                  </label>
-                  <textarea
-                    value={formData.bio}
-                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                    rows={4}
-                    className="w-full px-4 py-3 lg:px-6 lg:py-4 bg-white/5 border border-white/10 rounded-xl text-white text-sm lg:text-base placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all resize-none"
-                    placeholder="Présentez-vous en quelques mots..."
-                  />
                 </div>
               )}
             </div>

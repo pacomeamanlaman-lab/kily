@@ -600,7 +600,12 @@ function FeedPageContent() {
           </div>
 
           {/* Create Post Button - Only for Talents */}
-          {canPublish && <CreatePostButton />}
+          {canPublish && (
+            <CreatePostButton
+              userAvatar={currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400"}
+              userName={currentUser?.firstName || "Vous"}
+            />
+          )}
 
           {/* Stories */}
           <motion.div
