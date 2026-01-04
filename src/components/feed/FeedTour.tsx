@@ -12,6 +12,8 @@ interface TourStep {
   description: string;
   target: string; // Selector CSS ou "mobile" / "desktop"
   position?: "top" | "bottom" | "left" | "right" | "center";
+  mobileOnly?: boolean;
+  desktopOnly?: boolean;
 }
 
 interface FeedTourProps {
@@ -22,15 +24,31 @@ export default function FeedTour({ onComplete }: FeedTourProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [targetElement, setTargetElement] = useState<HTMLElement | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  const steps: TourStep[] = [
+  // Détecter si on est sur mobile
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Toutes les étapes possibles
+  const allSteps: TourStep[] = [
     {
       id: "filters",
       title: "Filtrez votre feed",
       description: "Utilisez les filtres pour voir tous les posts, ceux de vos abonnements ou les tendances",
       target: '[data-tour="filters"]',
       position: "bottom",
+      desktopOnly: true,
     },
     {
       id: "create-post",
@@ -38,6 +56,7 @@ export default function FeedTour({ onComplete }: FeedTourProps) {
       description: "Partagez vos talents avec la communauté en publiant des posts ou des vidéos",
       target: '[data-tour="create-post"]',
       position: "bottom",
+      desktopOnly: true,
     },
     {
       id: "stories",
@@ -62,6 +81,13 @@ export default function FeedTour({ onComplete }: FeedTourProps) {
     },
   ];
 
+  // Filtrer les étapes selon mobile/desktop
+  const steps = allSteps.filter(step => {
+    if (isMobile && step.desktopOnly) return false;
+    if (!isMobile && step.mobileOnly) return false;
+    return true;
+  });
+
   // Check if tour was already completed for this user
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -81,6 +107,12 @@ export default function FeedTour({ onComplete }: FeedTourProps) {
     }
   }, []);
 
+  // Réinitialiser l'étape quand on change de mobile/desktop
+  useEffect(() => {
+    setCurrentStep(0);
+    setTargetElement(null);
+  }, [isMobile]);
+
   // Find and highlight target element
   useEffect(() => {
     if (!isVisible || currentStep >= steps.length) return;
@@ -93,8 +125,10 @@ export default function FeedTour({ onComplete }: FeedTourProps) {
       const element = document.querySelector(step.target) as HTMLElement;
       if (element) {
         setTargetElement(element);
-        // Scroll element into view
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Scroll element into view (sauf sur mobile pour bottom-nav qui est fixe)
+        if (!isMobile || step.id !== "bottom-nav") {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
         } else {
           // If element doesn't exist, skip to next step
           if (currentStep < steps.length - 1) {
@@ -114,7 +148,7 @@ export default function FeedTour({ onComplete }: FeedTourProps) {
       }, 300);
 
     return () => clearTimeout(timer);
-  }, [currentStep, isVisible, onComplete]);
+  }, [currentStep, isVisible, onComplete, steps, isMobile]);
 
   const handleComplete = () => {
     setIsVisible(false);
@@ -153,6 +187,12 @@ export default function FeedTour({ onComplete }: FeedTourProps) {
 
   // Calculate position for tooltip
   const getTooltipPosition = () => {
+    // Sur mobile, toujours en bas plein écran (bottom sheet style)
+    if (isMobile) {
+      return { bottom: "0", left: "0", right: "0", transform: "none" };
+    }
+
+    // Desktop : positionnement classique
     if (!targetElement) return { top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
 
     const rect = targetElement.getBoundingClientRect();
@@ -254,57 +294,76 @@ export default function FeedTour({ onComplete }: FeedTourProps) {
           {/* Tooltip */}
           {targetElement && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: isMobile ? 100 : 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="fixed z-[9999] pointer-events-auto"
+              exit={{ opacity: 0, y: isMobile ? 100 : 20 }}
+              className={`fixed z-[9999] pointer-events-auto ${isMobile ? "w-full" : ""}`}
               style={getTooltipPosition()}
             >
-              <div className="bg-gradient-to-br from-violet-900/95 to-purple-900/95 backdrop-blur-lg border border-violet-500/50 rounded-2xl p-6 shadow-2xl max-w-sm mx-4">
+              <div
+                className={`bg-gradient-to-br from-violet-900/95 to-purple-900/95 backdrop-blur-lg border border-violet-500/50 shadow-2xl ${
+                  isMobile
+                    ? "rounded-t-3xl p-6 pb-8 border-t-2 border-l-0 border-r-0 border-b-0"
+                    : "rounded-2xl p-6 max-w-sm mx-4"
+                }`}
+              >
+                {/* Mobile: Handle bar */}
+                {isMobile && (
+                  <div className="flex justify-center mb-4">
+                    <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+                  </div>
+                )}
+
                 {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-violet-700 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Sparkles className="w-5 h-5 text-white" />
+                <div className={`flex items-start justify-between ${isMobile ? "mb-3" : "mb-4"}`}>
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className={`bg-gradient-to-br from-violet-500 to-violet-700 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      isMobile ? "w-12 h-12" : "w-10 h-10"
+                    }`}>
+                      <Sparkles className={isMobile ? "w-6 h-6" : "w-5 h-5"} />
                     </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-white">{currentStepData.title}</h3>
-                      <p className="text-xs text-violet-300 mt-1">
+                    <div className="flex-1">
+                      <h3 className={`font-bold text-white ${isMobile ? "text-xl" : "text-lg"}`}>
+                        {currentStepData.title}
+                      </h3>
+                      <p className={`text-violet-300 mt-0.5 ${isMobile ? "text-sm" : "text-xs"}`}>
                         {currentStep + 1} / {steps.length}
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={handleSkip}
-                    className="text-gray-400 hover:text-white transition-colors p-1"
+                    className={`text-gray-400 hover:text-white transition-colors ${isMobile ? "p-2" : "p-1"}`}
                   >
-                    <X className="w-5 h-5" />
+                    <X className={isMobile ? "w-6 h-6" : "w-5 h-5"} />
                   </button>
                 </div>
 
                 {/* Description */}
-                <p className="text-gray-300 text-sm mb-6 leading-relaxed">
+                <p className={`text-gray-300 leading-relaxed ${isMobile ? "text-base mb-6" : "text-sm mb-6"}`}>
                   {currentStepData.description}
                 </p>
 
                 {/* Navigation */}
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="secondary"
-                    onClick={handlePrevious}
-                    disabled={currentStep === 0}
-                    className="flex-1"
-                  >
-                    <ChevronLeft className="w-4 h-4 mr-1" />
-                    Précédent
-                  </Button>
+                <div className={`flex items-center ${isMobile ? "gap-4" : "gap-3"}`}>
+                  {!isMobile && (
+                    <Button
+                      variant="secondary"
+                      onClick={handlePrevious}
+                      disabled={currentStep === 0}
+                      className="flex-1"
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-1" />
+                      Précédent
+                    </Button>
+                  )}
                   <Button
                     variant="primary"
                     onClick={handleNext}
-                    className="flex-1"
+                    className={isMobile ? "w-full py-4 text-base font-semibold" : "flex-1"}
                   >
-                    {currentStep === steps.length - 1 ? "Terminer" : "Suivant"}
-                    {currentStep < steps.length - 1 && <ChevronRight className="w-4 h-4 ml-1" />}
+                    {currentStep === steps.length - 1 ? "J'ai compris" : "Suivant"}
+                    {currentStep < steps.length - 1 && <ChevronRight className={`ml-1 ${isMobile ? "w-5 h-5" : "w-4 h-4"}`} />}
                   </Button>
                 </div>
               </div>
