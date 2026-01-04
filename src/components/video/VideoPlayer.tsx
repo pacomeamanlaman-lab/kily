@@ -609,8 +609,8 @@ export default function VideoPlayer({
                 onClick={handleLike}
                 className="flex flex-col items-center gap-1"
               >
-                <div className={`w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors ${liked ? 'bg-red-500/20' : ''}`}>
-                  <Heart className={`w-6 h-6 ${liked ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                <div className={`w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center hover:bg-white/20 transition-colors ${liked ? 'bg-violet-500/20' : ''}`}>
+                  <Heart className={`w-6 h-6 ${liked ? 'fill-violet-500 text-violet-500' : 'text-white'}`} />
                 </div>
                 <span className="text-white text-xs font-medium">{formatNumber(likesCount)}</span>
               </motion.button>

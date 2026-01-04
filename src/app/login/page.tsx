@@ -7,6 +7,7 @@ import { ArrowLeft, Mail, Lock, Eye, EyeOff, Sparkles } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { login, isLoggedIn } from "@/lib/auth";
+import { getCurrentUser, getCurrentUserRedirectPath } from "@/lib/users";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,7 +23,8 @@ export default function LoginPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (isLoggedIn()) {
-      router.push("/feed");
+      const redirectPath = getCurrentUserRedirectPath();
+      router.push(redirectPath);
     }
   }, [router]);
 
@@ -81,20 +83,23 @@ export default function LoginPage() {
       // Simulation de connexion (2 secondes)
       setTimeout(() => {
         // Try to login
-        const success = login(formData.email);
+        const success = login(formData.email, formData.password);
         
         if (!success) {
-          // User not found - show error
-          setErrors({ email: "Aucun compte trouvé avec cet email" });
+          // User not found or password incorrect - show error
+          setErrors({ email: "Email ou mot de passe incorrect" });
           setIsLoading(false);
           return;
         }
 
         setIsLoading(false);
         
-        // Redirect to intended page or feed
-        const redirectPath = sessionStorage.getItem("redirectAfterLogin") || "/feed";
+        // Redirect to intended page or user-specific default
+        const intendedPath = sessionStorage.getItem("redirectAfterLogin");
         sessionStorage.removeItem("redirectAfterLogin");
+        
+        // Use intended path if exists, otherwise get user-specific redirect
+        const redirectPath = intendedPath || getCurrentUserRedirectPath();
         router.push(redirectPath);
       }, 2000);
     }

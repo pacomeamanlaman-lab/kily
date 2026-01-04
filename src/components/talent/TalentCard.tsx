@@ -26,7 +26,7 @@ export default function TalentCard({ talent, onClick }: TalentCardProps) {
 
         {/* Badge vérifié */}
         {talent.verified && (
-          <div className="absolute top-4 right-4 bg-violet-600/90 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1">
+          <div className="absolute top-4 left-4 bg-violet-600/90 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1">
             <CheckCircle className="w-4 h-4 text-white" />
             <span className="text-xs font-medium text-white">Vérifié</span>
           </div>

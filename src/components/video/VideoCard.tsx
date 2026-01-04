@@ -4,6 +4,7 @@ import { Users, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { Video } from "@/lib/videoData";
+import { getCurrentUser } from "@/lib/users";
 
 interface VideoCardProps {
   video: Video;
@@ -11,6 +12,9 @@ interface VideoCardProps {
 }
 
 export default function VideoCard({ video, onClick }: VideoCardProps) {
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.id || null;
+  const isOwnVideo = currentUserId === video.author.id;
   return (
     <motion.button
       whileHover={{ y: -4, scale: 1.01 }}
@@ -48,7 +52,7 @@ export default function VideoCard({ video, onClick }: VideoCardProps) {
           </div>
           <div className="flex items-center gap-1 min-w-0 flex-1">
             <p className="text-xs font-semibold text-white truncate">
-              {video.author.name}
+              {isOwnVideo ? "Vous" : video.author.name}
             </p>
             {video.author.verified && (
               <CheckCircle className="w-3 h-3 text-violet-500 fill-violet-500 flex-shrink-0" />

@@ -18,6 +18,14 @@ import {
   Code,
   Flame,
   Bell,
+  FileText,
+  Video,
+  Briefcase,
+  Search,
+  LayoutDashboard,
+  Heart,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import PostCard from "@/components/feed/PostCard";
 import StoryCarousel from "@/components/feed/StoryCarousel";
@@ -37,6 +45,7 @@ import { useScrollDirection } from "@/hooks/useScrollDirection";
 import NotificationsSidebar from "@/components/notifications/NotificationsSidebar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import FeedBottomSheet from "@/components/feed/FeedBottomSheet";
+import FeedTour from "@/components/feed/FeedTour";
 import { getCurrentUser } from "@/lib/users";
 
 function FeedPageContent() {
@@ -48,6 +57,11 @@ function FeedPageContent() {
   const [unreadNotifications] = useState(5); // Mock notifications count
   const [showNotifications, setShowNotifications] = useState(false);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    talent: true,
+    recruiter: true,
+    neighbor: true,
+  });
   const [posts, setPosts] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
@@ -427,14 +441,61 @@ function FeedPageContent() {
     setIsPulling(false);
   };
 
-  const leftMenuItems = [
+  // Navigation principale (commune à tous)
+  const mainNavigation = [
     { icon: Home, label: "Accueil", path: "/feed", active: true },
     { icon: Compass, label: "Découvrir", path: "/discover" },
     { icon: MessageCircle, label: "Messages", path: "/messages" },
     { icon: User, label: "Profil", path: "/profile" },
-    { icon: BookMarked, label: "Sauvegardés", path: "/recruiter/dashboard?tab=saved" },
-    { icon: Users, label: "Communautés", path: "#" },
   ];
+
+  // Sections spécifiques selon le type d'utilisateur
+  const getSpecificSection = () => {
+    if (!currentUser) return null;
+
+    switch (currentUser.userType) {
+      case "talent":
+        return {
+          title: "Mes contenus",
+          items: [
+            { icon: FileText, label: "Mes posts", path: "/profile?tab=posts" },
+            { icon: Video, label: "Mes vidéos", path: "/profile?tab=videos" },
+          ],
+          key: "talent",
+        };
+      case "recruiter":
+        return {
+          title: "Recherche",
+          items: [
+            { icon: Heart, label: "Talents sauvegardés", path: "/recruiter/dashboard?tab=saved", badge: 0 },
+            { icon: Search, label: "Recherche avancée", path: "/discover" },
+            { icon: LayoutDashboard, label: "Dashboard", path: "/recruiter/dashboard" },
+          ],
+          key: "recruiter",
+        };
+      case "neighbor":
+        return {
+          title: "Services",
+          items: [
+            { icon: BookMarked, label: "Services sauvegardés", path: "/profile?tab=saved" },
+            { icon: Briefcase, label: "Demandes actives", path: "/profile?tab=requests" },
+          ],
+          key: "neighbor",
+        };
+      default:
+        return null;
+    }
+  };
+
+  const specificSection = getSpecificSection();
+  const isSectionExpanded = specificSection ? expandedSections[specificSection.key] : false;
+
+  const toggleSection = (key: string) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
 
   const trendingSkills = [
     { icon: Code, label: "Développement Web", count: 234 },
@@ -502,12 +563,6 @@ function FeedPageContent() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowBottomSheet(true)}
-                className="relative p-2 text-violet-400 hover:text-violet-300 transition-colors"
-              >
-                <User className="w-6 h-6" />
-              </button>
-              <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className={`relative p-2 text-violet-400 hover:text-violet-300 transition-colors ${
                   showNotifications ? "bg-white/10" : ""
@@ -520,11 +575,17 @@ function FeedPageContent() {
                   </span>
                 )}
               </button>
+              <button
+                onClick={() => setShowBottomSheet(true)}
+                className="relative p-2 text-violet-400 hover:text-violet-300 transition-colors"
+              >
+                <User className="w-6 h-6" />
+              </button>
             </div>
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto horizontal-scrollbar pb-1">
+          <div data-tour="filters" className="flex items-center gap-2 overflow-x-auto horizontal-scrollbar pb-1">
             {filterOptions.map((option) => {
               const Icon = option.icon;
               const isActive = filter === option.value;
@@ -552,32 +613,89 @@ function FeedPageContent() {
       <div className="hidden lg:flex max-w-[1400px] mx-auto gap-6 pt-6">
         {/* Left Sidebar */}
         <div className="w-64 flex-shrink-0">
-          <div className="sticky top-20 space-y-2">
-            {/* Navigation */}
-            {leftMenuItems.map((item) => {
-              const Icon = item.icon;
-              return (
+          <div className="sticky top-20 space-y-4">
+            {/* Navigation principale */}
+            <div className="space-y-2">
+              {mainNavigation.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.label}
+                    onClick={() => router.push(item.path)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                      item.active
+                        ? "bg-violet-600 text-white"
+                        : "hover:bg-white/5 text-gray-300"
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="font-medium">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Section spécifique (pliable) */}
+            {specificSection && (
+              <div className="border-t border-white/10 pt-4">
                 <button
-                  key={item.label}
-                  onClick={() => router.push(item.path)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    item.active
-                      ? "bg-violet-600 text-white"
-                      : "hover:bg-white/5 text-gray-300"
-                  }`}
+                  onClick={() => toggleSection(specificSection.key)}
+                  className="w-full flex items-center justify-between px-4 py-2 text-gray-400 hover:text-white transition-colors"
                 >
-                  <Icon className="w-5 h-5" />
-                  <span className="font-medium">{item.label}</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider">
+                    {specificSection.title}
+                  </span>
+                  {isSectionExpanded ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
                 </button>
-              );
-            })}
+                
+                {isSectionExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-2 space-y-1"
+                  >
+                    {specificSection.items.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.label}
+                          onClick={() => {
+                            // Mark that we're coming from feed for auto-scroll
+                            if (item.path.includes("/profile") || item.path.includes("/recruiter/dashboard")) {
+                              sessionStorage.setItem("scrollToProfileTab", "true");
+                            }
+                            router.push(item.path);
+                          }}
+                          className="w-full flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg hover:bg-white/5 text-gray-300 hover:text-white transition-all group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon className="w-4 h-4" />
+                            <span className="text-sm font-medium">{item.label}</span>
+                          </div>
+                          {item.badge !== undefined && item.badge > 0 && (
+                            <span className="px-2 py-0.5 bg-violet-500 text-white text-xs rounded-full">
+                              {item.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Main Feed */}
         <div className="flex-1 max-w-2xl">
           {/* Filter Tabs */}
-          <div className="flex items-center gap-2 mb-6 overflow-x-auto horizontal-scrollbar pb-1">
+          <div data-tour="filters" className="flex items-center gap-2 mb-6 overflow-x-auto horizontal-scrollbar pb-1">
             {filterOptions.map((option) => {
               const Icon = option.icon;
               const isActive = filter === option.value;
@@ -601,14 +719,17 @@ function FeedPageContent() {
 
           {/* Create Post Button - Only for Talents */}
           {canPublish && (
-            <CreatePostButton
-              userAvatar={currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400"}
-              userName={currentUser?.firstName || "Vous"}
-            />
+            <div data-tour="create-post">
+              <CreatePostButton
+                userAvatar={currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400"}
+                userName={currentUser?.firstName || "Vous"}
+              />
+            </div>
           )}
 
           {/* Stories */}
           <motion.div
+            data-tour="stories"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-6"
@@ -617,7 +738,7 @@ function FeedPageContent() {
           </motion.div>
 
           {/* Mixed Feed - Posts & Videos */}
-          <div className="space-y-6">
+          <div data-tour="posts" className="space-y-6">
             {mixedFeed.slice(0, visiblePosts).map((item, index) => (
               <motion.div
                 key={item.id}
@@ -751,6 +872,7 @@ function FeedPageContent() {
       <div className="lg:hidden max-w-3xl mx-auto px-4 sm:px-6 py-6">
         {/* Stories */}
         <motion.div
+          data-tour="stories"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-6"
@@ -759,7 +881,7 @@ function FeedPageContent() {
         </motion.div>
 
         {/* Mixed Feed - Posts & Videos */}
-        <div className="space-y-6">
+        <div data-tour="posts" className="space-y-6">
           {mixedFeed.slice(0, visiblePosts).map((item, index) => (
             <motion.div
               key={item.id}
@@ -869,6 +991,9 @@ function FeedPageContent() {
         isOpen={showBottomSheet}
         onClose={() => setShowBottomSheet(false)}
       />
+
+      {/* Feed Tour */}
+      <FeedTour />
     </div>
   );
 }

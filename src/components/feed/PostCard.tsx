@@ -322,7 +322,7 @@ export default function PostCard({ post }: PostCardProps) {
           </div>
           <div className="text-left">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-white">{post.author.name}</h3>
+              <h3 className="font-semibold text-white">{isOwnPost ? "Vous" : post.author.name}</h3>
             </div>
             <p className="text-xs text-gray-500">{getTimeAgo(post.timestamp)}</p>
           </div>
@@ -614,7 +614,7 @@ export default function PostCard({ post }: PostCardProps) {
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-1 text-sm text-gray-400">
-            <Heart className={`w-4 h-4 ${liked ? "fill-red-500 text-red-500" : ""}`} />
+            <Heart className={`w-4 h-4 ${liked ? "fill-violet-500 text-violet-500" : ""}`} />
             <span>{likesCount}</span>
           </div>
           <button
@@ -631,11 +631,11 @@ export default function PostCard({ post }: PostCardProps) {
             onClick={handleLike}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all ${
               liked
-                ? "bg-red-500/10 text-red-500"
+                ? "bg-violet-500/10 text-violet-500"
                 : "bg-white/5 hover:bg-white/10 text-gray-400"
             }`}
           >
-            <Heart className={`w-5 h-5 ${liked ? "fill-red-500" : ""}`} />
+            <Heart className={`w-5 h-5 ${liked ? "fill-violet-500" : ""}`} />
             <span className="text-sm font-medium">
               {liked ? "Aimé" : "Aimer"}
             </span>

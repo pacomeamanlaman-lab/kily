@@ -320,7 +320,7 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
           </div>
           <div className="text-left">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-white">{video.author.name}</h3>
+              <h3 className="font-semibold text-white">{isOwnVideo ? "Vous" : video.author.name}</h3>
             </div>
             <p className="text-sm text-gray-400 capitalize">{video.category}</p>
             <p className="text-xs text-gray-500">{getTimeAgo(video.createdAt)}</p>
@@ -503,7 +503,7 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-1 text-sm text-gray-400">
-            <Heart className={`w-4 h-4 ${liked ? "fill-red-500 text-red-500" : ""}`} />
+            <Heart className={`w-4 h-4 ${liked ? "fill-violet-500 text-violet-500" : ""}`} />
             <span>{formatNumber(likesCount)}</span>
           </div>
           <button
@@ -523,11 +523,11 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
             onClick={handleLike}
             className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all ${
               liked
-                ? "bg-red-500/10 text-red-500"
+                ? "bg-violet-500/10 text-violet-500"
                 : "bg-white/5 hover:bg-white/10 text-gray-400"
             }`}
           >
-            <Heart className={`w-5 h-5 ${liked ? "fill-red-500" : ""}`} />
+            <Heart className={`w-5 h-5 ${liked ? "fill-violet-500" : ""}`} />
             <span className="text-sm font-medium">
               {liked ? "Aimé" : "Aimer"}
             </span>

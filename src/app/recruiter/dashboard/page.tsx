@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-  ArrowLeft,
+  Sparkles,
   Users,
   Eye,
   Star,
@@ -16,17 +16,47 @@ import {
   Trash2,
   Mail,
   Filter,
+  Bell,
+  User,
 } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import TalentCard from "@/components/talent/TalentCard";
 import { mockTalents } from "@/lib/mockData";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
 import { loadSavedTalents, loadContactedTalents, addSavedTalent, removeSavedTalent, addContactedTalent, removeContactedTalent } from "@/lib/savedTalents";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
+import NotificationsSidebar from "@/components/notifications/NotificationsSidebar";
+import FeedBottomSheet from "@/components/feed/FeedBottomSheet";
+import { getCurrentUser } from "@/lib/users";
 
-export default function RecruiterDashboard() {
+function RecruiterDashboardContent() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"overview" | "saved" | "contacted">("overview");
+  const searchParams = useSearchParams();
+  const scrollDirection = useScrollDirection({ threshold: 10 });
+  const urlTab = searchParams.get("tab") as "overview" | "saved" | "contacted" | null;
+  const [activeTab, setActiveTab] = useState<"overview" | "saved" | "contacted">(urlTab || "overview");
+  
+  // Update activeTab when URL changes and scroll if coming from feed
+  const contentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (urlTab && ["overview", "saved", "contacted"].includes(urlTab)) {
+      setActiveTab(urlTab);
+    }
+    
+    // Scroll to content if coming from feed
+    const shouldScroll = sessionStorage.getItem("scrollToProfileTab") === "true";
+    if (shouldScroll && urlTab && urlTab !== "overview" && contentRef.current) {
+      setTimeout(() => {
+        contentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        sessionStorage.removeItem("scrollToProfileTab");
+      }, 100);
+    }
+  }, [urlTab]);
+  const [unreadNotifications] = useState(5);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showBottomSheet, setShowBottomSheet] = useState(false);
+  const currentUser = getCurrentUser();
 
   // State management - Load from localStorage
   const [savedTalentIds, setSavedTalentIds] = useState<string[]>([]);
@@ -156,28 +186,57 @@ export default function RecruiterDashboard() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-20">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-black border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-4"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Retour</span>
-          </button>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Dashboard Recruteur</h1>
-              <p className="text-gray-400 mt-1">Gérez vos recrutements et talents</p>
+      {/* Header Mobile */}
+      <div
+        className={`sticky top-0 z-40 bg-black/95 backdrop-blur-lg border-b border-white/10 lg:hidden transition-transform duration-300 ${
+          scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"
+        }`}
+      >
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <h1 className="text-2xl font-bold">Kily</h1>
             </div>
-            <Button variant="primary" onClick={() => router.push("/discover")}>
-              <Search className="w-4 h-4 mr-2" />
-              Rechercher des talents
-            </Button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`relative p-2 text-violet-400 hover:text-violet-300 transition-colors ${
+                  showNotifications ? "bg-white/10" : ""
+                }`}
+              >
+                <Bell className="w-6 h-6" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-0 -right-0 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setShowBottomSheet(true)}
+                className="relative p-2 text-violet-400 hover:text-violet-300 transition-colors"
+              >
+                <User className="w-6 h-6" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+
+      {/* Notifications Sidebar */}
+      <NotificationsSidebar
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
+
+      {/* Bottom Sheet */}
+      <FeedBottomSheet
+        isOpen={showBottomSheet}
+        onClose={() => setShowBottomSheet(false)}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Tabs */}
@@ -305,6 +364,7 @@ export default function RecruiterDashboard() {
         )}
 
         {/* Saved Tab */}
+        <div ref={contentRef}>
         {activeTab === "saved" && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -570,6 +630,7 @@ export default function RecruiterDashboard() {
             )}
           </motion.div>
         )}
+        </div>
       </div>
 
       {/* Toast */}
@@ -580,5 +641,20 @@ export default function RecruiterDashboard() {
         onClose={() => setToast({ ...toast, isVisible: false })}
       />
     </div>
+  );
+}
+
+export default function RecruiterDashboard() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <RecruiterDashboardContent />
+    </Suspense>
   );
 }

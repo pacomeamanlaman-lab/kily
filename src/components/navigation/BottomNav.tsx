@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Compass, MessageCircle, User, Plus, Search } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { isLoggedIn } from "@/lib/auth";
 
 interface BottomNavProps {
@@ -14,9 +14,12 @@ export default function BottomNav({ onPublishClick, showPublishButton = false }:
   const pathname = usePathname();
   const router = useRouter();
   const [unreadMessages] = useState(3); // Mock unread messages count
+  const [profilePath, setProfilePath] = useState("/login"); // Default to login to avoid hydration mismatch
 
-  // Determine profile path based on login status
-  const profilePath = isLoggedIn() ? "/profile" : "/login";
+  // Determine profile path based on login status - only on client side
+  useEffect(() => {
+    setProfilePath(isLoggedIn() ? "/profile" : "/login");
+  }, []);
 
   // Tabs pour les pages normales (sans le bouton +)
   const normalTabs = [
@@ -52,7 +55,7 @@ export default function BottomNav({ onPublishClick, showPublishButton = false }:
   };
 
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-lg border-t border-white/10">
+    <nav data-tour="bottom-nav" className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-lg border-t border-white/10">
       <div className="flex items-center justify-around px-2 py-2">
         {tabs.map((tab) => {
           const Icon = tab.icon;

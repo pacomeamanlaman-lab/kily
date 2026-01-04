@@ -3,6 +3,7 @@
 export interface User {
   id: string;
   email: string;
+  password?: string; // Password hash (optional for backward compatibility)
   firstName: string;
   lastName: string;
   phone: string;
@@ -88,6 +89,7 @@ const saveUsers = (users: User[]): void => {
 // Create new user from registration data
 export const createUser = (userData: {
   email: string;
+  password: string;
   firstName: string;
   lastName: string;
   phone: string;
@@ -112,6 +114,7 @@ export const createUser = (userData: {
   const newUser: User = {
     id: userId,
     email: userData.email,
+    password: userData.password, // Store password (in production, this should be hashed)
     firstName: userData.firstName,
     lastName: userData.lastName,
     phone: userData.phone,
@@ -141,6 +144,25 @@ export const createUser = (userData: {
   setCurrentUserId(userId);
   
   return newUser;
+};
+
+// Get redirect path based on user type
+export const getRedirectPath = (user?: User | null): string => {
+  if (!user) return "/feed";
+  
+  // Recruiters go to their dashboard
+  if (user.userType === "recruiter") {
+    return "/recruiter/dashboard";
+  }
+  
+  // Other users go to feed
+  return "/feed";
+};
+
+// Get redirect path for current user
+export const getCurrentUserRedirectPath = (): string => {
+  const user = getCurrentUser();
+  return getRedirectPath(user);
 };
 
 // Get current user ID

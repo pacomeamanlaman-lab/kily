@@ -14,11 +14,19 @@ export const getUserEmail = (): string | null => {
   return currentUser?.email || null;
 };
 
-export const login = (email: string): boolean => {
+export const login = (email: string, password?: string): boolean => {
   const user = getUserByEmail(email);
   if (!user) {
     return false; // User not found
   }
+  
+  // If user has a password, verify it
+  if (user.password) {
+    if (!password || user.password !== password) {
+      return false; // Password mismatch
+    }
+  }
+  // If user doesn't have a password (old accounts), allow login with email only for backward compatibility
   
   setCurrentUserId(user.id);
   localStorage.setItem('kily_logged_in', 'true');

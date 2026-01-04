@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, User, Users, Briefcase, ChevronRight, Sparkles } from "lucide-react";
+import { ArrowLeft, User, Users, Briefcase, ChevronRight, Sparkles, Lock, Eye, EyeOff } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
@@ -18,6 +18,8 @@ interface FormData {
   lastName: string;
   email: string;
   phone: string;
+  password: string;
+  confirmPassword: string;
   country: string;
   city: string;
   commune: string;
@@ -33,16 +35,26 @@ export default function RegisterPage() {
     lastName: "",
     email: "",
     phone: "",
+    password: "",
+    confirmPassword: "",
     country: "Côte d'Ivoire", // Pays pilote pré-sélectionné
     city: "",
     commune: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Scroll to top when step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
 
   const steps = [
     { title: "Type de compte", description: "Choisissez votre profil" },
     { title: "Informations", description: "Vos coordonnées" },
+    { title: "Sécurité", description: "Votre mot de passe" },
   ];
 
   const userTypes = [
@@ -120,6 +132,26 @@ export default function RegisterPage() {
       if (!formData.commune.trim()) {
         newErrors.commune = "La commune est requise pour Abidjan";
       }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Validation Step 3 (Password)
+  const validateStep3 = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.password.trim()) {
+      newErrors.password = "Le mot de passe est requis";
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Le mot de passe doit contenir au moins 8 caractères";
+    }
+
+    if (!formData.confirmPassword.trim()) {
+      newErrors.confirmPassword = "La confirmation du mot de passe est requise";
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Les mots de passe ne correspondent pas";
     }
 
     setErrors(newErrors);
@@ -206,6 +238,32 @@ export default function RegisterPage() {
           delete newErrors.commune;
         }
         break;
+
+      case "password":
+        if (!value.trim()) {
+          newErrors.password = "Le mot de passe est requis";
+        } else if (value.length < 8) {
+          newErrors.password = "Le mot de passe doit contenir au moins 8 caractères";
+        } else {
+          delete newErrors.password;
+          // Re-validate confirmPassword if it's already filled
+          if (formData.confirmPassword && formData.confirmPassword !== value) {
+            newErrors.confirmPassword = "Les mots de passe ne correspondent pas";
+          } else if (formData.confirmPassword) {
+            delete newErrors.confirmPassword;
+          }
+        }
+        break;
+
+      case "confirmPassword":
+        if (!value.trim()) {
+          newErrors.confirmPassword = "La confirmation du mot de passe est requise";
+        } else if (formData.password !== value) {
+          newErrors.confirmPassword = "Les mots de passe ne correspondent pas";
+        } else {
+          delete newErrors.confirmPassword;
+        }
+        break;
     }
 
     setErrors(newErrors);
@@ -216,10 +274,7 @@ export default function RegisterPage() {
 
     if (currentStep === 1) {
       isValid = validateStep1();
-      if (isValid && formData.userType !== "talent") {
-        // Si pas talent, skip step 3
-        setCurrentStep(2);
-      } else if (isValid) {
+      if (isValid) {
         setCurrentStep(2);
       }
     } else if (currentStep === 2) {
@@ -236,7 +291,18 @@ export default function RegisterPage() {
       
       isValid = validateStep2();
       if (isValid) {
-        // Tous les utilisateurs vont directement à l'onboarding après step 2
+        setCurrentStep(3);
+      }
+    } else if (currentStep === 3) {
+      // Marquer tous les champs comme touchés pour afficher les erreurs
+      setTouched({
+        ...touched,
+        password: true,
+        confirmPassword: true,
+      });
+      
+      isValid = validateStep3();
+      if (isValid) {
         handleSubmit();
       }
     }
@@ -257,6 +323,7 @@ export default function RegisterPage() {
         // Create user in the system (bio and skills will be filled in onboarding)
         const newUser = createUser({
           email: formData.email,
+          password: formData.password,
           firstName: formData.firstName,
           lastName: formData.lastName,
           phone: formData.phone,
@@ -273,7 +340,7 @@ export default function RegisterPage() {
 
         // Login the user
         import("@/lib/auth").then(({ login }) => {
-          login(formData.email);
+          login(formData.email, formData.password);
         });
 
         // Rediriger vers onboarding (nouvel utilisateur)
@@ -323,8 +390,8 @@ export default function RegisterPage() {
         {/* Step Indicator */}
         <StepIndicator
           currentStep={currentStep}
-          totalSteps={formData.userType === "talent" ? 3 : 2}
-          steps={formData.userType === "talent" ? steps : steps.slice(0, 2)}
+          totalSteps={3}
+          steps={steps}
         />
 
         {/* Step 1: Type utilisateur */}
@@ -569,6 +636,119 @@ export default function RegisterPage() {
             </div>
           </motion.div>
         )}
+
+        {/* Step 3: Mot de passe */}
+        {currentStep === 3 && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+          >
+            <h2 className="text-2xl lg:text-3xl font-bold mb-6 lg:mb-8">Sécurité de votre compte</h2>
+            
+            {/* Message d'erreur global si des champs sont invalides */}
+            {Object.keys(errors).length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 lg:mb-8 p-4 lg:p-6 bg-red-500/10 border border-red-500/30 rounded-xl"
+              >
+                <p className="text-red-400 font-semibold mb-2 lg:text-lg">
+                  Veuillez corriger les erreurs suivantes :
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-sm lg:text-base text-red-300">
+                  {errors.password && <li>{errors.password}</li>}
+                  {errors.confirmPassword && <li>{errors.confirmPassword}</li>}
+                </ul>
+              </motion.div>
+            )}
+
+            <div className="space-y-4 lg:max-w-xl">
+              <div>
+                <label className="block text-sm lg:text-base font-medium text-gray-300 mb-2 lg:mb-3">
+                  Mot de passe
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => {
+                      setFormData({ ...formData, password: e.target.value });
+                      if (touched.password) {
+                        validateField("password", e.target.value);
+                      }
+                    }}
+                    onBlur={() => {
+                      setTouched({ ...touched, password: true });
+                      validateField("password", formData.password);
+                    }}
+                    placeholder="Minimum 8 caractères"
+                    className={`w-full px-4 py-3 lg:px-6 lg:py-4 pr-12 bg-white/5 border ${
+                      touched.password && errors.password ? "border-red-500" : "border-white/10"
+                    } rounded-xl text-white text-sm lg:text-base placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5 text-gray-400" />
+                    ) : (
+                      <Eye className="w-5 h-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                {touched.password && errors.password && (
+                  <p className="text-red-400 text-sm mt-1">{errors.password}</p>
+                )}
+                <p className="text-xs lg:text-sm text-gray-400 mt-1.5 lg:mt-2">
+                  Le mot de passe doit contenir au moins 8 caractères
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm lg:text-base font-medium text-gray-300 mb-2 lg:mb-3">
+                  Confirmer le mot de passe
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={formData.confirmPassword}
+                    onChange={(e) => {
+                      setFormData({ ...formData, confirmPassword: e.target.value });
+                      if (touched.confirmPassword) {
+                        validateField("confirmPassword", e.target.value);
+                      }
+                    }}
+                    onBlur={() => {
+                      setTouched({ ...touched, confirmPassword: true });
+                      validateField("confirmPassword", formData.confirmPassword);
+                    }}
+                    placeholder="Répétez votre mot de passe"
+                    className={`w-full px-4 py-3 lg:px-6 lg:py-4 pr-12 bg-white/5 border ${
+                      touched.confirmPassword && errors.confirmPassword ? "border-red-500" : "border-white/10"
+                    } rounded-xl text-white text-sm lg:text-base placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-5 h-5 text-gray-400" />
+                    ) : (
+                      <Eye className="w-5 h-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                {touched.confirmPassword && errors.confirmPassword && (
+                  <p className="text-red-400 text-sm mt-1">{errors.confirmPassword}</p>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Buttons - Sticky en bas */}
@@ -579,7 +759,7 @@ export default function RegisterPage() {
               Retour
             </Button>
             <Button variant="primary" onClick={handleNext} className="flex-1 lg:flex-none lg:min-w-[200px]">
-              {currentStep === 2 ? "Créer mon compte" : "Continuer"}
+              {currentStep === 3 ? "Créer mon compte" : "Continuer"}
             </Button>
           </div>
         </div>

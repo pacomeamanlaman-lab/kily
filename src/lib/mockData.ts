@@ -252,7 +252,6 @@ export const skillCategories = [
   { id: "couture", name: "Couture", count: 41 },
   { id: "coiffure", name: "Coiffure", count: 56 },
   { id: "education", name: "Éducation", count: 23 },
-  { id: "autre", name: "Autre", count: 18 },
 ];
 
 // Import des villes depuis locationData pour compatibilité

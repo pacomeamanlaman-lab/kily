@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, X, Users, FileText, User, RefreshCw, Video } from "lucide-react";
+import { Search, Filter, X, Users, FileText, User, RefreshCw, Video, ChevronDown, MapPin } from "lucide-react";
 import { mockTalents, skillCategories, cities } from "@/lib/mockData";
+import { coteIvoireCities } from "@/lib/locationData";
 import { mockPosts } from "@/lib/feedData";
 import { mockVideos } from "@/lib/videoData";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -23,10 +24,30 @@ function DiscoverPageContent() {
   const searchParams = useSearchParams();
   const scrollDirection = useScrollDirection({ threshold: 10 });
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // Pour les vidéos uniquement
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [showOtherCities, setShowOtherCities] = useState(false);
+  const [citySearchQuery, setCitySearchQuery] = useState("");
+  const [skillSearchQuery, setSkillSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"talents" | "posts" | "videos" | "users">("talents");
+
+  // Liste de toutes les compétences depuis l'onboarding
+  const allSkills = useMemo(() => {
+    const predefinedSkills = {
+      cuisine: ["Pâtisserie", "Cuisine africaine", "Street food", "Traiteur", "Boulangerie"],
+      tech: ["Développement Web", "Design UI/UX", "Réparation téléphones", "Maintenance PC", "Photoshop"],
+      artisanat: ["Bijoux", "Sculpture", "Poterie", "Décoration", "Vannerie"],
+      bricolage: ["Plomberie", "Électricité", "Menuiserie", "Peinture", "Maçonnerie"],
+      mecanique: ["Réparation auto", "Mécanique moto", "Soudure", "Carrosserie", "Climatisation"],
+      photographie: ["Photo événementiel", "Portrait", "Retouche photo", "Vidéographie", "Drone"],
+      couture: ["Couture sur mesure", "Retouche vêtements", "Mode africaine", "Broderie", "Tapisserie"],
+      coiffure: ["Coiffure afro", "Barbier", "Tresses", "Mèches", "Maquillage"],
+      education: ["Cours particuliers", "Langues", "Musique", "Sport", "Informatique"],
+    };
+    return Object.values(predefinedSkills).flat();
+  }, []);
 
   // Video player state
   const [isVideoPlayerOpen, setIsVideoPlayerOpen] = useState(false);
@@ -43,6 +64,7 @@ function DiscoverPageContent() {
   const lastItemRefDesktop = useRef<HTMLDivElement | null>(null);
   const lastItemRefMobile = useRef<HTMLDivElement | null>(null);
   const [observerKey, setObserverKey] = useState(0);
+  const otherCitiesDropdownRef = useRef<HTMLDivElement | null>(null);
 
   // Pull to refresh state
   const [isPulling, setIsPulling] = useState(false);
@@ -63,16 +85,36 @@ function DiscoverPageContent() {
       videos: 8,
       users: 10,
     });
-  }, [activeTab, searchQuery, selectedCategory, selectedCity]);
+  }, [activeTab, searchQuery, selectedSkill, selectedCity]);
 
-  // Lire le paramètre category depuis l'URL
+  // Lire le paramètre skill depuis l'URL (pour compatibilité, on garde "category" mais on le mappe vers skill)
   useEffect(() => {
     const categoryParam = searchParams.get("category");
     if (categoryParam) {
-      setSelectedCategory(categoryParam);
+      // Si c'est une compétence valide, on l'utilise directement
+      if (allSkills.includes(categoryParam)) {
+        setSelectedSkill(categoryParam);
+      }
       setShowFilters(true);
     }
-  }, [searchParams]);
+  }, [searchParams, allSkills]);
+
+  // Fermer le dropdown "Autres villes" quand on clique en dehors
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (otherCitiesDropdownRef.current && !otherCitiesDropdownRef.current.contains(event.target as Node)) {
+        setShowOtherCities(false);
+      }
+    };
+
+    if (showOtherCities) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showOtherCities]);
 
   // Filtrage des talents
   const filteredTalents = useMemo(() => {
@@ -85,17 +127,17 @@ function DiscoverPageContent() {
           skill.name.toLowerCase().includes(searchQuery.toLowerCase())
         );
 
-      // Filtre par catégorie
-      const matchesCategory =
-        !selectedCategory ||
-        talent.skills.some((skill) => skill.category === selectedCategory);
+      // Filtre par compétence
+      const matchesSkill =
+        !selectedSkill ||
+        talent.skills.some((skill) => skill.name === selectedSkill);
 
       // Filtre par ville
       const matchesCity = !selectedCity || talent.location.city === selectedCity;
 
-      return matchesSearch && matchesCategory && matchesCity;
+      return matchesSearch && matchesSkill && matchesCity;
     });
-  }, [searchQuery, selectedCategory, selectedCity]);
+  }, [searchQuery, selectedSkill, selectedCity]);
 
   // Filtrage des posts
   const filteredPosts = useMemo(() => {
@@ -171,6 +213,7 @@ function DiscoverPageContent() {
   // Réinitialiser les filtres
   const resetFilters = () => {
     setSearchQuery("");
+    setSelectedSkill(null);
     setSelectedCategory(null);
     setSelectedCity(null);
   };
@@ -320,7 +363,7 @@ function DiscoverPageContent() {
     }
   }, []);
 
-  const hasActiveFilters = searchQuery || selectedCategory || selectedCity;
+  const hasActiveFilters = searchQuery || selectedSkill || selectedCategory || selectedCity;
 
   return (
     <div
@@ -485,34 +528,67 @@ function DiscoverPageContent() {
               exit={{ opacity: 0, height: 0 }}
               className="mt-6 p-6 bg-white/5 rounded-2xl border border-white/10"
             >
-              {/* Catégories */}
+              {/* Compétences */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-sm text-gray-300">Catégories</h3>
-                  {selectedCategory && (
+                  <h3 className="font-semibold text-sm text-gray-300">Compétences</h3>
+                  {selectedSkill && (
                     <button
-                      onClick={() => setSelectedCategory(null)}
+                      onClick={() => setSelectedSkill(null)}
                       className="text-xs text-violet-400 hover:text-violet-300"
                     >
                       Effacer
                     </button>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto categories-scrollbar pr-1">
-                  {skillCategories.map((category) => (
-                    <Badge
-                      key={category.id}
-                      variant={selectedCategory === category.id ? "primary" : "secondary"}
-                      className="cursor-pointer hover:scale-105 transition-transform"
-                      onClick={() =>
-                        setSelectedCategory(
-                          selectedCategory === category.id ? null : category.id
-                        )
-                      }
+                
+                {/* Barre de recherche rapide pour compétences */}
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={skillSearchQuery}
+                    onChange={(e) => setSkillSearchQuery(e.target.value)}
+                    placeholder="Rechercher une compétence..."
+                    className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+                  />
+                  {skillSearchQuery && (
+                    <button
+                      onClick={() => setSkillSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors"
                     >
-                      {category.name} ({category.count})
-                    </Badge>
-                  ))}
+                      <X className="w-3 h-3 text-gray-400" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Liste des compétences filtrées */}
+                <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto categories-scrollbar pr-1">
+                  {allSkills
+                    .filter((skill) =>
+                      skill.toLowerCase().includes(skillSearchQuery.toLowerCase())
+                    )
+                    .map((skill) => (
+                      <Badge
+                        key={skill}
+                        variant={selectedSkill === skill ? "primary" : "secondary"}
+                        className="cursor-pointer hover:scale-105 transition-transform"
+                        onClick={() =>
+                          setSelectedSkill(
+                            selectedSkill === skill ? null : skill
+                          )
+                        }
+                      >
+                        {skill}
+                      </Badge>
+                    ))}
+                  {allSkills.filter((skill) =>
+                    skill.toLowerCase().includes(skillSearchQuery.toLowerCase())
+                  ).length === 0 && (
+                    <div className="w-full text-center py-4 text-gray-500 text-sm">
+                      Aucune compétence trouvée
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -559,9 +635,9 @@ function DiscoverPageContent() {
           {hasActiveFilters && !showFilters && (
             <div className="mt-4 flex items-center gap-2 flex-wrap">
               <span className="text-sm text-gray-400">Filtres actifs:</span>
-              {selectedCategory && (
-                <Badge variant="primary" className="cursor-pointer" onClick={() => setSelectedCategory(null)}>
-                  {skillCategories.find((c) => c.id === selectedCategory)?.name}
+              {selectedSkill && (
+                <Badge variant="primary" className="cursor-pointer" onClick={() => setSelectedSkill(null)}>
+                  {selectedSkill}
                   <X className="w-3 h-3 ml-1" />
                 </Badge>
               )}
@@ -671,34 +747,67 @@ function DiscoverPageContent() {
             className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10"
           >
             <div className="grid grid-cols-2 gap-6">
-              {/* Catégories */}
+              {/* Compétences */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-sm text-gray-300">Catégories</h3>
-                  {selectedCategory && (
+                  <h3 className="font-semibold text-sm text-gray-300">Compétences</h3>
+                  {selectedSkill && (
                     <button
-                      onClick={() => setSelectedCategory(null)}
+                      onClick={() => setSelectedSkill(null)}
                       className="text-xs text-violet-400 hover:text-violet-300"
                     >
                       Effacer
                     </button>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto categories-scrollbar pr-1">
-                  {skillCategories.map((category) => (
-                    <Badge
-                      key={category.id}
-                      variant={selectedCategory === category.id ? "primary" : "secondary"}
-                      className="cursor-pointer hover:scale-105 transition-transform"
-                      onClick={() =>
-                        setSelectedCategory(
-                          selectedCategory === category.id ? null : category.id
-                        )
-                      }
+                
+                {/* Barre de recherche rapide pour compétences */}
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={skillSearchQuery}
+                    onChange={(e) => setSkillSearchQuery(e.target.value)}
+                    placeholder="Rechercher une compétence..."
+                    className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+                  />
+                  {skillSearchQuery && (
+                    <button
+                      onClick={() => setSkillSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors"
                     >
-                      {category.name}
-                    </Badge>
-                  ))}
+                      <X className="w-3 h-3 text-gray-400" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Liste des compétences filtrées */}
+                <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto categories-scrollbar pr-1">
+                  {allSkills
+                    .filter((skill) =>
+                      skill.toLowerCase().includes(skillSearchQuery.toLowerCase())
+                    )
+                    .map((skill) => (
+                      <Badge
+                        key={skill}
+                        variant={selectedSkill === skill ? "primary" : "secondary"}
+                        className="cursor-pointer hover:scale-105 transition-transform"
+                        onClick={() =>
+                          setSelectedSkill(
+                            selectedSkill === skill ? null : skill
+                          )
+                        }
+                      >
+                        {skill}
+                      </Badge>
+                    ))}
+                  {allSkills.filter((skill) =>
+                    skill.toLowerCase().includes(skillSearchQuery.toLowerCase())
+                  ).length === 0 && (
+                    <div className="w-full text-center py-4 text-gray-500 text-sm">
+                      Aucune compétence trouvée
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -715,8 +824,9 @@ function DiscoverPageContent() {
                     </button>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {cities.map((city) => (
+                {/* Villes principales de Côte d'Ivoire */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {["Abidjan", "Bouaké", "Daloa", "Korhogo", "San-Pédro", "Yamoussoukro", "Man"].map((city) => (
                     <Badge
                       key={city}
                       variant={selectedCity === city ? "primary" : "secondary"}
@@ -726,6 +836,74 @@ function DiscoverPageContent() {
                       {city}
                     </Badge>
                   ))}
+                </div>
+
+                {/* Autres villes - Dropdown */}
+                <div className="relative" ref={otherCitiesDropdownRef}>
+                  <button
+                    onClick={() => setShowOtherCities(!showOtherCities)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm text-gray-300 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Autres villes
+                    </span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showOtherCities ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {showOtherCities && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute z-50 w-full mt-2 bg-black/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl max-h-64 overflow-hidden"
+                    >
+                      {/* Recherche dans le dropdown */}
+                      <div className="p-3 border-b border-white/10">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            type="text"
+                            value={citySearchQuery}
+                            onChange={(e) => setCitySearchQuery(e.target.value)}
+                            placeholder="Rechercher une ville..."
+                            className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Liste des autres villes de CI */}
+                      <div className="max-h-48 overflow-y-auto">
+                        {coteIvoireCities
+                          .filter(city => 
+                            !["Abidjan", "Bouaké", "Daloa", "Korhogo", "San-Pédro", "Yamoussoukro", "Man"].includes(city) &&
+                            city.toLowerCase().includes(citySearchQuery.toLowerCase())
+                          )
+                          .map((city) => (
+                            <button
+                              key={city}
+                              onClick={() => {
+                                setSelectedCity(selectedCity === city ? null : city);
+                                setShowOtherCities(false);
+                                setCitySearchQuery("");
+                              }}
+                              className={`w-full text-left px-4 py-2.5 hover:bg-white/10 transition-colors ${
+                                selectedCity === city ? "bg-violet-500/20 text-violet-400" : "text-gray-300"
+                              }`}
+                            >
+                              {city}
+                            </button>
+                          ))}
+                        {coteIvoireCities.filter(city => 
+                          !["Abidjan", "Bouaké", "Daloa", "Korhogo", "San-Pédro", "Yamoussoukro", "Man"].includes(city) &&
+                          city.toLowerCase().includes(citySearchQuery.toLowerCase())
+                        ).length === 0 && (
+                          <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                            Aucune ville trouvée
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
               </div>
             </div>

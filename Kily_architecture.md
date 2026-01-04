@@ -2,15 +2,15 @@
 
 ## 📊 État Actuel du Projet
 
-**Dernière mise à jour : 3 Janvier 2026**
+**Dernière mise à jour : 3 Janvier 2026 (sidebar personnalisée, tabs profil, scroll auto, mot de passe)**
 
 ### Statistiques
-- **Commits :** 30+ (main branch)
+- **Commits :** 35+ (main branch)
 - **Avancement MVP :** 100% ✅
-- **Pages complètes :** 21/21
+- **Pages complètes :** 22/22 (+ onboarding)
 - **Composants créés :** 45+
-- **Fichiers TypeScript :** 82
-- **Lignes de code :** ~15000+
+- **Fichiers TypeScript :** 83
+- **Lignes de code :** ~16000+
 
 ### Fonctionnalités Opérationnelles ✅
 ✅ Landing page complète avec animations
@@ -29,6 +29,9 @@
 ✅ Validation formulaires temps réel
 ✅ Page 404 personnalisée
 ✅ États de chargement (skeletons)
+✅ Onboarding complet (6 étapes Talents, 3 étapes Voisins/Recruteurs)
+✅ Restriction publication (Talents uniquement)
+✅ Avatar unifié sur toute la plateforme
 ✅ Modal de contact interactif
 ✅ Filtres par catégorie depuis landing
 ✅ Boutons Follow/Unfollow interactifs
@@ -54,6 +57,12 @@
 ✅ Profile navigation depuis vidéos
 ✅ Partage posts/vidéos via ShareModal
 ✅ Menu contextuel posts/vidéos (éditer/supprimer/signaler)
+✅ Sidebar personnalisée par profil avec sections spécifiques
+✅ Système de tabs dans le profil (posts, videos, saved, requests)
+✅ Scroll automatique depuis feed vers sections profil
+✅ Étape mot de passe dans le register (min 8 caractères)
+✅ Filtre discover par compétences au lieu de catégories
+✅ Visite guidée feed liée à l'utilisateur spécifique
 
 ### MVP Phase 1 - TERMINÉ 🎉
 ✅ Toutes les pages essentielles (21/21)
@@ -376,12 +385,12 @@ src/
 ### 7.1 Phase 1 - MVP (✅ TERMINÉ - 100%)
 **Objectif : Lancement rapide avec fonctionnalités essentielles**
 
-#### 📱 Pages Complétées (21/21)
+#### 📱 Pages Complétées (22/22)
 
 **Pages Publiques :**
 1. ✅ Landing page (/) - Hero avec parallax, talents populaires, catégories cliquables, features, footer
 2. ✅ Login (/login) - Auth avec validation temps réel, OAuth mockés, loading state
-3. ✅ Register (/register) - Formulaire adapté Côte d'Ivoire, compétences 45+ prédéfinies
+3. ✅ Register (/register) - Formulaire simplifié 2 étapes, adapté Côte d'Ivoire
 4. ✅ 404 (/not-found) - Page erreur personnalisée avec animations
 
 **Pages Authentifiées :**
@@ -390,27 +399,28 @@ src/
 7. ✅ Search (/search) - 4 tabs (Talents/Posts/Users/Vidéos), recherche temps réel, compteurs
 8. ✅ Profile Talent (/profile/[id]) - Portfolio multi-upload, avis, compétences, bottom sheets
 9. ✅ Profile User (/profile) - Édition complète, upload avatar/cover, portfolio drag & drop
+10. ✅ Onboarding (/onboarding) - 6 étapes Talents, 3 étapes Voisins/Recruteurs, parcours personnalisé
 
 **Pages Messaging :**
-10. ✅ Messages List (/messages) - Conversations, recherche, online status, unread badges
-11. ✅ Conversation (/messages/[id]) - Chat 1-to-1, temps réel mocké, auto-scroll
+11. ✅ Messages List (/messages) - Conversations, recherche, online status, unread badges
+12. ✅ Conversation (/messages/[id]) - Chat 1-to-1, temps réel mocké, auto-scroll
 
 **Pages Recruteur :**
-12. ✅ Recruiter Dashboard (/recruiter/dashboard) - 3 tabs, filtres avancés, actions bulk
+13. ✅ Recruiter Dashboard (/recruiter/dashboard) - 3 tabs, filtres avancés, actions bulk
 
 **Pages Settings :**
-13. ✅ Settings (/settings) - 4 sections (profil, notifications, confidentialité, sécurité)
+14. ✅ Settings (/settings) - 4 sections (profil, notifications, confidentialité, sécurité)
 
 **Pages Super Admin (9 pages) :**
-14. ✅ Admin Dashboard (/admin/dashboard) - Vue d'ensemble, stats clés, graphiques
-15. ✅ Admin Users (/admin/dashboard/users) - Gestion utilisateurs, filtres, actions
-16. ✅ Admin Content (/admin/dashboard/content) - Modération posts/vidéos
-17. ✅ Admin Moderation (/admin/dashboard/moderation) - Signalements, actions rapides
-18. ✅ Admin Messages (/admin/dashboard/messages) - Support client
-19. ✅ Admin Reputation (/admin/dashboard/reputation) - Système de badges
-20. ✅ Admin Categories (/admin/dashboard/categories) - Gestion catégories
-21. ✅ Admin Cities (/admin/dashboard/cities) - Gestion villes actives
-22. ✅ Admin Settings (/admin/dashboard/settings) - Configuration plateforme
+15. ✅ Admin Dashboard (/admin/dashboard) - Vue d'ensemble, stats clés, graphiques
+16. ✅ Admin Users (/admin/dashboard/users) - Gestion utilisateurs, filtres, actions
+17. ✅ Admin Content (/admin/dashboard/content) - Modération posts/vidéos
+18. ✅ Admin Moderation (/admin/dashboard/moderation) - Signalements, actions rapides
+19. ✅ Admin Messages (/admin/dashboard/messages) - Support client
+20. ✅ Admin Reputation (/admin/dashboard/reputation) - Système de badges
+21. ✅ Admin Categories (/admin/dashboard/categories) - Gestion catégories
+22. ✅ Admin Cities (/admin/dashboard/cities) - Gestion villes actives
+23. ✅ Admin Settings (/admin/dashboard/settings) - Configuration plateforme
 
 #### 🎨 Composants Créés (45+)
 
@@ -441,6 +451,7 @@ src/
 * FeedBottomSheet (bottom sheet menu mobile pour filtres feed)
 * ImageLightbox (lightbox fullscreen pour images posts)
 * EditPostModal (modal édition post avec multi-upload)
+* FeedTour (visite guidée feed avec 5 étapes, overlay spotlight, tooltips)
 
 **Composants Vidéo :**
 * VideoCard (card vidéo discover avec thumbnail, stats)
@@ -507,12 +518,13 @@ src/
 * ✅ Menu contextuel (éditer/supprimer/signaler/masquer)
 
 **Interactions Sociales :**
-* ✅ Likes posts/vidéos synchronisés localStorage
+* ✅ Likes posts/vidéos synchronisés localStorage (couleur violette cohérente)
 * ✅ Commentaires avec ajout temps réel
 * ✅ Partage via ShareModal (copier lien/Twitter/Facebook/WhatsApp)
 * ✅ Follow/Unfollow talents avec feedback Toast
 * ✅ Save/Unsave profils (favoris recruteur)
 * ✅ Messages 1-to-1 avec conversations mockées
+* ✅ Affichage "Vous" sur posts/vidéos de l'utilisateur (au lieu du nom)
 
 **Filtres & Recherche :**
 * ✅ Filtres avancés (catégories, villes, recherche temps réel)
@@ -530,6 +542,9 @@ src/
 * ✅ Notifications Toast avec auto-dismiss
 * ✅ Validation formulaires temps réel
 * ✅ Badge notifications (messages, notifs bell)
+* ✅ Visite guidée feed (FeedTour) avec 5 étapes interactives
+* ✅ Scroll automatique vers le haut lors des changements de step (register)
+* ✅ Navigation bottom masquée sur page onboarding
 
 **Profile & Settings :**
 * ✅ Upload avatar/cover avec preview base64
@@ -729,7 +744,7 @@ src/
 * ✅ **Fix handlers** - handlePostUpdated/handleVideoUpdated dans feed
 * ✅ **Fix video sorting** - Tri vidéos par date (newest first)
 * ✅ **Fix hooks order** - VideoPlayer hooks order issue résolu
-* ✅ **Fix hydration error** - Bottom sheet menu mobile
+* ✅ **Fix hydration error** - Bottom sheet menu mobile + BottomNav (useEffect pour client-side)
 * ✅ **Fix admin logout** - Implémentation logout admin complète
 
 #### 🎨 Améliorations UI/UX
@@ -743,6 +758,12 @@ src/
 * ✅ **Auto-hide header** - Header scroll mobile optimisé
 * ✅ **Desktop layout** - Fix feed desktop layout
 * ✅ **Profile navigation** - Navigation profil depuis vidéos
+* ✅ **Navigation bottom onboarding** - Masquée sur page onboarding mobile
+* ✅ **Header mobile feed** - Inversion position cloche notifications et icône profil
+* ✅ **Affichage "Vous"** - Posts/vidéos de l'utilisateur affichent "Vous" au lieu du nom
+* ✅ **Scroll auto register** - Scroll automatique vers le haut lors des changements de step
+* ✅ **Visite guidée feed** - Système de tour guidé avec 5 étapes (FeedTour component)
+* ✅ **Couleurs likes** - Changement de rouge à violet pour cohérence charte graphique
 
 #### 🌍 Adaptation Côte d'Ivoire
 * ✅ **Register form** - Formulaire adapté marché CI
@@ -754,6 +775,150 @@ src/
 * ✅ **Stats carousel** - Carousel stats avec swipe mobile
 * ✅ **Responsive tables** - Tables admin adaptées mobile
 * ✅ **9 pages admin** - Dashboard complet multi-sections
+
+#### 🎯 Nouveaux Composants (Janvier 2026)
+* ✅ **FeedTour.tsx** - Composant visite guidée feed
+  - 5 étapes : Filtres, Publication, Stories, Posts, Navigation bottom
+  - Overlay sombre avec spotlight sur éléments ciblés
+  - Tooltip avec navigation Précédent/Suivant
+  - Sauvegarde localStorage (ne s'affiche qu'une fois)
+  - Détection automatique éléments absents (skip)
+  - Positionnement adaptatif tooltip
+  - Design cohérent violet/noir
+
+#### 🚀 Phase 1.9 - Onboarding & Optimisations UX ✅ TERMINÉ
+**Objectif : Améliorer le parcours utilisateur et restreindre les permissions**
+
+**Système d'Onboarding Complet :**
+* ✅ **Page onboarding (/onboarding)** - Parcours différencié par type d'utilisateur
+  - 6 étapes pour Talents : Welcome → Profile → Skills → Portfolio → Tour → Ready
+  - 3 étapes pour Voisins/Recruteurs : Welcome → Profile → Ready
+  - Step 1 : Welcome screen avec animations et message personnalisé par type
+  - Step 2 : Profile (upload avatar + bio min 20 caractères)
+  - Step 3 : Skills Selection (Talents uniquement, min 1 compétence)
+    * 45+ compétences prédéfinies en 9 catégories
+    * Barre de recherche avec filtrage temps réel
+    * Ajout de compétences personnalisées
+    * Tags cliquables avec check icon
+  - Step 4 : Portfolio (Talents uniquement, min 2 photos)
+    * Multi-upload avec preview
+    * Placeholders Unsplash pour éviter quota localStorage
+  - Step 5 : App Tour (présentation des fonctionnalités)
+  - Step 6 : Ready screen avec CTA "Découvrir Kily"
+  - Progress bar animée en haut
+  - Bouton "Passer" pour skip
+  - Validation dynamique par étape
+  - Flag `hasCompletedOnboarding` dans User
+  - Redirect automatique si onboarding déjà complété
+  - Fix SSR error : loading screen client-side avec useEffect
+  - Navigation bottom masquée sur page onboarding
+
+**Inscription Complète :**
+* ✅ **Register 3 étapes** - Type utilisateur, Informations, Sécurité
+  - Step 1 : Type utilisateur (Talent, Voisin, Recruteur)
+  - Step 2 : Informations (Nom, Prénom, Email, Téléphone, Localisation)
+  - Step 3 : Sécurité (Mot de passe + Confirmation, min 8 caractères)
+  - Validation en temps réel pour chaque champ
+  - Bio et skills déplacés vers onboarding
+  - Redirect automatique vers /onboarding après inscription
+
+**Restriction Publication (Talents Uniquement) :**
+* ✅ **Feed** - CreatePostButton visible uniquement pour Talents
+  - Check `currentUser?.userType === "talent"`
+  - Avatar et prénom utilisateur dans "Quoi de neuf, {Prénom} ?"
+* ✅ **BottomNav** - Bouton publish centré masqué pour non-Talents
+  - Variable `canPublish` basée sur userType
+* ✅ **PublishModal** - Modal d'erreur si non-Talent tente d'accéder
+  - Message : "Accès refusé - Seuls les Talents peuvent publier"
+* ✅ **StoryCarousel** - Bouton "Ajouter" story masqué pour non-Talents
+  - Check userType avant affichage
+
+**Avatar Unifié :**
+* ✅ **Onboarding avatar** - Upload avatar sauvegardé correctement
+  - Base64 sauvegardé dans `currentUser.avatar`
+  - Pas de conversion en placeholder (contrairement au portfolio)
+* ✅ **Avatar partout** - Vérification affichage sur toute la plateforme
+  - DesktopHeader (menu utilisateur)
+  - Profile page (édition + affichage)
+  - FeedBottomSheet (menu mobile)
+  - CreateStoryModal (auteur story)
+  - CreatePostForm (auteur post)
+  - CreateVideoForm (auteur vidéo)
+  - CreatePostButton (espace publication "Quoi de neuf")
+* ✅ **Fix photo couverture mobile** - Bouton change cover non cliquable
+  - Ajout z-index: 10
+  - Padding augmenté (p-2.5 sm:p-3)
+  - Effet active:scale-95
+
+**Builds & Tests :**
+* ✅ **Build production** - Tous les builds réussis sans erreurs
+  - Fix SSR error onboarding (typeof window check)
+  - Fix missing buttonsRef dans register
+  - Fix bio field JSX dans register
+  - 22 routes compilées avec succès
+
+#### 🚀 Phase 2.0 - Sidebar Personnalisée & Navigation Améliorée ✅ TERMINÉ
+**Objectif : Améliorer la navigation et l'expérience utilisateur par profil**
+
+**Sidebar Personnalisée par Profil :**
+* ✅ **Navigation principale commune** - 4 items fixes pour tous les profils
+  - Accueil, Découvrir, Messages, Profil
+* ✅ **Sections spécifiques pliables** - Déroulées par défaut
+  - **Talent** : Mes contenus (Mes posts, Mes vidéos)
+  - **Recruteur** : Recherche (Talents sauvegardés, Recherche avancée, Dashboard)
+  - **Voisin** : Services (Services sauvegardés, Demandes actives)
+* ✅ **Design épuré** - Sections pliables avec chevrons, animations Framer Motion
+* ✅ **Badges notifications** - Affichage du nombre pour les éléments avec compteurs
+
+**Système de Tabs dans le Profil :**
+* ✅ **Tabs pour Talents** - Vue d'ensemble, Mes posts, Mes vidéos
+  - Filtrage automatique des posts/vidéos par utilisateur
+  - Badges avec compteurs
+  - États vides avec messages et CTAs
+* ✅ **Tabs pour Voisins** - Vue d'ensemble, Services sauvegardés, Demandes actives
+  - Sections dédiées avec messages informatifs
+* ✅ **Dashboard Recruteur** - Lecture du paramètre `tab` depuis l'URL
+  - Support pour `?tab=saved` et `?tab=contacted`
+  - Scroll automatique vers la section correspondante
+
+**Scroll Automatique depuis Feed :**
+* ✅ **Détection origine** - Utilisation de `sessionStorage` pour marquer l'origine
+* ✅ **Scroll conditionnel** - Uniquement depuis le feed (via sidebar)
+  - Pas de scroll lors d'un changement de tab direct sur la page
+  - Délai et retry pour s'assurer que le contenu est rendu
+* ✅ **Offset header** - Scroll avec offset de 120px pour le header
+* ✅ **Smooth scroll** - Animation fluide vers les sections
+
+**Amélioration Inscription :**
+* ✅ **Étape mot de passe** - Ajout Step 3 : Sécurité
+  - Champs : Mot de passe + Confirmation
+  - Validation : Minimum 8 caractères (flexible)
+  - Boutons afficher/masquer le mot de passe
+  - Vérification que les deux mots de passe correspondent
+* ✅ **Système d'authentification** - Mise à jour pour utiliser le mot de passe
+  - Stockage du mot de passe dans User (à hasher en production)
+  - Vérification du mot de passe lors du login
+  - Compatibilité avec les anciens comptes (sans mot de passe)
+
+**Filtre Discover Amélioré :**
+* ✅ **Remplacement catégories par compétences** - Plus précis pour les recruteurs
+  - Liste de toutes les compétences depuis l'onboarding (45 compétences)
+  - Barre de recherche pour filtrer les compétences
+  - Filtrage des talents par compétence exacte au lieu de catégorie large
+* ✅ **Compétences disponibles** - Toutes les compétences de l'onboarding
+  - Cuisine, Tech, Artisanat, Bricolage, Mécanique, Photographie, Couture, Coiffure, Éducation
+
+**Visite Guidée Feed :**
+* ✅ **Fix visite guidée** - Liée à l'utilisateur spécifique
+  - Clé localStorage : `kily_feed_tour_completed_${userId}`
+  - Chaque nouvel utilisateur voit la visite indépendamment
+  - Vérification que l'utilisateur est connecté avant affichage
+
+**Builds & Tests :**
+* ✅ **Build production** - Tous les builds réussis
+  - Fix Suspense boundary pour useSearchParams (profile + dashboard)
+  - Fix VideoCardFeed onClick prop manquante
+  - 22 routes compilées avec succès
 
 ---
 
@@ -1049,6 +1214,24 @@ Toutes les interactions frontend MVP sont complétées :
 **Statut : ⏳ EN ATTENTE (après Phase 2)**
 
 #### 🚀 Features Différenciatrices
+* ⏳ **Système de Validation Communautaire** - USP majeur de Kily
+  - Bouton "Recommander ce talent" sur les profils
+  - Validation par compétence spécifique (ex: "Valider sa compétence en Plomberie")
+  - Compteur de validations visible (ex: "Validé par 45 personnes")
+  - Badges automatiques :
+    * "Validé par la communauté" (10+ validations)
+    * "Talent Certifié Bronze" (25+ validations)
+    * "Talent Certifié Argent" (50+ validations)
+    * "Talent Certifié Or" (100+ validations avec 4.5★+)
+  - Système d'endorsements par compétence (comme LinkedIn)
+  - Score de réputation multicritères (avis 40% + validations 30% + activité 15% + ancienneté 10% + réactivité 5%)
+  - Filtre "Talents Validés" dans Discover
+  - Avis vérifiés avec badge "Client vérifié" (a vraiment utilisé le service)
+  - Système de parrainage (talents établis parrainent nouveaux)
+  - Leaderboard mensuel des talents les plus validés
+  - Gamification avec points et niveaux
+  - **Objectif** : Résoudre le problème de confiance pour talents sans diplômes via preuve sociale
+  - **Timing** : À implémenter après Phase 2 (besoin de 50+ utilisateurs actifs pour avoir du sens)
 * ⏳ Map interactive (talents à proximité avec geolocation)
 * ⏳ Paiements intégrés Mobile Money (Orange Money, MTN, Moov Money)
 * ⏳ Analytics utilisateurs (dashboard analytics pour talents)
@@ -1056,7 +1239,6 @@ Toutes les interactions frontend MVP sont complétées :
 * ⏳ Groupes de compétences / communautés
 * ⏳ Lives / streaming vidéo (talents en direct)
 * ⏳ Marketplace services (acheter/vendre prestations)
-* ⏳ Système de réputation avancé (badges, certifications communautaires)
 * ⏳ Recommandations IA (talents suggérés basés sur recherches)
 
 #### 🏗️ Optimisations Scalabilité

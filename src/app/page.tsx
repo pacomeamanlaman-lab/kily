@@ -26,7 +26,7 @@ import {
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { isLoggedIn } from "@/lib/auth";
-import { getCurrentUser, getUserFullName } from "@/lib/users";
+import { getCurrentUser, getUserFullName, getCurrentUserRedirectPath } from "@/lib/users";
 import { logout } from "@/lib/auth";
 
 // Mock data pour les talents populaires
@@ -134,8 +134,9 @@ export default function Home() {
       setIsUserLoggedIn(loggedIn);
       if (loggedIn) {
         setCurrentUser(getCurrentUser());
-        // Redirect to feed if user is logged in
-        router.push("/feed");
+        // Redirect to user-specific default page
+        const redirectPath = getCurrentUserRedirectPath();
+        router.push(redirectPath);
       }
     };
     checkAuth();

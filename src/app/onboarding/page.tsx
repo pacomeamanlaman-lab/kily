@@ -22,7 +22,7 @@ import {
   Search,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { getCurrentUser, updateUser } from "@/lib/users";
+import { getCurrentUser, updateUser, getCurrentUserRedirectPath } from "@/lib/users";
 import { isLoggedIn } from "@/lib/auth";
 
 type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6;
@@ -64,7 +64,8 @@ export default function OnboardingPage() {
     }
 
     if (user.hasCompletedOnboarding) {
-      router.push("/feed");
+      const redirectPath = getCurrentUserRedirectPath();
+      router.push(redirectPath);
       return;
     }
 
@@ -78,7 +79,7 @@ export default function OnboardingPage() {
     setLoading(false);
   }, [router]);
 
-  const totalSteps = isTalent ? 6 : 3; // 6 for Talents (added skills), 3 for Voisins/Recruteurs
+  const totalSteps = isTalent ? 6 : 4; // 6 for Talents (added skills), 4 for Voisins/Recruteurs (added app tour step)
   const progress = (currentStep / totalSteps) * 100;
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,7 +120,8 @@ export default function OnboardingPage() {
     if (currentUser) {
       updateUser(currentUser.id, { hasCompletedOnboarding: true });
     }
-    router.push("/feed");
+    const redirectPath = getCurrentUserRedirectPath();
+    router.push(redirectPath);
   };
 
   const handleNext = () => {
@@ -159,7 +161,8 @@ export default function OnboardingPage() {
     }
 
     setTimeout(() => {
-      router.push("/feed");
+      const redirectPath = getCurrentUserRedirectPath();
+      router.push(redirectPath);
     }, 500);
   };
 
@@ -423,9 +426,9 @@ export default function OnboardingPage() {
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
-              className="max-w-2xl w-full"
+              className="max-w-2xl w-full flex flex-col h-[calc(100vh-120px)]"
             >
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 sm:p-12">
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 sm:p-12 flex flex-col flex-1 overflow-hidden">
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-12 h-12 bg-violet-500/20 rounded-full flex items-center justify-center">
                     <TrendingUp className="w-6 h-6 text-violet-400" />
@@ -436,114 +439,116 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {/* Barre de recherche */}
-                <div className="relative mb-6">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Rechercher une compétence..."
-                    className="w-full pl-12 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors"
-                    >
-                      <X className="w-4 h-4 text-white/60" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Compétences sélectionnées */}
-                {formData.selectedSkills.length > 0 && (
-                  <div className="mb-6 p-4 bg-violet-500/10 border border-violet-500/30 rounded-xl">
-                    <p className="text-sm text-violet-400 mb-3">
-                      {formData.selectedSkills.length} compétence(s) sélectionnée(s)
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.selectedSkills.map((skill) => (
-                        <button
-                          key={skill.name}
-                          onClick={() => toggleSkill(skill.name, skill.category)}
-                          className="px-3 py-1.5 bg-violet-500 text-white rounded-full text-sm font-medium flex items-center gap-1 hover:bg-violet-600 transition-colors"
-                        >
-                          <Check className="w-3 h-3" />
-                          {skill.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Compétences prédéfinies */}
-                <div className="space-y-4 max-h-[35vh] overflow-y-auto pr-2 mb-6">
-                  {Object.entries(getFilteredSkills()).length > 0 ? (
-                    Object.entries(getFilteredSkills()).map(([category, skills]) => (
-                      <div key={category}>
-                        <h3 className="text-sm font-semibold text-white/70 mb-2 capitalize">
-                          {category === "tech" ? "Technologie" : category}
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {(skills as string[]).map((skillName) => {
-                            const isSelected = formData.selectedSkills.some(s => s.name === skillName);
-                            return (
-                              <button
-                                key={skillName}
-                                onClick={() => toggleSkill(skillName, category)}
-                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                                  isSelected
-                                    ? "bg-violet-500 text-white"
-                                    : "bg-white/5 text-white/80 hover:bg-white/10 border border-white/10"
-                                }`}
-                              >
-                                {isSelected && <Check className="w-4 h-4 inline mr-1" />}
-                                {skillName}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    searchQuery && (
-                      <div className="text-center py-8 text-white/60">
-                        <p>Aucune compétence trouvée pour "{searchQuery}"</p>
-                        <p className="text-sm mt-2">Ajoutez-la manuellement ci-dessous</p>
-                      </div>
-                    )
-                  )}
-                </div>
-
-                {/* Input personnalisé */}
-                <div className="border-t border-white/10 pt-4 mb-8">
-                  <label className="block text-sm font-medium mb-2">Autre compétence ?</label>
-                  <div className="flex gap-2">
+                <div className="flex-1 overflow-y-auto pr-2">
+                  {/* Barre de recherche */}
+                  <div className="relative mb-6">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
                     <input
                       type="text"
-                      value={customSkill}
-                      onChange={(e) => setCustomSkill(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addCustomSkill();
-                        }
-                      }}
-                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                      placeholder="Ex: Menuiserie d'art..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Rechercher une compétence..."
+                      className="w-full pl-12 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
                     />
-                    <button
-                      onClick={addCustomSkill}
-                      className="px-4 py-3 bg-violet-500 hover:bg-violet-600 rounded-xl transition-colors"
-                    >
-                      <Plus className="w-5 h-5" />
-                    </button>
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors"
+                      >
+                        <X className="w-4 h-4 text-white/60" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Compétences sélectionnées */}
+                  {formData.selectedSkills.length > 0 && (
+                    <div className="mb-6 p-4 bg-violet-500/10 border border-violet-500/30 rounded-xl">
+                      <p className="text-sm text-violet-400 mb-3">
+                        {formData.selectedSkills.length} compétence(s) sélectionnée(s)
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {formData.selectedSkills.map((skill) => (
+                          <button
+                            key={skill.name}
+                            onClick={() => toggleSkill(skill.name, skill.category)}
+                            className="px-3 py-1.5 bg-violet-500 text-white rounded-full text-sm font-medium flex items-center gap-1 hover:bg-violet-600 transition-colors"
+                          >
+                            <Check className="w-3 h-3" />
+                            {skill.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Compétences prédéfinies */}
+                  <div className="space-y-4 mb-6">
+                    {Object.entries(getFilteredSkills()).length > 0 ? (
+                      Object.entries(getFilteredSkills()).map(([category, skills]) => (
+                        <div key={category}>
+                          <h3 className="text-sm font-semibold text-white/70 mb-2 capitalize">
+                            {category === "tech" ? "Technologie" : category}
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {(skills as string[]).map((skillName) => {
+                              const isSelected = formData.selectedSkills.some(s => s.name === skillName);
+                              return (
+                                <button
+                                  key={skillName}
+                                  onClick={() => toggleSkill(skillName, category)}
+                                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                                    isSelected
+                                      ? "bg-violet-500 text-white"
+                                      : "bg-white/5 text-white/80 hover:bg-white/10 border border-white/10"
+                                  }`}
+                                >
+                                  {isSelected && <Check className="w-4 h-4 inline mr-1" />}
+                                  {skillName}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      searchQuery && (
+                        <div className="text-center py-8 text-white/60">
+                          <p>Aucune compétence trouvée pour "{searchQuery}"</p>
+                          <p className="text-sm mt-2">Ajoutez-la manuellement ci-dessous</p>
+                        </div>
+                      )
+                    )}
+                  </div>
+
+                  {/* Input personnalisé */}
+                  <div className="border-t border-white/10 pt-4 mb-6">
+                    <label className="block text-sm font-medium mb-2">Autre compétence ?</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={customSkill}
+                        onChange={(e) => setCustomSkill(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addCustomSkill();
+                          }
+                        }}
+                        className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        placeholder="Ex: Menuiserie d'art..."
+                      />
+                      <button
+                        onClick={addCustomSkill}
+                        className="px-4 py-3 bg-violet-500 hover:bg-violet-600 rounded-xl transition-colors"
+                      >
+                        <Plus className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Navigation */}
-                <div className="flex gap-3">
+                {/* Navigation - Fixée en bas */}
+                <div className="flex gap-3 pt-6 border-t border-white/10 mt-6">
                   <Button variant="outline" onClick={handleBack} className="flex-1">
                     Retour
                   </Button>
@@ -702,7 +707,7 @@ export default function OnboardingPage() {
           )}
 
           {/* Final Step: Ready! */}
-          {((currentStep === 3 && !isTalent) || (currentStep === 6 && isTalent)) && (
+          {((currentStep === 4 && !isTalent) || (currentStep === 6 && isTalent)) && (
             <motion.div
               key="step5"
               initial={{ opacity: 0, scale: 0.9 }}
