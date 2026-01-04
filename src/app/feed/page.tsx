@@ -26,6 +26,7 @@ import {
   Heart,
   ChevronDown,
   ChevronUp,
+  Menu,
 } from "lucide-react";
 import PostCard from "@/components/feed/PostCard";
 import StoryCarousel from "@/components/feed/StoryCarousel";
@@ -579,7 +580,7 @@ function FeedPageContent() {
                 onClick={() => setShowBottomSheet(true)}
                 className="relative p-2 text-violet-400 hover:text-violet-300 transition-colors"
               >
-                <User className="w-6 h-6" />
+                <Menu className="w-6 h-6" />
               </button>
             </div>
           </div>
