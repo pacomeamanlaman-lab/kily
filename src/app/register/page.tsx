@@ -9,6 +9,8 @@ import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
 import StepIndicator from "@/components/ui/StepIndicator";
 import { countries, getCitiesByCountry, abidjanCommunes, requiresCommune } from "@/lib/locationData";
+import { createUser } from "@/lib/users";
+import { login } from "@/lib/auth";
 
 type UserType = "talent" | "neighbor" | "recruiter";
 
@@ -45,6 +47,7 @@ export default function RegisterPage() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Scroll to top when step changes
   useEffect(() => {
@@ -269,7 +272,10 @@ export default function RegisterPage() {
     setErrors(newErrors);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    // Empêcher les double-clics
+    if (isSubmitting) return;
+
     let isValid = false;
 
     if (currentStep === 1) {
@@ -303,7 +309,14 @@ export default function RegisterPage() {
       
       isValid = validateStep3();
       if (isValid) {
-        handleSubmit();
+        setIsSubmitting(true);
+        try {
+          await handleSubmit();
+        } catch (error) {
+          console.error("Error in handleNext:", error);
+          setIsSubmitting(false);
+        }
+        // Note: setIsSubmitting(false) n'est pas appelé ici car on redirige
       }
     }
   };
@@ -316,12 +329,20 @@ export default function RegisterPage() {
     }
   };
 
-  const handleSubmit = () => {
-    // Import createUser dynamically to avoid SSR issues
-    import("@/lib/users").then(({ createUser }) => {
+  const handleSubmit = async () => {
+    try {
+      // Vérifier que tous les champs requis sont remplis
+      if (!formData.userType || !formData.email || !formData.password) {
+        setErrors({ 
+          email: "Veuillez remplir tous les champs requis" 
+        });
+        return;
+      }
+
+      // Create user in the system (bio and skills will be filled in onboarding)
+      let newUser;
       try {
-        // Create user in the system (bio and skills will be filled in onboarding)
-        const newUser = createUser({
+        newUser = createUser({
           email: formData.email,
           password: formData.password,
           firstName: formData.firstName,
@@ -331,25 +352,65 @@ export default function RegisterPage() {
           city: formData.city,
           commune: formData.commune || undefined,
           bio: "", // Will be filled in onboarding
-          userType: formData.userType!,
+          userType: formData.userType,
           selectedSkills: [], // Will be filled in onboarding
         });
-
-        // Also save in old format for backward compatibility
-        localStorage.setItem("kily_user_data", JSON.stringify(formData));
-
-        // Login the user
-        import("@/lib/auth").then(({ login }) => {
-          login(formData.email, formData.password);
+      } catch (createError: any) {
+        console.error("Create user error:", createError);
+        setIsSubmitting(false);
+        setErrors({ 
+          email: createError?.message || "Un compte avec cet email existe déjà" 
         });
-
-        // Rediriger vers onboarding (nouvel utilisateur)
-        router.push("/onboarding");
-      } catch (error: any) {
-        // Handle error (e.g., email already exists)
-        setErrors({ email: error.message || "Une erreur est survenue" });
+        return;
       }
-    });
+
+      // Also save in old format for backward compatibility
+      try {
+        localStorage.setItem("kily_user_data", JSON.stringify(formData));
+      } catch (e) {
+        // Ignore localStorage errors for backward compatibility data
+        console.warn("Could not save backward compatibility data:", e);
+      }
+
+      // Login the user
+      try {
+        login(formData.email, formData.password);
+      } catch (loginError: any) {
+        console.error("Login error:", loginError);
+        // Continue anyway, user is created - try to set current user manually
+        try {
+          if (typeof window !== "undefined") {
+            localStorage.setItem("kily_current_user_id", newUser.id);
+          }
+        } catch (e) {
+          console.warn("Could not set current user:", e);
+        }
+      }
+
+      // Rediriger vers onboarding (nouvel utilisateur)
+      // Utiliser window.location pour forcer la navigation en cas de problème avec router
+      try {
+        // Essayer d'abord avec router.push
+        router.push("/onboarding");
+        // Fallback avec window.location après un court délai
+        setTimeout(() => {
+          if (window.location.pathname !== "/onboarding") {
+            window.location.href = "/onboarding";
+          }
+        }, 500);
+      } catch (navError) {
+        console.error("Navigation error:", navError);
+        // Fallback direct
+        window.location.href = "/onboarding";
+      }
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      setIsSubmitting(false);
+      // Handle error (e.g., email already exists)
+      setErrors({ 
+        email: error?.message || "Une erreur est survenue lors de la création du compte. Veuillez réessayer." 
+      });
+    }
   };
 
   return (
@@ -758,8 +819,18 @@ export default function RegisterPage() {
             <Button variant="secondary" onClick={handleBack} className="flex-1 lg:flex-none lg:min-w-[150px]">
               Retour
             </Button>
-            <Button variant="primary" onClick={handleNext} className="flex-1 lg:flex-none lg:min-w-[200px]">
-              {currentStep === 3 ? "Créer mon compte" : "Continuer"}
+            <Button 
+              variant="primary" 
+              onClick={handleNext} 
+              disabled={isSubmitting}
+              className="flex-1 lg:flex-none lg:min-w-[200px]"
+            >
+              {isSubmitting 
+                ? "Création en cours..." 
+                : currentStep === 3 
+                ? "Créer mon compte" 
+                : "Continuer"
+              }
             </Button>
           </div>
         </div>
