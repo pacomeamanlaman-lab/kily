@@ -5,7 +5,8 @@ import { X, Upload, Image as ImageIcon } from "lucide-react";
 import { useState } from "react";
 import { showToast } from "@/lib/toast";
 import { createStory } from "@/lib/stories";
-import { getCurrentUser, getUserDisplayName } from "@/lib/users";
+import { getUserDisplayName } from "@/lib/supabase/users.service";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface CreateStoryModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface CreateStoryModalProps {
 }
 
 export default function CreateStoryModal({ isOpen, onClose }: CreateStoryModalProps) {
+  const { user: currentUser } = useCurrentUser();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,8 +61,7 @@ export default function CreateStoryModal({ isOpen, onClose }: CreateStoryModalPr
     // Mock API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Get current user
-    const currentUser = getCurrentUser();
+    // Check if user is connected
     if (!currentUser) {
       showToast("Vous devez être connecté pour publier", "error");
       setIsSubmitting(false);

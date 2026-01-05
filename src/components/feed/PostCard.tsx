@@ -10,7 +10,8 @@ import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
 import { togglePostLike, isPostLiked, addComment, loadComments, deletePost, updatePost, Post } from "@/lib/posts";
-import { getCurrentUser, getUserDisplayName } from "@/lib/users";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { getUserDisplayName } from "@/lib/supabase/users.service";
 import { hidePost } from "@/lib/hiddenContent";
 import { createReport, hasUserReported } from "@/lib/reports";
 import { toggleFollow, isFollowing } from "@/lib/follows";
@@ -29,7 +30,7 @@ interface Comment {
 
 export default function PostCard({ post }: PostCardProps) {
   const router = useRouter();
-  const currentUser = getCurrentUser();
+  const { user: currentUser } = useCurrentUser();
   const currentUserId = currentUser?.id || null;
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes);

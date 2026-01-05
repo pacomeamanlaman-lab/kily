@@ -1,7 +1,9 @@
 "use client";
 
 import { Search, User, Menu } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getCurrentUser, getUserFullName } from "@/lib/supabase/users.service";
+import type { User as UserType } from "@/lib/supabase/users.service";
 
 interface AdminHeaderProps {
   onMenuClick?: () => void;
@@ -9,6 +11,15 @@ interface AdminHeaderProps {
 
 export default function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const [searchExpanded, setSearchExpanded] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const user = await getCurrentUser();
+      setCurrentUser(user);
+    };
+    loadUser();
+  }, []);
 
   return (
     <header className="h-16 bg-black/95 backdrop-blur-lg border-b border-white/10 px-4 sm:px-6 flex items-center justify-between gap-4">
@@ -60,12 +71,26 @@ export default function AdminHeader({ onMenuClick }: AdminHeaderProps) {
         {/* Admin Profile */}
         <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-white/10">
           <div className="hidden sm:block text-right">
-            <p className="text-sm font-medium text-white">Admin User</p>
-            <p className="text-xs text-gray-400">admin@kily.com</p>
+            <p className="text-sm font-medium text-white">
+              {currentUser ? getUserFullName(currentUser) : "Admin"}
+            </p>
+            <p className="text-xs text-gray-400">
+              {currentUser?.email || "Chargement..."}
+            </p>
           </div>
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-violet-500 to-violet-700 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          </div>
+          {currentUser?.avatar ? (
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-violet-500/50">
+              <img
+                src={currentUser.avatar}
+                alt={getUserFullName(currentUser) || "Admin"}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-violet-500 to-violet-700 rounded-full flex items-center justify-center">
+              <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            </div>
+          )}
         </div>
       </div>
     </header>

@@ -28,7 +28,7 @@ import { loadSavedTalents, loadContactedTalents, addSavedTalent, removeSavedTale
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 import NotificationsSidebar from "@/components/notifications/NotificationsSidebar";
 import FeedBottomSheet from "@/components/feed/FeedBottomSheet";
-import { getCurrentUser } from "@/lib/users";
+import { getCurrentUser } from "@/lib/supabase/users.service";
 
 function RecruiterDashboardContent() {
   const router = useRouter();
@@ -56,7 +56,15 @@ function RecruiterDashboardContent() {
   const [unreadNotifications] = useState(5);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
-  const currentUser = getCurrentUser();
+  const [currentUser, setCurrentUser] = useState<Awaited<ReturnType<typeof getCurrentUser>>>(null);
+  
+  useEffect(() => {
+    const loadUser = async () => {
+      const user = await getCurrentUser();
+      setCurrentUser(user);
+    };
+    loadUser();
+  }, []);
 
   // State management - Load from localStorage
   const [savedTalentIds, setSavedTalentIds] = useState<string[]>([]);

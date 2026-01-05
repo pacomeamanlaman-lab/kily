@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { mockTalents } from "@/lib/mockData";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import { getCurrentUser } from "@/lib/users";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { loadMessages, sendMessage } from "@/lib/messages";
 
 interface Message {
@@ -28,7 +28,7 @@ interface Message {
 function ConversationPageContent() {
   const router = useRouter();
   const params = useParams();
-  const currentUser = getCurrentUser();
+  const { user: currentUser } = useCurrentUser();
   const currentUserId = currentUser?.id || null;
   const conversationId = params.id as string;
   const messagesEndRef = useRef<HTMLDivElement>(null);

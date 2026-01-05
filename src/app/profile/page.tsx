@@ -13,8 +13,9 @@ import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
 import { Skill, SkillCategory } from "@/types";
-import { getCurrentUser, updateUser, getUserFullName } from "@/lib/users";
-import { isLoggedIn } from "@/lib/auth";
+import { getCurrentUser, updateUser, getUserFullName } from "@/lib/supabase/users.service";
+import { isLoggedIn } from "@/lib/supabase/auth.service";
+import type { User } from "@/lib/supabase/users.service";
 
 function ProfilePageContent() {
   const router = useRouter();
@@ -64,56 +65,54 @@ function ProfilePageContent() {
 
   // Load user on mount
   useEffect(() => {
-    if (!isLoggedIn()) {
-      router.push("/login");
-      return;
-    }
+    const loadUser = async () => {
+      const loggedIn = await isLoggedIn();
+      if (!loggedIn) {
+        router.push("/login");
+        return;
+      }
 
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-      router.push("/register");
-      return;
-    }
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        router.push("/register");
+        return;
+      }
 
-    // Convert user data to profile format
-    const profileUser = {
-      id: currentUser.id,
-      name: getUserFullName(currentUser),
-      email: currentUser.email,
-      phone: currentUser.phone,
-      avatar: currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.firstName}${currentUser.lastName}`,
-      coverImage: currentUser.coverImage || "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200",
-      bio: currentUser.bio || "Complétez votre profil pour montrer vos talents au monde !",
-      userType: currentUser.userType,
-      location: {
-        city: currentUser.city,
-        country: currentUser.country,
-      },
-      verified: currentUser.verified,
-      rating: currentUser.rating,
-      reviewCount: currentUser.reviewCount,
-      completedProjects: currentUser.completedProjects,
-      skills: currentUser.selectedSkills.map(skill => ({
-        id: skill.name,
-        name: skill.name,
-        category: skill.category as SkillCategory,
-        level: "intermediate" as const,
-        verified: false,
-      })),
-      portfolio: currentUser.portfolio,
-      joinedDate: currentUser.joinedDate,
+      // Convert user data to profile format
+      const profileUser = {
+        id: currentUser.id,
+        name: getUserFullName(currentUser),
+        email: currentUser.email,
+        phone: currentUser.phone,
+        avatar: currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.first_name}${currentUser.last_name}`,
+        coverImage: currentUser.cover_image || "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200",
+        bio: currentUser.bio || "Complétez votre profil pour montrer vos talents au monde !",
+        userType: currentUser.user_type,
+        location: {
+          city: currentUser.city,
+          country: currentUser.country,
+        },
+        verified: currentUser.verified,
+        rating: currentUser.rating,
+        reviewCount: currentUser.review_count,
+        completedProjects: currentUser.completed_projects,
+        skills: [] as Skill[], // TODO: Load from skills table
+        portfolio: [] as Array<{ id: string; title: string; description: string; imageUrl: string }>, // TODO: Load from portfolio_items table
+        joinedDate: currentUser.created_at,
+      };
+
+      setUser(profileUser);
+      setFormData({
+        name: profileUser.name,
+        bio: profileUser.bio,
+        email: profileUser.email,
+        phone: profileUser.phone,
+        city: profileUser.location.city,
+      });
+      setSelectedSkills([]); // TODO: Load from skills table
+      setLoading(false);
     };
-
-    setUser(profileUser);
-    setFormData({
-      name: profileUser.name,
-      bio: profileUser.bio,
-      email: profileUser.email,
-      phone: profileUser.phone,
-      city: profileUser.location.city,
-    });
-    setSelectedSkills(currentUser.selectedSkills);
-    setLoading(false);
+    loadUser();
   }, [router]);
 
   // Load user's posts and videos
@@ -177,50 +176,48 @@ function ProfilePageContent() {
     city: "",
   });
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    // Update user in localStorage
-    const updatedUser = updateUser(user.id, {
-      firstName: formData.name.split(' ')[0] || formData.name,
-      lastName: formData.name.split(' ').slice(1).join(' ') || '',
-      bio: formData.bio,
-      email: formData.email,
-      phone: formData.phone,
-      city: formData.city,
-      selectedSkills: selectedSkills,
-      portfolio: user.portfolio,
-    });
-
-    if (updatedUser) {
-      // Update local state
-      setUser({
-        ...user,
-        name: getUserFullName(updatedUser),
-        bio: updatedUser.bio,
-        email: updatedUser.email,
-        phone: updatedUser.phone,
-        location: {
-          ...user.location,
-          city: updatedUser.city,
-        },
-        skills: updatedUser.selectedSkills.map(skill => ({
-          id: skill.name,
-          name: skill.name,
-          category: skill.category as SkillCategory,
-          level: "intermediate" as const,
-          verified: false,
-        })),
+    try {
+      // Update user in Supabase
+      const nameParts = formData.name.split(' ');
+      const updatedUser = await updateUser(user.id, {
+        first_name: nameParts[0] || formData.name,
+        last_name: nameParts.slice(1).join(' ') || '',
+        bio: formData.bio,
+        email: formData.email,
+        phone: formData.phone,
+        city: formData.city,
       });
 
-      // Dispatch event to notify other components
-      window.dispatchEvent(new Event('userUpdated'));
+      if (updatedUser) {
+        // Update local state
+        setUser({
+          ...user,
+          name: getUserFullName(updatedUser),
+          bio: updatedUser.bio,
+          email: updatedUser.email,
+          phone: updatedUser.phone,
+          location: {
+            ...user.location,
+            city: updatedUser.city,
+          },
+        });
 
-      setIsEditing(false);
+        setIsEditing(false);
+        setToast({
+          message: "Profil mis à jour avec succès !",
+          type: "success",
+          isVisible: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
       setToast({
-        message: "Profil mis à jour avec succès !",
-        type: "success",
+        message: "Erreur lors de la mise à jour du profil",
+        type: "error",
         isVisible: true,
       });
     }

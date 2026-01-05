@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { Image as ImageIcon, X } from "lucide-react";
 import { showToast } from "@/lib/toast";
 import { createPost } from "@/lib/posts";
-import { getCurrentUser, getUserDisplayName, getUserFullName } from "@/lib/users";
+import { getUserDisplayName } from "@/lib/supabase/users.service";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface CreatePostFormProps {
   onSuccess: () => void;
@@ -25,6 +26,7 @@ const categories = [
 const MAX_IMAGES = 8;
 
 export default function CreatePostForm({ onSuccess, onCancel }: CreatePostFormProps) {
+  const { user: currentUser } = useCurrentUser();
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -121,8 +123,7 @@ export default function CreatePostForm({ onSuccess, onCancel }: CreatePostFormPr
     // Mock API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Get current user
-    const currentUser = getCurrentUser();
+    // Check if user is connected
     if (!currentUser) {
       showToast("Vous devez être connecté pour publier", "error");
       setIsSubmitting(false);
@@ -137,7 +138,7 @@ export default function CreatePostForm({ onSuccess, onCancel }: CreatePostFormPr
       author: {
         id: currentUser.id,
         name: getUserDisplayName(currentUser),
-        username: `@${currentUser.firstName.toLowerCase()}${currentUser.lastName.toLowerCase()}`,
+        username: `@${currentUser.first_name?.toLowerCase() || ''}${currentUser.last_name?.toLowerCase() || ''}`,
         avatar: currentUser.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
       },
     });

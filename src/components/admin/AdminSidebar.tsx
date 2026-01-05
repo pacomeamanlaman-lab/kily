@@ -17,7 +17,7 @@ import {
   X
 } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { logout } from "@/lib/auth";
+import { logout } from "@/lib/supabase/auth.service";
 
 interface AdminSidebarProps {
   isOpen?: boolean;
@@ -86,9 +86,9 @@ export default function AdminSidebar({ isOpen = true, onClose }: AdminSidebarPro
     },
   ];
 
-  const handleLogout = () => {
-    logout();
-    router.push("/");
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
     if (onClose) onClose();
   };
 

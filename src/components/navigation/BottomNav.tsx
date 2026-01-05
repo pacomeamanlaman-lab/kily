@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Compass, MessageCircle, User, Plus, Search } from "lucide-react";
 import { useState, useEffect } from "react";
-import { isLoggedIn } from "@/lib/auth";
+import { isLoggedIn } from "@/lib/supabase/auth.service";
 
 interface BottomNavProps {
   onPublishClick?: () => void;
@@ -18,7 +18,11 @@ export default function BottomNav({ onPublishClick, showPublishButton = false }:
 
   // Determine profile path based on login status - only on client side
   useEffect(() => {
-    setProfilePath(isLoggedIn() ? "/profile" : "/login");
+    const checkAuth = async () => {
+      const loggedIn = await isLoggedIn();
+      setProfilePath(loggedIn ? "/profile" : "/login");
+    };
+    checkAuth();
   }, []);
 
   // Tabs pour les pages normales (sans le bouton +)

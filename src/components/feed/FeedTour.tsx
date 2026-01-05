@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronRight, ChevronLeft, Sparkles } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { getCurrentUser } from "@/lib/users";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface TourStep {
   id: string;
@@ -88,24 +88,24 @@ export default function FeedTour({ onComplete }: FeedTourProps) {
     return true;
   });
 
+  const { user: currentUser } = useCurrentUser();
+
   // Check if tour was already completed for this user
   useEffect(() => {
     if (typeof window === "undefined") return;
-    
-    const currentUser = getCurrentUser();
     if (!currentUser) return;
-    
+
     // Use user-specific key
     const TOUR_STORAGE_KEY = `kily_feed_tour_completed_${currentUser.id}`;
     const completed = localStorage.getItem(TOUR_STORAGE_KEY);
-    
+
     if (!completed) {
       // Show tour after a short delay to allow page to render
       setTimeout(() => {
         setIsVisible(true);
       }, 1000);
     }
-  }, []);
+  }, [currentUser]);
 
   // Réinitialiser l'étape quand on change de mobile/desktop
   useEffect(() => {
@@ -135,12 +135,9 @@ export default function FeedTour({ onComplete }: FeedTourProps) {
             setTimeout(() => setCurrentStep(currentStep + 1), 100);
           } else {
             setIsVisible(false);
-            if (typeof window !== "undefined") {
-              const currentUser = getCurrentUser();
-              if (currentUser) {
-                const TOUR_STORAGE_KEY = `kily_feed_tour_completed_${currentUser.id}`;
-                localStorage.setItem(TOUR_STORAGE_KEY, "true");
-              }
+            if (typeof window !== "undefined" && currentUser) {
+              const TOUR_STORAGE_KEY = `kily_feed_tour_completed_${currentUser.id}`;
+              localStorage.setItem(TOUR_STORAGE_KEY, "true");
             }
             onComplete?.();
           }
@@ -148,16 +145,13 @@ export default function FeedTour({ onComplete }: FeedTourProps) {
       }, 300);
 
     return () => clearTimeout(timer);
-  }, [currentStep, isVisible, onComplete, steps, isMobile]);
+  }, [currentStep, isVisible, onComplete, steps, isMobile, currentUser]);
 
   const handleComplete = () => {
     setIsVisible(false);
-    if (typeof window !== "undefined") {
-      const currentUser = getCurrentUser();
-      if (currentUser) {
-        const TOUR_STORAGE_KEY = `kily_feed_tour_completed_${currentUser.id}`;
-        localStorage.setItem(TOUR_STORAGE_KEY, "true");
-      }
+    if (typeof window !== "undefined" && currentUser) {
+      const TOUR_STORAGE_KEY = `kily_feed_tour_completed_${currentUser.id}`;
+      localStorage.setItem(TOUR_STORAGE_KEY, "true");
     }
     onComplete?.();
   };

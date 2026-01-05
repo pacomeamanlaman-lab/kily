@@ -4,7 +4,7 @@ import { Users, CheckCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { Video } from "@/lib/videoData";
-import { getCurrentUser } from "@/lib/users";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface VideoCardProps {
   video: Video;
@@ -12,7 +12,7 @@ interface VideoCardProps {
 }
 
 export default function VideoCard({ video, onClick }: VideoCardProps) {
-  const currentUser = getCurrentUser();
+  const { user: currentUser } = useCurrentUser();
   const currentUserId = currentUser?.id || null;
   const isOwnVideo = currentUserId === video.author.id;
   return (

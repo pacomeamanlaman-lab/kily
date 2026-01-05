@@ -5,7 +5,7 @@ import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import CreateStoryModal from "./CreateStoryModal";
 import { loadStories, markStoryAsViewed, isStoryViewed } from "@/lib/stories";
-import { getCurrentUser } from "@/lib/users";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export interface Story {
   id: string;
@@ -23,9 +23,9 @@ interface StoryCarouselProps {
 }
 
 export default function StoryCarousel({ stories: initialStories }: StoryCarouselProps) {
-  const currentUser = getCurrentUser();
+  const { user: currentUser } = useCurrentUser();
   const currentUserId = currentUser?.id || null;
-  const canPublish = currentUser?.userType === "talent"; // Only Talents can create stories
+  const canPublish = currentUser?.user_type === "talent"; // Only Talents can create stories
   const [stories, setStories] = useState<Story[]>(initialStories || []);
   const [selectedStory, setSelectedStory] = useState<number | null>(null);
   const [viewedStories, setViewedStories] = useState<Set<string>>(new Set());

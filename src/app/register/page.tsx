@@ -9,8 +9,7 @@ import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
 import StepIndicator from "@/components/ui/StepIndicator";
 import { countries, getCitiesByCountry, abidjanCommunes, requiresCommune } from "@/lib/locationData";
-import { createUser } from "@/lib/users";
-import { login } from "@/lib/auth";
+import { register } from "@/lib/supabase/auth.service";
 
 type UserType = "talent" | "neighbor" | "recruiter";
 
@@ -112,8 +111,8 @@ export default function RegisterPage() {
 
     if (!formData.email.trim()) {
       newErrors.email = "L'email est requis";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Format d'email invalide";
+    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)) {
+      newErrors.email = "Format d'email invalide (ex: exemple@email.com)";
     }
 
     if (!formData.phone.trim()) {
@@ -189,8 +188,8 @@ export default function RegisterPage() {
       case "email":
         if (!value.trim()) {
           newErrors.email = "L'email est requis";
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          newErrors.email = "Format d'email invalide";
+        } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) {
+          newErrors.email = "Format d'email invalide (ex: exemple@email.com)";
         } else {
           delete newErrors.email;
         }
@@ -339,27 +338,26 @@ export default function RegisterPage() {
         return;
       }
 
-      // Create user in the system (bio and skills will be filled in onboarding)
-      let newUser;
-      try {
-        newUser = createUser({
-          email: formData.email,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phone: formData.phone,
-          country: formData.country,
-          city: formData.city,
-          commune: formData.commune || undefined,
-          bio: "", // Will be filled in onboarding
-          userType: formData.userType,
-          selectedSkills: [], // Will be filled in onboarding
-        });
-      } catch (createError: any) {
-        console.error("Create user error:", createError);
+      // Create user with Supabase (bio and skills will be filled in onboarding)
+      const { success, user: newUser, error } = await register({
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        country: formData.country,
+        city: formData.city,
+        commune: formData.commune || undefined,
+        bio: "", // Will be filled in onboarding
+        userType: formData.userType,
+        selectedSkills: [], // Will be filled in onboarding
+      });
+
+      if (!success || !newUser) {
+        console.error("Create user error:", error);
         setIsSubmitting(false);
-        setErrors({ 
-          email: createError?.message || "Un compte avec cet email existe déjà" 
+        setErrors({
+          email: error || "Un compte avec cet email existe déjà" 
         });
         return;
       }
@@ -372,20 +370,8 @@ export default function RegisterPage() {
         console.warn("Could not save backward compatibility data:", e);
       }
 
-      // Login the user
-      try {
-        login(formData.email, formData.password);
-      } catch (loginError: any) {
-        console.error("Login error:", loginError);
-        // Continue anyway, user is created - try to set current user manually
-        try {
-          if (typeof window !== "undefined") {
-            localStorage.setItem("kily_current_user_id", newUser.id);
-          }
-        } catch (e) {
-          console.warn("Could not set current user:", e);
-        }
-      }
+      // User is automatically logged in after registration with Supabase
+      // No need to call login() explicitly
 
       // Rediriger vers onboarding (nouvel utilisateur)
       // Utiliser window.location pour forcer la navigation en cas de problème avec router

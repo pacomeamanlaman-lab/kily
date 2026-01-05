@@ -22,8 +22,9 @@ import {
   Search,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { getCurrentUser, updateUser, getCurrentUserRedirectPath } from "@/lib/users";
-import { isLoggedIn } from "@/lib/auth";
+import { getCurrentUser, updateUser, getRedirectPath } from "@/lib/supabase/users.service";
+import { isLoggedIn } from "@/lib/supabase/auth.service";
+import type { User } from "@/lib/supabase/users.service";
 
 type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -31,11 +32,11 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(1);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const portfolioInputRef = useRef<HTMLInputElement>(null);
 
-  const isTalent = currentUser?.userType === "talent";
+  const isTalent = currentUser?.user_type === "talent";
 
   // Form data
   const [formData, setFormData] = useState({
@@ -50,33 +51,37 @@ export default function OnboardingPage() {
 
   // Check auth and load user on client-side only
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    const checkAuth = async () => {
+      if (typeof window === "undefined") return;
 
-    if (!isLoggedIn()) {
-      router.push("/login");
-      return;
-    }
+      const loggedIn = await isLoggedIn();
+      if (!loggedIn) {
+        router.push("/login");
+        return;
+      }
 
-    const user = getCurrentUser();
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+      const user = await getCurrentUser();
+      if (!user) {
+        router.push("/login");
+        return;
+      }
 
-    if (user.hasCompletedOnboarding) {
-      const redirectPath = getCurrentUserRedirectPath();
-      router.push(redirectPath);
-      return;
-    }
+      if (user.has_completed_onboarding) {
+        const redirectPath = getRedirectPath(user);
+        router.push(redirectPath);
+        return;
+      }
 
-    setCurrentUser(user);
-    setFormData({
-      avatar: user.avatar || "",
-      bio: user.bio || "",
-      selectedSkills: user.selectedSkills || [],
-      portfolioItems: [],
-    });
-    setLoading(false);
+      setCurrentUser(user);
+      setFormData({
+        avatar: user.avatar || "",
+        bio: user.bio || "",
+        selectedSkills: [], // Will be loaded from skills table if needed
+        portfolioItems: [],
+      });
+      setLoading(false);
+    };
+    checkAuth();
   }, [router]);
 
   const totalSteps = isTalent ? 6 : 4; // 6 for Talents (added skills), 4 for Voisins/Recruteurs (added app tour step)
@@ -115,13 +120,15 @@ export default function OnboardingPage() {
     setFormData({ ...formData, portfolioItems: [...formData.portfolioItems, ...newItems] });
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     // Mark onboarding as completed and redirect
     if (currentUser) {
-      updateUser(currentUser.id, { hasCompletedOnboarding: true });
+      await updateUser(currentUser.id, { has_completed_onboarding: true });
     }
-    const redirectPath = getCurrentUserRedirectPath();
-    router.push(redirectPath);
+    if (currentUser) {
+      const redirectPath = getRedirectPath(currentUser);
+      router.push(redirectPath);
+    }
   };
 
   const handleNext = () => {
@@ -136,34 +143,25 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     setLoading(true);
 
     // Update user with onboarding data
     if (currentUser) {
-      // Use placeholder images to avoid localStorage quota issues
-      // In production, these would be uploaded to Supabase Storage
-      const portfolioData = formData.portfolioItems.map((img, i) => ({
-        id: `${Date.now()}-${i}`,
-        title: `Portfolio item ${i + 1}`,
-        description: "",
-        // Use placeholder instead of base64 to save localStorage space
-        imageUrl: `https://images.unsplash.com/photo-${1500000000000 + i}?w=800`,
-      }));
-
-      updateUser(currentUser.id, {
+      await updateUser(currentUser.id, {
         avatar: formData.avatar || currentUser.avatar,
         bio: formData.bio || currentUser.bio,
-        selectedSkills: formData.selectedSkills,
-        portfolio: [...(currentUser.portfolio || []), ...portfolioData],
-        hasCompletedOnboarding: true,
+        has_completed_onboarding: true,
       });
+      
+      // TODO: Save skills and portfolio items to Supabase tables
+      // For now, we'll just mark onboarding as complete
     }
 
-    setTimeout(() => {
-      const redirectPath = getCurrentUserRedirectPath();
+    if (currentUser) {
+      const redirectPath = getRedirectPath(currentUser);
       router.push(redirectPath);
-    }, 500);
+    }
   };
 
   // Compétences prédéfinies par catégorie

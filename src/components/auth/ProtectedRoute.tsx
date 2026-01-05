@@ -1,10 +1,10 @@
-// Component to protect routes - redirects to login if not authenticated
+// Component to protect routes - redirects to login if not authenticated (Supabase version)
 
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { isLoggedIn } from "@/lib/auth";
+import { isLoggedIn } from "@/lib/supabase/auth.service";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,8 +16,10 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    const checkAuth = () => {
-      if (!isLoggedIn()) {
+    const checkAuth = async () => {
+      const loggedIn = await isLoggedIn();
+
+      if (!loggedIn) {
         // Save the intended destination
         sessionStorage.setItem("redirectAfterLogin", pathname);
         router.push("/login");

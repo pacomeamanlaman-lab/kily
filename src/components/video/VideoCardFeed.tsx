@@ -10,7 +10,7 @@ import { Video } from "@/lib/videoData";
 import { mockComments } from "@/lib/feedData";
 import Toast from "@/components/ui/Toast";
 import { isVideoLiked, getVideoLikesCount, toggleVideoLike, initVideoLikesCount } from "@/lib/videoLikes";
-import { getCurrentUser } from "@/lib/users";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { deleteVideo, updateVideo } from "@/lib/videos";
 import EditVideoModal from "@/components/video/EditVideoModal";
 import { toggleFollow, isFollowing } from "@/lib/follows";
@@ -32,7 +32,7 @@ interface Comment {
 
 export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
   const router = useRouter();
-  const currentUser = getCurrentUser();
+  const { user: currentUser } = useCurrentUser();
   const currentUserId = currentUser?.id || null;
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(video.likes);

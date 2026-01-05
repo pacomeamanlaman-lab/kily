@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Upload, X } from "lucide-react";
 import { showToast } from "@/lib/toast";
 import { createVideo } from "@/lib/videos";
-import { getCurrentUser, getUserDisplayName } from "@/lib/users";
+import { getUserDisplayName } from "@/lib/supabase/users.service";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface CreateVideoFormProps {
   onSuccess: () => void;
@@ -23,6 +24,7 @@ const categories = [
 ];
 
 export default function CreateVideoForm({ onSuccess, onCancel }: CreateVideoFormProps) {
+  const { user: currentUser } = useCurrentUser();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -166,8 +168,7 @@ export default function CreateVideoForm({ onSuccess, onCancel }: CreateVideoForm
     // Mock API call
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // Get current user
-    const currentUser = getCurrentUser();
+    // Check if user is connected
     if (!currentUser) {
       showToast("Vous devez être connecté pour publier", "error");
       setIsSubmitting(false);

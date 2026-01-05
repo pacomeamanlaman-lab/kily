@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { mockTalents, mockReviews } from "@/lib/mockData";
-import { getCurrentUser } from "@/lib/users";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Card from "@/components/ui/Card";
@@ -29,7 +29,7 @@ import { isTalentSaved, toggleSaveTalent } from "@/lib/savedTalents";
 export default function ProfilePage() {
   const router = useRouter();
   const params = useParams();
-  const currentUser = getCurrentUser();
+  const { user: currentUser } = useCurrentUser();
   const currentUserId = currentUser?.id || null;
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showContactModal, setShowContactModal] = useState(false);

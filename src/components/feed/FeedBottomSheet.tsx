@@ -18,8 +18,9 @@ import {
   Flame,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { getCurrentUser, getUserFullName } from "@/lib/users";
-import { logout } from "@/lib/auth";
+import { getUserFullName } from "@/lib/supabase/users.service";
+import { logout } from "@/lib/supabase/auth.service";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface FeedBottomSheetProps {
   isOpen: boolean;
@@ -28,7 +29,7 @@ interface FeedBottomSheetProps {
 
 export default function FeedBottomSheet({ isOpen, onClose }: FeedBottomSheetProps) {
   const router = useRouter();
-  const currentUser = getCurrentUser();
+  const { user: currentUser } = useCurrentUser();
 
   const mainMenuItems = [
     { icon: Home, label: "Accueil", path: "/feed", color: "text-violet-400" },
@@ -58,8 +59,8 @@ export default function FeedBottomSheet({ isOpen, onClose }: FeedBottomSheetProp
     onClose();
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push("/login");
     onClose();
   };

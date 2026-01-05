@@ -47,7 +47,7 @@ import NotificationsSidebar from "@/components/notifications/NotificationsSideba
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import FeedBottomSheet from "@/components/feed/FeedBottomSheet";
 import FeedTour from "@/components/feed/FeedTour";
-import { getCurrentUser } from "@/lib/users";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 function FeedPageContent() {
   const router = useRouter();
@@ -72,8 +72,8 @@ function FeedPageContent() {
   });
 
   // Get current user to check if they can publish
-  const currentUser = getCurrentUser();
-  const canPublish = currentUser?.userType === "talent";
+  const { user: currentUser, loading: userLoading } = useCurrentUser();
+  const canPublish = currentUser?.user_type === "talent";
 
   // Load posts and videos from localStorage on mount and when window gets focus
   useEffect(() => {
@@ -454,7 +454,7 @@ function FeedPageContent() {
   const getSpecificSection = () => {
     if (!currentUser) return null;
 
-    switch (currentUser.userType) {
+    switch (currentUser?.user_type) {
       case "talent":
         return {
           title: "Mes contenus",

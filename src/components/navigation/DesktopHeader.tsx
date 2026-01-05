@@ -5,8 +5,8 @@ import { Bell, Search, Sparkles, User, Settings, LogOut, ChevronDown, Home } fro
 import { useState, useEffect, useRef } from "react";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 import NotificationsSidebar from "@/components/notifications/NotificationsSidebar";
-import { getCurrentUser, getUserFullName } from "@/lib/users";
-import { logout, isLoggedIn } from "@/lib/auth";
+import { getUserFullName, getCurrentUser, type User } from "@/lib/supabase/users.service";
+import { logout } from "@/lib/supabase/auth.service";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface DesktopHeaderProps {
@@ -20,22 +20,27 @@ export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide
   const [searchQuery, setSearchQuery] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [currentUser, setCurrentUser] = useState<ReturnType<typeof getCurrentUser>>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const scrollDirection = useScrollDirection({ threshold: 10 });
 
   // Load user on mount to avoid hydration mismatch
   useEffect(() => {
-    setIsMounted(true);
-    setCurrentUser(getCurrentUser());
+    const loadUser = async () => {
+      setIsMounted(true);
+      const user = await getCurrentUser();
+      setCurrentUser(user);
+    };
+    loadUser();
   }, []);
 
   // Update user when it changes
   useEffect(() => {
     if (!isMounted) return;
-    const handleUserUpdate = () => {
-      setCurrentUser(getCurrentUser());
+    const handleUserUpdate = async () => {
+      const user = await getCurrentUser();
+      setCurrentUser(user);
     };
     window.addEventListener('userUpdated', handleUserUpdate);
     window.addEventListener('userLoggedIn', handleUserUpdate);
@@ -71,8 +76,8 @@ export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push("/login");
   };
 

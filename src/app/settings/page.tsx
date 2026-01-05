@@ -81,10 +81,15 @@ function SettingsPageContent() {
     { value: "security" as const, label: "Sécurité", icon: Shield },
   ];
 
-  const handleLogout = () => {
-    localStorage.removeItem("kily_logged_in");
-    localStorage.removeItem("kily_user_email");
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      const { logout } = await import("@/lib/supabase/auth.service");
+      await logout();
+      router.push("/login");
+    } catch (error) {
+      console.error('Error logging out:', error);
+      router.push("/login");
+    }
   };
 
   const handleSaveProfile = () => {

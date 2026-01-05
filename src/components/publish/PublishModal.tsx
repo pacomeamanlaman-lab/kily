@@ -5,7 +5,7 @@ import { X, FileText, Video, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import CreatePostForm from "./CreatePostForm";
 import CreateVideoForm from "./CreateVideoForm";
-import { getCurrentUser } from "@/lib/users";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface PublishModalProps {
   isOpen: boolean;
@@ -19,8 +19,8 @@ export default function PublishModal({ isOpen, onClose, initialType = null }: Pu
   const [publishType, setPublishType] = useState<PublishType>(initialType);
 
   // Check if user can publish (only Talents)
-  const currentUser = getCurrentUser();
-  const canPublish = currentUser?.userType === "talent";
+  const { user: currentUser } = useCurrentUser();
+  const canPublish = currentUser?.user_type === "talent";
 
   // Sync publishType with initialType when modal opens
   useEffect(() => {

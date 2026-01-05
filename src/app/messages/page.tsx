@@ -7,12 +7,12 @@ import { motion } from "framer-motion";
 import { loadConversations } from "@/lib/messages";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import { getCurrentUser } from "@/lib/users";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 function MessagesPageContent() {
   const router = useRouter();
   const scrollDirection = useScrollDirection({ threshold: 10 });
-  const currentUser = getCurrentUser();
+  const { user: currentUser } = useCurrentUser();
   const currentUserId = currentUser?.id || null;
   const [searchQuery, setSearchQuery] = useState("");
   const [conversations, setConversations] = useState<any[]>([]);

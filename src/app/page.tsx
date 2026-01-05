@@ -25,9 +25,9 @@ import {
 } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isLoggedIn } from "@/lib/auth";
-import { getCurrentUser, getUserFullName, getCurrentUserRedirectPath } from "@/lib/users";
-import { logout } from "@/lib/auth";
+import { isLoggedIn, logout } from "@/lib/supabase/auth.service";
+import { getCurrentUser, getUserFullName, getRedirectPath } from "@/lib/supabase/users.service";
+import type { User } from "@/lib/supabase/users.service";
 
 // Mock data pour les talents populaires
 const popularTalents = [
@@ -116,8 +116,9 @@ export default function Home() {
   const ref = useRef(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [currentUser, setCurrentUser] = useState<ReturnType<typeof getCurrentUser>>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -129,30 +130,27 @@ export default function Home() {
 
   // Check if user is logged in and redirect to feed if connected
   useEffect(() => {
-    const checkAuth = () => {
-      const loggedIn = isLoggedIn();
-      setIsUserLoggedIn(loggedIn);
-      if (loggedIn) {
-        setCurrentUser(getCurrentUser());
-        // Redirect to user-specific default page
-        const redirectPath = getCurrentUserRedirectPath();
-        router.push(redirectPath);
+    const checkAuth = async () => {
+      try {
+        const loggedIn = await isLoggedIn();
+        setIsUserLoggedIn(loggedIn);
+        if (loggedIn) {
+          const user = await getCurrentUser();
+          setCurrentUser(user);
+          if (user) {
+            // Redirect to user-specific default page
+            const redirectPath = getRedirectPath(user);
+            router.push(redirectPath);
+          }
+        } else {
+          setIsChecking(false);
+        }
+      } catch (error) {
+        console.error('Error checking auth:', error);
+        setIsChecking(false);
       }
     };
     checkAuth();
-
-    const handleUserUpdate = () => {
-      checkAuth();
-    };
-    window.addEventListener('userUpdated', handleUserUpdate);
-    window.addEventListener('userLoggedIn', handleUserUpdate);
-    window.addEventListener('userLoggedOut', handleUserUpdate);
-
-    return () => {
-      window.removeEventListener('userUpdated', handleUserUpdate);
-      window.removeEventListener('userLoggedIn', handleUserUpdate);
-      window.removeEventListener('userLoggedOut', handleUserUpdate);
-    };
   }, [router]);
 
   // Close menu when clicking outside
@@ -172,13 +170,29 @@ export default function Home() {
     };
   }, [showProfileMenu]);
 
-  const handleLogout = () => {
-    logout();
-    setShowProfileMenu(false);
-    setIsUserLoggedIn(false);
-    setCurrentUser(null);
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setShowProfileMenu(false);
+      setIsUserLoggedIn(false);
+      setCurrentUser(null);
+      router.push("/login");
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
   };
+
+  // Show loading state while checking auth
+  if (isChecking && isUserLoggedIn) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-black text-white min-h-screen overflow-x-hidden pb-20 sm:pb-0">
