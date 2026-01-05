@@ -18,7 +18,7 @@ import {
   Camera,
   Menu,
   X,
-  User,
+  User as UserIcon,
   Settings,
   LogOut,
   ChevronDown
@@ -239,7 +239,7 @@ export default function Home() {
                       </div>
                     ) : (
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center">
-                        <User className="w-5 h-5" />
+                        <UserIcon className="w-5 h-5" />
                       </div>
                     )}
                     <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
@@ -284,7 +284,7 @@ export default function Home() {
                             }}
                             className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
                           >
-                            <User className="w-4 h-4" />
+                            <UserIcon className="w-4 h-4" />
                             <span className="text-sm">Mon profil</span>
                           </button>
                           <button
@@ -344,7 +344,7 @@ export default function Home() {
                       </div>
                     ) : (
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center">
-                        <User className="w-5 h-5" />
+                        <UserIcon className="w-5 h-5" />
                       </div>
                     )}
                   </button>
@@ -388,7 +388,7 @@ export default function Home() {
                             }}
                             className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
                           >
-                            <User className="w-4 h-4" />
+                            <UserIcon className="w-4 h-4" />
                             <span className="text-sm">Mon profil</span>
                           </button>
                           <button

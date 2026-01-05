@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Bell, Search, Sparkles, User, Settings, LogOut, ChevronDown, Home } from "lucide-react";
+import { Bell, Search, Sparkles, User as UserIcon, Settings, LogOut, ChevronDown, Home } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 import NotificationsSidebar from "@/components/notifications/NotificationsSidebar";
@@ -91,7 +91,7 @@ export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide
         <div className="flex items-center justify-between gap-6">
           {/* Logo */}
           <button
-            onClick={() => router.push(isLoggedIn() ? "/feed" : "/")}
+            onClick={() => router.push(currentUser ? "/feed" : "/")}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-violet-700 rounded-lg flex items-center justify-center">
@@ -149,7 +149,7 @@ export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide
                   </div>
                 ) : (
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center">
-                    <User className="w-5 h-5" />
+                    <UserIcon className="w-5 h-5" />
                   </div>
                 )}
                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
@@ -194,7 +194,7 @@ export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide
                         }}
                         className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-300 hover:bg-white/5 transition-colors"
                       >
-                        <User className="w-4 h-4" />
+                        <UserIcon className="w-4 h-4" />
                         <span className="text-sm">Mon profil</span>
                       </button>
                       <button

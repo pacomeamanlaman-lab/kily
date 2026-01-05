@@ -130,6 +130,21 @@ export const getFollowers = async (targetUserId: string): Promise<string[]> => {
   }
 };
 
+// Charger tous les follows (pour admin)
+export const loadFollows = async (): Promise<Array<{ follower_id: string; followed_id: string }>> => {
+  try {
+    const { data, error } = await supabase
+      .from('follows')
+      .select('follower_id, followed_id');
+
+    if (error) throw error;
+    return data || [];
+  } catch (error: any) {
+    console.error('Erreur loadFollows:', error);
+    return [];
+  }
+};
+
 // ========== SAVED TALENTS (pour recruteurs) ==========
 
 // Vérifier si un talent est sauvegardé par un recruteur

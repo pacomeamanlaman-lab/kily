@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, Code, Palette, Briefcase, Music, Sparkles, Dumbbell, ChefHat, Wrench, Tag, Users, FileText } from "lucide-react";
 import StatsCardsCarousel from "@/components/admin/StatsCardsCarousel";
 
@@ -14,16 +14,42 @@ interface Category {
 }
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([
-    { id: "1", name: "Tech & Code", icon: "Code", color: "#8b5cf6", talentsCount: 245, postsCount: 567 },
-    { id: "2", name: "Design & Créa", icon: "Palette", color: "#ec4899", talentsCount: 198, postsCount: 432 },
-    { id: "3", name: "Marketing", icon: "Briefcase", color: "#f59e0b", talentsCount: 134, postsCount: 289 },
-    { id: "4", name: "Musique", icon: "Music", color: "#10b981", talentsCount: 167, postsCount: 345 },
-    { id: "5", name: "Art", icon: "Sparkles", color: "#06b6d4", talentsCount: 156, postsCount: 312 },
-    { id: "6", name: "Sport", icon: "Dumbbell", color: "#ef4444", talentsCount: 123, postsCount: 234 },
-    { id: "7", name: "Cuisine", icon: "ChefHat", color: "#f97316", talentsCount: 189, postsCount: 401 },
-    { id: "8", name: "Bricolage", icon: "Wrench", color: "#6366f1", talentsCount: 145, postsCount: 278 },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  // Charger les données depuis Supabase
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const { getCategoriesStats } = await import("@/lib/supabase/admin.service");
+        const categoriesData = await getCategoriesStats();
+
+        // Transformer les données
+        const transformedCategories: Category[] = categoriesData.map((cat, index) => ({
+          id: (index + 1).toString(),
+          name: cat.name,
+          icon: cat.icon,
+          color: cat.color,
+          talentsCount: cat.talentsCount,
+          postsCount: cat.postsCount,
+        }));
+
+        setCategories(transformedCategories);
+      } catch (error) {
+        console.error('Erreur lors du chargement des catégories:', error);
+        // En cas d'erreur, garder un tableau vide
+        setCategories([
+          { id: "1", name: "Tech & Code", icon: "Code", color: "#8b5cf6", talentsCount: 245, postsCount: 567 },
+          { id: "2", name: "Design & Créa", icon: "Palette", color: "#ec4899", talentsCount: 198, postsCount: 432 },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const getIconComponent = (iconName: string) => {
     const icons: any = {

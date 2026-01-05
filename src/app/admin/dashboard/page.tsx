@@ -15,13 +15,14 @@ import {
   ArrowDown
 } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { getAdminStats, getUserGrowthData, getContentData, getUserTypeData, getTopCitiesData } from "@/lib/supabase/admin.service";
 
 export default function AdminDashboardPage() {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
-
-  const statsCards = [
+  const [loading, setLoading] = useState(true);
+  const [statsCards, setStatsCards] = useState([
     {
       id: "users",
       icon: Users,
@@ -31,8 +32,8 @@ export default function AdminDashboardPage() {
       bgIcon: "bg-violet-500/20",
       textIcon: "text-violet-400",
       label: "Total Utilisateurs",
-      value: "890",
-      change: "+12%",
+      value: "0",
+      change: "+0%",
       changeColor: "text-green-400"
     },
     {
@@ -44,8 +45,8 @@ export default function AdminDashboardPage() {
       bgIcon: "bg-pink-500/20",
       textIcon: "text-pink-400",
       label: "Posts Publiés",
-      value: "1,234",
-      change: "+8%",
+      value: "0",
+      change: "+0%",
       changeColor: "text-green-400"
     },
     {
@@ -57,8 +58,8 @@ export default function AdminDashboardPage() {
       bgIcon: "bg-orange-500/20",
       textIcon: "text-orange-400",
       label: "Vidéos Publiées",
-      value: "567",
-      change: "+15%",
+      value: "0",
+      change: "+0%",
       changeColor: "text-green-400"
     },
     {
@@ -70,11 +71,15 @@ export default function AdminDashboardPage() {
       bgIcon: "bg-green-500/20",
       textIcon: "text-green-400",
       label: "Total Engagement",
-      value: "45.2K",
-      change: "+22%",
+      value: "0",
+      change: "+0%",
       changeColor: "text-green-400"
     }
-  ];
+  ]);
+  const [userGrowthData, setUserGrowthData] = useState<Array<{ name: string; users: number }>>([]);
+  const [contentData, setContentData] = useState<Array<{ name: string; posts: number; videos: number; stories: number }>>([]);
+  const [userTypeData, setUserTypeData] = useState<Array<{ name: string; value: number; color: string }>>([]);
+  const [cityData, setCityData] = useState<Array<{ name: string; users: number }>>([]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -94,50 +99,140 @@ export default function AdminDashboardPage() {
 
     if (distance > 0) {
       // Swipe left - next card
-      setCurrentCardIndex((prev) => (prev + 1) % statsCards.length);
+      setCurrentCardIndex((prev) => (prev + 1) % 4);
     } else {
       // Swipe right - previous card
-      setCurrentCardIndex((prev) => (prev - 1 + statsCards.length) % statsCards.length);
+      setCurrentCardIndex((prev) => (prev - 1 + 4) % 4);
     }
 
     touchStartX.current = 0;
     touchEndX.current = 0;
   };
 
-  // Mock data for charts
-  const userGrowthData = [
-    { name: "Jan", users: 120 },
-    { name: "Fev", users: 180 },
-    { name: "Mar", users: 250 },
-    { name: "Avr", users: 340 },
-    { name: "Mai", users: 480 },
-    { name: "Jun", users: 620 },
-    { name: "Jul", users: 890 },
-  ];
+  // Charger les données depuis Supabase
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        console.log('🔄 Début du chargement des données admin...');
 
-  const contentData = [
-    { name: "Lun", posts: 45, videos: 12, stories: 78 },
-    { name: "Mar", posts: 52, videos: 18, stories: 65 },
-    { name: "Mer", posts: 38, videos: 15, stories: 82 },
-    { name: "Jeu", posts: 61, videos: 22, stories: 71 },
-    { name: "Ven", posts: 55, videos: 19, stories: 88 },
-    { name: "Sam", posts: 70, videos: 28, stories: 95 },
-    { name: "Dim", posts: 48, videos: 16, stories: 73 },
-  ];
+        // Charger les statistiques principales avec timeout
+        const statsPromise = getAdminStats();
+        const statsTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout: getAdminStats')), 10000)
+        );
+        
+        const stats = await Promise.race([statsPromise, statsTimeout]) as Awaited<ReturnType<typeof getAdminStats>>;
+        console.log('✅ Statistiques chargées:', stats);
 
-  const userTypeData = [
-    { name: "Talents", value: 620, color: "#8b5cf6" },
-    { name: "Recruteurs", value: 180, color: "#ec4899" },
-    { name: "Voisins", value: 90, color: "#f59e0b" },
-  ];
+        // Mettre à jour les cartes de statistiques
+        setStatsCards([
+          {
+            id: "users",
+            icon: Users,
+            iconColor: "violet",
+            gradient: "from-violet-600/20 to-violet-800/10",
+            border: "border-violet-500/30",
+            bgIcon: "bg-violet-500/20",
+            textIcon: "text-violet-400",
+            label: "Total Utilisateurs",
+            value: stats.totalUsers.toLocaleString(),
+            change: "+0%", // TODO: Calculer la variation
+            changeColor: "text-green-400"
+          },
+          {
+            id: "posts",
+            icon: FileText,
+            iconColor: "pink",
+            gradient: "from-pink-600/20 to-pink-800/10",
+            border: "border-pink-500/30",
+            bgIcon: "bg-pink-500/20",
+            textIcon: "text-pink-400",
+            label: "Posts Publiés",
+            value: stats.totalPosts.toLocaleString(),
+            change: "+0%",
+            changeColor: "text-green-400"
+          },
+          {
+            id: "videos",
+            icon: Video,
+            iconColor: "orange",
+            gradient: "from-orange-600/20 to-orange-800/10",
+            border: "border-orange-500/30",
+            bgIcon: "bg-orange-500/20",
+            textIcon: "text-orange-400",
+            label: "Vidéos Publiées",
+            value: stats.totalVideos.toLocaleString(),
+            change: "+0%",
+            changeColor: "text-green-400"
+          },
+          {
+            id: "engagement",
+            icon: Heart,
+            iconColor: "green",
+            gradient: "from-green-600/20 to-green-800/10",
+            border: "border-green-500/30",
+            bgIcon: "bg-green-500/20",
+            textIcon: "text-green-400",
+            label: "Total Engagement",
+            value: stats.totalEngagement >= 1000 
+              ? `${(stats.totalEngagement / 1000).toFixed(1)}K`
+              : stats.totalEngagement.toLocaleString(),
+            change: "+0%",
+            changeColor: "text-green-400"
+          }
+        ]);
 
-  const cityData = [
-    { name: "Abidjan", users: 245 },
-    { name: "Lagos", users: 198 },
-    { name: "Accra", users: 152 },
-    { name: "Dakar", users: 134 },
-    { name: "Nairobi", users: 98 },
-  ];
+        // Charger les données des graphiques avec gestion d'erreur individuelle
+        console.log('🔄 Chargement des graphiques...');
+        const [growthData, contentDataResult, userTypeResult, citiesResult] = await Promise.allSettled([
+          getUserGrowthData(7),
+          getContentData(),
+          getUserTypeData(),
+          getTopCitiesData(),
+        ]).then(results => results.map((result, index) => {
+          if (result.status === 'fulfilled') {
+            console.log(`✅ Graphique ${index} chargé`);
+            return result.value;
+          } else {
+            console.error(`❌ Erreur graphique ${index}:`, result.reason);
+            // Retourner des données vides en cas d'erreur
+            if (index === 0) return []; // growthData
+            if (index === 1) return []; // contentData
+            if (index === 2) return []; // userTypeData
+            return []; // citiesResult
+          }
+        }));
+
+        setUserGrowthData(growthData as Array<{ name: string; users: number }>);
+        setContentData(contentDataResult as Array<{ name: string; posts: number; videos: number; stories: number }>);
+        setUserTypeData(userTypeResult as Array<{ name: string; value: number; color: string }>);
+        setCityData(citiesResult as Array<{ name: string; users: number }>);
+
+        console.log('✅ Toutes les données chargées avec succès');
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des données admin:', error);
+        // Afficher quand même les données par défaut pour éviter un écran blanc
+        console.log('⚠️ Utilisation des données par défaut');
+      } finally {
+        setLoading(false);
+        console.log('🏁 Chargement terminé');
+      }
+    };
+
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Chargement des données...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-6">
@@ -298,11 +393,18 @@ export default function AdminDashboardPage() {
         {/* Top Cities Chart */}
         <div className="bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Top 5 Villes Actives</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={cityData} layout="vertical">
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={cityData} layout="vertical" margin={{ left: 20, right: 10, top: 10, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#333" />
               <XAxis type="number" stroke="#9ca3af" />
-              <YAxis dataKey="name" type="category" stroke="#9ca3af" />
+              <YAxis 
+                dataKey="name" 
+                type="category" 
+                stroke="#9ca3af" 
+                width={100}
+                tick={{ fontSize: 12 }}
+                interval={0}
+              />
               <Tooltip
                 contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid #333", borderRadius: "8px" }}
                 labelStyle={{ color: "#fff" }}

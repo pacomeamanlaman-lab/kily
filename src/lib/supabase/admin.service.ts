@@ -107,13 +107,77 @@ export const getAdminStats = async (): Promise<{
   totalNeighbors: number;
   totalAdmins: number;
   verifiedUsers: number;
+  totalPosts: number;
+  totalVideos: number;
+  totalStories: number;
+  totalEngagement: number;
 }> => {
   try {
-    const { data: users, error } = await supabase
+    // Récupérer les utilisateurs
+    const { data: users, error: usersError } = await supabase
       .from('users')
       .select('user_type, verified, is_admin');
 
-    if (error) throw error;
+    if (usersError) {
+      console.error('Erreur lors de la récupération des utilisateurs:', usersError);
+      // Continuer avec des valeurs par défaut
+    }
+
+    // Récupérer les posts
+    const { count: postsCount, error: postsError } = await supabase
+      .from('posts')
+      .select('*', { count: 'exact', head: true });
+
+    if (postsError) {
+      console.error('Erreur lors de la récupération des posts:', postsError);
+    }
+
+    // Récupérer les vidéos
+    const { count: videosCount, error: videosError } = await supabase
+      .from('videos')
+      .select('*', { count: 'exact', head: true });
+
+    if (videosError) {
+      console.error('Erreur lors de la récupération des vidéos:', videosError);
+    }
+
+    // Récupérer les stories actives
+    let storiesCount = 0;
+    try {
+      const now = new Date().toISOString();
+      const { count, error: storiesError } = await supabase
+        .from('stories')
+        .select('*', { count: 'exact', head: true })
+        .gt('expires_at', now);
+
+      if (storiesError) {
+        console.error('Erreur lors de la récupération des stories:', storiesError);
+      } else {
+        storiesCount = count || 0;
+      }
+    } catch (err) {
+      console.error('Erreur lors de la récupération des stories:', err);
+    }
+
+    // Calculer l'engagement total (likes + comments)
+    // Utiliser limit pour éviter de charger trop de données
+    const { data: postsData, error: postsDataError } = await supabase
+      .from('posts')
+      .select('likes_count, comments_count')
+      .limit(1000); // Limiter pour éviter les problèmes de performance
+
+    const { data: videosData, error: videosDataError } = await supabase
+      .from('videos')
+      .select('likes_count, comments_count')
+      .limit(1000); // Limiter pour éviter les problèmes de performance
+
+    let totalEngagement = 0;
+    if (!postsDataError && postsData) {
+      totalEngagement += postsData.reduce((sum, p) => sum + (p.likes_count || 0) + (p.comments_count || 0), 0);
+    }
+    if (!videosDataError && videosData) {
+      totalEngagement += videosData.reduce((sum, v) => sum + (v.likes_count || 0) + (v.comments_count || 0), 0);
+    }
 
     const stats = {
       totalUsers: users?.length || 0,
@@ -122,9 +186,537 @@ export const getAdminStats = async (): Promise<{
       totalNeighbors: users?.filter(u => u.user_type === 'neighbor').length || 0,
       totalAdmins: users?.filter(u => u.is_admin === true).length || 0,
       verifiedUsers: users?.filter(u => u.verified === true).length || 0,
+      totalPosts: postsCount || 0,
+      totalVideos: videosCount || 0,
+      totalStories: storiesCount || 0,
+      totalEngagement: totalEngagement,
     };
 
+    console.log('📊 Statistiques calculées:', stats);
     return stats;
+  } catch (error: any) {
+    console.error('❌ Erreur dans getAdminStats:', error);
+    // Retourner des valeurs par défaut au lieu de throw pour éviter de bloquer
+    return {
+      totalUsers: 0,
+      totalTalents: 0,
+      totalRecruiters: 0,
+      totalNeighbors: 0,
+      totalAdmins: 0,
+      verifiedUsers: 0,
+      totalPosts: 0,
+      totalVideos: 0,
+      totalStories: 0,
+      totalEngagement: 0,
+    };
+  }
+};
+
+// Obtenir les statistiques de croissance des utilisateurs (par mois)
+export const getUserGrowthData = async (months: number = 7): Promise<Array<{ name: string; users: number }>> => {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('created_at')
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    // Grouper par mois
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const data: Record<string, number> = {};
+
+    // Initialiser les derniers N mois avec 0
+    for (let i = months - 1; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${monthNames[date.getMonth()]}`;
+      data[key] = 0;
+    }
+
+    // Compter les utilisateurs par mois
+    users?.forEach(user => {
+      const date = new Date(user.created_at);
+      const key = `${monthNames[date.getMonth()]}`;
+      if (data[key] !== undefined) {
+        data[key]++;
+      }
+    });
+
+    // Convertir en tableau et calculer les totaux cumulatifs
+    let cumulative = 0;
+    return Object.entries(data).map(([name, count]) => {
+      cumulative += count;
+      return { name, users: cumulative };
+    });
+  } catch (error: any) {
+    throw new Error(handleSupabaseError(error));
+  }
+};
+
+// Obtenir les statistiques de contenu publié (7 derniers jours)
+export const getContentData = async (): Promise<Array<{ name: string; posts: number; videos: number; stories: number }>> => {
+  try {
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const data: Array<{ name: string; posts: number; videos: number; stories: number }> = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const startOfDay = new Date(date.setHours(0, 0, 0, 0)).toISOString();
+      const endOfDay = new Date(date.setHours(23, 59, 59, 999)).toISOString();
+
+      // Compter les posts
+      const { count: postsCount } = await supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfDay)
+        .lte('created_at', endOfDay);
+
+      // Compter les vidéos
+      const { count: videosCount } = await supabase
+        .from('videos')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfDay)
+        .lte('created_at', endOfDay);
+
+      // Compter les stories
+      const { count: storiesCount } = await supabase
+        .from('stories')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfDay)
+        .lte('created_at', endOfDay);
+
+      data.push({
+        name: days[date.getDay() === 0 ? 6 : date.getDay() - 1],
+        posts: postsCount || 0,
+        videos: videosCount || 0,
+        stories: storiesCount || 0,
+      });
+    }
+
+    return data;
+  } catch (error: any) {
+    throw new Error(handleSupabaseError(error));
+  }
+};
+
+// Obtenir la répartition des types d'utilisateurs
+export const getUserTypeData = async (): Promise<Array<{ name: string; value: number; color: string }>> => {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('user_type')
+      .eq('is_admin', false); // Exclure les admins
+
+    if (error) throw error;
+
+    const talents = users?.filter(u => u.user_type === 'talent').length || 0;
+    const recruiters = users?.filter(u => u.user_type === 'recruiter').length || 0;
+    const neighbors = users?.filter(u => u.user_type === 'neighbor').length || 0;
+
+    return [
+      { name: 'Talents', value: talents, color: '#8b5cf6' },
+      { name: 'Recruteurs', value: recruiters, color: '#ec4899' },
+      { name: 'Voisins', value: neighbors, color: '#f59e0b' },
+    ];
+  } catch (error: any) {
+    throw new Error(handleSupabaseError(error));
+  }
+};
+
+// Obtenir le top 5 des villes actives
+export const getTopCitiesData = async (): Promise<Array<{ name: string; users: number }>> => {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('city')
+      .not('city', 'is', null);
+
+    if (error) throw error;
+
+    // Compter les utilisateurs par ville
+    const cityCounts: Record<string, number> = {};
+    users?.forEach(user => {
+      if (user.city) {
+        cityCounts[user.city] = (cityCounts[user.city] || 0) + 1;
+      }
+    });
+
+    // Trier et prendre le top 5
+    const sorted = Object.entries(cityCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([name, users]) => ({ name, users }));
+
+    return sorted;
+  } catch (error: any) {
+    throw new Error(handleSupabaseError(error));
+  }
+};
+
+// Obtenir toutes les conversations (pour admin)
+export const getAllConversations = async (): Promise<Array<{
+  id: string;
+  participant_1_id: string;
+  participant_2_id: string;
+  last_message: string;
+  last_message_at: string;
+  participant_1?: { id: string; first_name: string; last_name: string; avatar: string };
+  participant_2?: { id: string; first_name: string; last_name: string; avatar: string };
+}>> => {
+  try {
+    const { data: conversations, error } = await supabase
+      .from('conversations')
+      .select(`
+        *,
+        participant_1:users!participant_1_id (
+          id,
+          first_name,
+          last_name,
+          avatar
+        ),
+        participant_2:users!participant_2_id (
+          id,
+          first_name,
+          last_name,
+          avatar
+        )
+      `)
+      .order('last_message_at', { ascending: false });
+
+    if (error) throw error;
+    return conversations || [];
+  } catch (error: any) {
+    throw new Error(handleSupabaseError(error));
+  }
+};
+
+// Obtenir les statistiques de messages (7 derniers jours)
+export const getMessagesData = async (): Promise<Array<{ name: string; messages: number }>> => {
+  try {
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const data: Array<{ name: string; messages: number }> = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const startOfDay = new Date(date.setHours(0, 0, 0, 0)).toISOString();
+      const endOfDay = new Date(date.setHours(23, 59, 59, 999)).toISOString();
+
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfDay)
+        .lte('created_at', endOfDay);
+
+      data.push({
+        name: days[date.getDay() === 0 ? 6 : date.getDay() - 1],
+        messages: count || 0,
+      });
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Erreur dans getMessagesData:', error);
+    return [];
+  }
+};
+
+// Obtenir les statistiques de messages par heure
+export const getMessagesHourlyData = async (): Promise<Array<{ hour: string; count: number }>> => {
+  try {
+    const hours = ['00h', '04h', '08h', '12h', '16h', '20h'];
+    const data: Array<{ hour: string; count: number }> = [];
+
+    for (const hourStr of hours) {
+      const hour = parseInt(hourStr.replace('h', ''));
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', new Date().toISOString().split('T')[0] + `T${hour.toString().padStart(2, '0')}:00:00`)
+        .lt('created_at', new Date().toISOString().split('T')[0] + `T${(hour + 4).toString().padStart(2, '0')}:00:00`);
+
+      data.push({
+        hour: hourStr,
+        count: count || 0,
+      });
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Erreur dans getMessagesHourlyData:', error);
+    return [];
+  }
+};
+
+// Obtenir tous les signalements (pour admin)
+export const getAllReports = async (): Promise<Array<{
+  id: string;
+  reporter_id: string;
+  reported_item_type: string;
+  reported_item_id: string;
+  reason: string;
+  description: string;
+  status: string;
+  created_at: string;
+  reporter?: { id: string; first_name: string; last_name: string; avatar: string };
+}>> => {
+  try {
+    const { data: reports, error } = await supabase
+      .from('reports')
+      .select(`
+        *,
+        reporter:users!reporter_id (
+          id,
+          first_name,
+          last_name,
+          avatar
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return reports || [];
+  } catch (error: any) {
+    throw new Error(handleSupabaseError(error));
+  }
+};
+
+// Obtenir les statistiques par ville
+export const getCitiesStats = async (): Promise<Array<{
+  name: string;
+  country: string;
+  flag: string;
+  usersCount: number;
+  talentsCount: number;
+  postsCount: number;
+  growth: number;
+}>> => {
+  try {
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, city, country, user_type')
+      .not('city', 'is', null);
+
+    if (usersError) throw usersError;
+
+    const { data: posts, error: postsError } = await supabase
+      .from('posts')
+      .select('author_id')
+      .limit(10000);
+
+    if (postsError) throw postsError;
+
+    // Grouper par ville
+    const cityStats: Record<string, {
+      name: string;
+      country: string;
+      flag: string;
+      usersCount: number;
+      talentsCount: number;
+      postsCount: number;
+    }> = {};
+
+    // Compter les utilisateurs par ville
+    users?.forEach(user => {
+      if (user.city) {
+        if (!cityStats[user.city]) {
+          cityStats[user.city] = {
+            name: user.city,
+            country: user.country || "Non spécifié",
+            flag: "🌍", // TODO: Mapper les drapeaux par pays
+            usersCount: 0,
+            talentsCount: 0,
+            postsCount: 0,
+          };
+        }
+        cityStats[user.city].usersCount++;
+        if (user.user_type === 'talent') {
+          cityStats[user.city].talentsCount++;
+        }
+      }
+    });
+
+    // Compter les posts par ville (via l'auteur)
+    // Récupérer les utilisateurs avec leurs posts
+    if (posts && users) {
+      const userMap = new Map(users.map(u => [u.id, u]));
+      posts.forEach(post => {
+        const user = userMap.get(post.author_id);
+        if (user?.city && cityStats[user.city]) {
+          cityStats[user.city].postsCount++;
+        }
+      });
+    }
+
+    // Convertir en tableau et calculer la croissance (mock pour l'instant)
+    return Object.values(cityStats).map(city => ({
+      ...city,
+      growth: Math.floor(Math.random() * 20) + 5, // TODO: Calculer la vraie croissance
+    })).sort((a, b) => b.usersCount - a.usersCount);
+  } catch (error: any) {
+    throw new Error(handleSupabaseError(error));
+  }
+};
+
+// Obtenir les statistiques par catégorie
+export const getCategoriesStats = async (): Promise<Array<{
+  name: string;
+  icon: string;
+  color: string;
+  talentsCount: number;
+  postsCount: number;
+}>> => {
+  try {
+    // Récupérer les compétences depuis la table skills
+    const { data: skills, error: skillsError } = await supabase
+      .from('skills')
+      .select('category, user_id')
+      .limit(10000);
+
+    if (skillsError) {
+      console.error('Erreur lors de la récupération des skills:', skillsError);
+      // Continuer sans les skills si la table n'existe pas
+    }
+
+    const { data: posts, error: postsError } = await supabase
+      .from('posts')
+      .select('category')
+      .limit(10000);
+
+    if (postsError) {
+      console.error('Erreur lors de la récupération des posts:', postsError);
+    }
+
+    // Catégories par défaut avec couleurs
+    const categoryColors: Record<string, { icon: string; color: string }> = {
+      "Tech & Code": { icon: "Code", color: "#8b5cf6" },
+      "Design & Créa": { icon: "Palette", color: "#ec4899" },
+      "Marketing": { icon: "Briefcase", color: "#f59e0b" },
+      "Musique": { icon: "Music", color: "#10b981" },
+      "Art": { icon: "Sparkles", color: "#06b6d4" },
+      "Sport": { icon: "Dumbbell", color: "#ef4444" },
+      "Cuisine": { icon: "ChefHat", color: "#f97316" },
+      "Bricolage": { icon: "Wrench", color: "#6366f1" },
+    };
+
+    const categoryStats: Record<string, {
+      name: string;
+      icon: string;
+      color: string;
+      talentsCount: number;
+      postsCount: number;
+    }> = {};
+
+    // Compter les talents par catégorie (via la table skills)
+    if (skills) {
+      // Compter les utilisateurs uniques par catégorie
+      const talentsByCategory: Record<string, Set<string>> = {};
+      
+      skills.forEach(skill => {
+        const category = skill.category as string;
+        if (!talentsByCategory[category]) {
+          talentsByCategory[category] = new Set();
+        }
+        talentsByCategory[category].add(skill.user_id);
+      });
+
+      // Initialiser les stats pour chaque catégorie trouvée
+      Object.keys(talentsByCategory).forEach(category => {
+        if (!categoryStats[category]) {
+          categoryStats[category] = {
+            name: category,
+            icon: categoryColors[category]?.icon || "Tag",
+            color: categoryColors[category]?.color || "#8b5cf6",
+            talentsCount: 0,
+            postsCount: 0,
+          };
+        }
+        categoryStats[category].talentsCount = talentsByCategory[category].size;
+      });
+    }
+
+    // Mapper les catégories de l'enum aux noms affichés
+    const categoryNameMap: Record<string, string> = {
+      'cuisine': 'Cuisine',
+      'tech': 'Tech & Code',
+      'artisanat': 'Art',
+      'bricolage': 'Bricolage',
+      'mecanique': 'Mécanique',
+      'photographie': 'Photographie',
+      'couture': 'Couture',
+      'coiffure': 'Coiffure',
+      'education': 'Éducation',
+      'autre': 'Autre'
+    };
+
+    // Compter les posts par catégorie
+    if (posts) {
+      posts.forEach(post => {
+        if (post.category) {
+          const categoryName = post.category;
+          if (!categoryStats[categoryName]) {
+            categoryStats[categoryName] = {
+              name: categoryName,
+              icon: categoryColors[categoryName]?.icon || "Tag",
+              color: categoryColors[categoryName]?.color || "#8b5cf6",
+              talentsCount: 0,
+              postsCount: 0,
+            };
+          }
+          categoryStats[categoryName].postsCount++;
+        }
+      });
+    }
+
+    // Mapper les noms de catégories pour l'affichage
+    const result = Object.values(categoryStats).map(stat => ({
+      ...stat,
+      name: categoryNameMap[stat.name.toLowerCase()] || stat.name
+    }));
+
+    return result.sort((a, b) => (b.talentsCount + b.postsCount) - (a.talentsCount + a.postsCount));
+  } catch (error: any) {
+    console.error('Erreur dans getCategoriesStats:', error);
+    // Retourner un tableau vide au lieu de throw pour éviter de bloquer
+    return [];
+  }
+};
+
+// Obtenir les top talents (par rating)
+export const getTopTalents = async (limit: number = 10): Promise<Array<{
+  id: string;
+  name: string;
+  avatar: string;
+  rating: number;
+  reviewsCount: number;
+  category: string;
+  badges: string[];
+}>> => {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, avatar, rating, review_count, skills, verified')
+      .eq('user_type', 'talent')
+      .not('rating', 'is', null)
+      .order('rating', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    return users?.map(user => ({
+      id: user.id,
+      name: `${user.first_name} ${user.last_name}`,
+      avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.first_name}${user.last_name}`,
+      rating: user.rating || 0,
+      reviewsCount: user.review_count || 0,
+      category: Array.isArray(user.skills) && user.skills.length > 0 ? user.skills[0] : "Général",
+      badges: [
+        ...(user.verified ? ["verified"] : []),
+        ...(user.rating && user.rating >= 4.8 ? ["top"] : []),
+      ],
+    })) || [];
   } catch (error: any) {
     throw new Error(handleSupabaseError(error));
   }

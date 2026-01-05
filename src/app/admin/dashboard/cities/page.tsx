@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, MapPin, TrendingUp, Users, Building2 } from "lucide-react";
 import StatsCardsCarousel from "@/components/admin/StatsCardsCarousel";
 import { abidjanCommunes } from "@/lib/locationData";
@@ -24,27 +24,57 @@ interface Commune {
 }
 
 export default function CitiesPage() {
-  const [cities, setCities] = useState<City[]>([
-    { id: "1", name: "Abidjan", country: "Côte d'Ivoire", flag: "🇨🇮", usersCount: 456, talentsCount: 245, postsCount: 678, growth: 12 },
-    { id: "2", name: "Lagos", country: "Nigeria", flag: "🇳🇬", usersCount: 389, talentsCount: 198, postsCount: 534, growth: 18 },
-    { id: "3", name: "Accra", country: "Ghana", flag: "🇬🇭", usersCount: 298, talentsCount: 152, postsCount: 423, growth: 8 },
-    { id: "4", name: "Dakar", country: "Sénégal", flag: "🇸🇳", usersCount: 267, talentsCount: 134, postsCount: 389, growth: 15 },
-    { id: "5", name: "Nairobi", country: "Kenya", flag: "🇰🇪", usersCount: 234, talentsCount: 123, postsCount: 345, growth: 22 },
-    { id: "6", name: "Douala", country: "Cameroun", flag: "🇨🇲", usersCount: 189, talentsCount: 98, postsCount: 267, growth: 10 },
-    { id: "7", name: "Kinshasa", country: "RD Congo", flag: "🇨🇩", usersCount: 176, talentsCount: 87, postsCount: 234, growth: 14 },
-    { id: "8", name: "Casablanca", country: "Maroc", flag: "🇲🇦", usersCount: 156, talentsCount: 76, postsCount: 198, growth: 9 },
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [cities, setCities] = useState<City[]>([]);
+  const [abidjanCommunesData, setAbidjanCommunesData] = useState<Commune[]>([]);
 
-  // Mock data pour les communes d'Abidjan
-  const [abidjanCommunesData] = useState<Commune[]>([
-    { name: "Cocody", usersCount: 98, talentsCount: 56, postsCount: 145 },
-    { name: "Yopougon", usersCount: 87, talentsCount: 45, postsCount: 132 },
-    { name: "Abobo", usersCount: 76, talentsCount: 42, postsCount: 118 },
-    { name: "Marcory", usersCount: 65, talentsCount: 38, postsCount: 103 },
-    { name: "Adjamé", usersCount: 54, talentsCount: 32, postsCount: 89 },
-    { name: "Le Plateau", usersCount: 48, talentsCount: 28, postsCount: 76 },
-    { name: "Treichville", usersCount: 34, talentsCount: 21, postsCount: 55 },
-  ]);
+  // Charger les données depuis Supabase
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const { getCitiesStats } = await import("@/lib/supabase/admin.service");
+        const citiesData = await getCitiesStats();
+
+        // Transformer les données
+        const transformedCities: City[] = citiesData.map((city, index) => ({
+          id: (index + 1).toString(),
+          name: city.name,
+          country: city.country,
+          flag: city.flag,
+          usersCount: city.usersCount,
+          talentsCount: city.talentsCount,
+          postsCount: city.postsCount,
+          growth: city.growth,
+        }));
+
+        setCities(transformedCities);
+
+        // Pour les communes d'Abidjan, données par défaut
+        // TODO: Implémenter la récupération des communes depuis Supabase si nécessaire
+        setAbidjanCommunesData([
+          { name: "Cocody", usersCount: 98, talentsCount: 56, postsCount: 145 },
+          { name: "Yopougon", usersCount: 87, talentsCount: 45, postsCount: 132 },
+          { name: "Abobo", usersCount: 76, talentsCount: 42, postsCount: 118 },
+          { name: "Marcory", usersCount: 65, talentsCount: 38, postsCount: 103 },
+          { name: "Adjamé", usersCount: 54, talentsCount: 32, postsCount: 89 },
+          { name: "Le Plateau", usersCount: 48, talentsCount: 28, postsCount: 76 },
+          { name: "Treichville", usersCount: 34, talentsCount: 21, postsCount: 55 },
+        ]);
+      } catch (error) {
+        console.error('Erreur lors du chargement des villes:', error);
+        // En cas d'erreur, garder un tableau vide
+        setCities([
+          { id: "1", name: "Abidjan", country: "Côte d'Ivoire", flag: "🇨🇮", usersCount: 456, talentsCount: 245, postsCount: 678, growth: 12 },
+          { id: "2", name: "Lagos", country: "Nigeria", flag: "🇳🇬", usersCount: 389, talentsCount: 198, postsCount: 534, growth: 18 },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const sortedCities = [...cities].sort((a, b) => b.usersCount - a.usersCount);
   const abidjanCity = cities.find(c => c.name === "Abidjan");

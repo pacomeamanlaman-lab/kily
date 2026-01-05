@@ -723,7 +723,7 @@ function FeedPageContent() {
             <div data-tour="create-post">
               <CreatePostButton
                 userAvatar={currentUser?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400"}
-                userName={currentUser?.firstName || "Vous"}
+                userName={currentUser?.first_name || "Vous"}
               />
             </div>
           )}

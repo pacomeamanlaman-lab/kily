@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Filter,
@@ -37,67 +37,56 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<User[]>([]);
 
-  // Mock data
-  const mockUsers: User[] = [
-    {
-      id: "1",
-      name: "Amina Koné",
-      email: "amina.kone@example.com",
-      type: "talent",
-      city: "Abidjan",
-      status: "active",
-      joinedAt: "2024-01-15",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100",
-      stats: { posts: 45, followers: 234 }
-    },
-    {
-      id: "2",
-      name: "Kofi Mensah",
-      email: "kofi.mensah@example.com",
-      type: "talent",
-      city: "Accra",
-      status: "active",
-      joinedAt: "2024-02-20",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100",
-      stats: { posts: 32, followers: 189 }
-    },
-    {
-      id: "3",
-      name: "Sarah Dubois",
-      email: "sarah.dubois@company.com",
-      type: "recruiter",
-      city: "Dakar",
-      status: "active",
-      joinedAt: "2024-03-10",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100",
-      stats: { posts: 12, followers: 45 }
-    },
-    {
-      id: "4",
-      name: "Ibrahim Diallo",
-      email: "ibrahim.diallo@example.com",
-      type: "talent",
-      city: "Dakar",
-      status: "banned",
-      joinedAt: "2023-12-05",
-      avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100",
-      stats: { posts: 8, followers: 23 }
-    },
-    {
-      id: "5",
-      name: "Fatou Sow",
-      email: "fatou.sow@example.com",
-      type: "neighbor",
-      city: "Lagos",
-      status: "active",
-      joinedAt: "2024-04-01",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100",
-      stats: { posts: 5, followers: 12 }
-    },
-  ];
+  // Charger les utilisateurs depuis Supabase
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setLoading(true);
+        const { getAllUsers } = await import("@/lib/supabase/users.service");
+        const { loadPosts } = await import("@/lib/supabase/posts.service");
+        const { loadFollows } = await import("@/lib/supabase/follows.service");
+        
+        const allUsers = await getAllUsers();
+        const allPosts = await loadPosts(1000);
+        const allFollows = await loadFollows();
 
-  const filteredUsers = mockUsers.filter((user) => {
+        // Transformer les utilisateurs Supabase en format User
+        const transformedUsers: User[] = allUsers.map(user => {
+          const userPosts = allPosts.filter(p => p.author_id === user.id);
+          const userFollowers = allFollows.filter(f => f.followed_id === user.id).length;
+
+          return {
+            id: user.id,
+            name: `${user.first_name} ${user.last_name}`,
+            email: user.email,
+            type: user.user_type,
+            city: user.city || "Non spécifié",
+            status: user.verified ? "active" : "active", // Mapper "pending" vers "active" pour correspondre à l'interface
+            joinedAt: new Date(user.created_at).toISOString().split('T')[0],
+            avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.first_name}${user.last_name}`,
+            stats: {
+              posts: userPosts.length,
+              followers: userFollowers
+            }
+          };
+        });
+
+        setUsers(transformedUsers);
+      } catch (error) {
+        console.error('Erreur lors du chargement des utilisateurs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
+
+
+  const filteredUsers = users.filter((user) => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.city.toLowerCase().includes(searchTerm.toLowerCase());
@@ -138,6 +127,17 @@ export default function UsersPage() {
     };
     return badges[status as keyof typeof badges];
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Chargement des utilisateurs...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">

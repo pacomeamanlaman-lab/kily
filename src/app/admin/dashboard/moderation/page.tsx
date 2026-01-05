@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AlertTriangle,
   CheckCircle,
@@ -45,107 +45,83 @@ export default function ModerationPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
   const [expandedActions, setExpandedActions] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [reports, setReports] = useState<Report[]>([]);
 
-  // Mock data
-  const mockReports: Report[] = [
-    {
-      id: "1",
-      type: "content",
-      contentType: "post",
-      reportedItem: {
-        id: "p1",
-        title: "Arnaque - Ne pas faire confiance",
-        author: {
-          name: "Ibrahim Diallo",
-          avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100"
-        },
-        thumbnail: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=300"
-      },
-      reportedBy: {
-        name: "Amina Koné",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100"
-      },
-      reason: "Spam ou arnaque",
-      description: "Ce post contient des informations trompeuses et tente d'arnaquer les utilisateurs",
-      reportCount: 5,
-      status: "pending",
-      createdAt: "2024-06-25T10:30:00"
-    },
-    {
-      id: "2",
-      type: "content",
-      contentType: "video",
-      reportedItem: {
-        id: "v1",
-        title: "Contenu inapproprié",
-        author: {
-          name: "User Suspect",
-          avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100"
-        },
-        thumbnail: "https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=300"
-      },
-      reportedBy: {
-        name: "Sarah Mensah",
-        avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100"
-      },
-      reason: "Contenu inapproprié",
-      description: "Vidéo contenant du contenu violent ou choquant",
-      reportCount: 3,
-      status: "pending",
-      createdAt: "2024-06-24T15:20:00"
-    },
-    {
-      id: "3",
-      type: "user",
-      reportedItem: {
-        id: "u1",
-        author: {
-          name: "Fake Account",
-          avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100"
-        }
-      },
-      reportedBy: {
-        name: "Kofi Mensah",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100"
-      },
-      reason: "Usurpation d'identité",
-      description: "Ce compte se fait passer pour une autre personne",
-      reportCount: 2,
-      status: "pending",
-      createdAt: "2024-06-23T09:15:00"
-    },
-    {
-      id: "4",
-      type: "comment",
-      reportedItem: {
-        id: "c1",
-        title: "Commentaire haineux sous post de Amina",
-        author: {
-          name: "User Toxique",
-          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100"
-        }
-      },
-      reportedBy: {
-        name: "Fatou Sow",
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100"
-      },
-      reason: "Harcèlement",
-      description: "Commentaire insultant et haineux",
-      reportCount: 7,
-      status: "approved",
-      createdAt: "2024-06-20T14:00:00"
-    }
-  ];
+  // Charger les signalements depuis Supabase
+  useEffect(() => {
+    const loadReports = async () => {
+      try {
+        setLoading(true);
+        const { getAllReports } = await import("@/lib/supabase/admin.service");
+        const reportsData = await getAllReports();
+        
+        // Transformer les données Supabase en format Report
+        const transformedReports: Report[] = reportsData.map(report => {
+          // Déterminer le type de contenu signalé
+          let type: "content" | "user" | "comment" = "content";
+          let contentType: "post" | "video" | "story" | undefined = undefined;
+          
+          if (report.reported_item_type === 'post' || report.reported_item_type === 'video' || report.reported_item_type === 'story') {
+            type = "content";
+            contentType = report.reported_item_type as "post" | "video" | "story";
+          } else if (report.reported_item_type === 'user') {
+            type = "user";
+          } else if (report.reported_item_type === 'comment') {
+            type = "comment";
+          }
 
-  const filteredReports = mockReports.filter((report) => {
+          return {
+            id: report.id,
+            type,
+            contentType,
+            reportedItem: {
+              id: report.reported_item_id,
+              title: report.description?.substring(0, 50) || "Contenu signalé",
+              author: report.reporter ? {
+                name: `${report.reporter.first_name} ${report.reporter.last_name}`,
+                avatar: report.reporter.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=user"
+              } : {
+                name: "Utilisateur",
+                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=user"
+              },
+            },
+            reportedBy: report.reporter ? {
+              name: `${report.reporter.first_name} ${report.reporter.last_name}`,
+              avatar: report.reporter.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=reporter"
+            } : {
+              name: "Utilisateur",
+              avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=user"
+            },
+            reason: report.reason || "Non spécifié",
+            description: report.description || "",
+            reportCount: 1, // TODO: Compter les signalements multiples pour le même contenu
+            status: report.status as "pending" | "approved" | "rejected",
+            createdAt: report.created_at,
+          };
+        });
+
+        setReports(transformedReports);
+      } catch (error) {
+        console.error('Erreur lors du chargement des signalements:', error);
+        // En cas d'erreur (table n'existe pas), on garde un tableau vide
+        setReports([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadReports();
+  }, []);
+  const filteredReports = reports.filter((report) => {
     const matchesStatus = filterStatus === "all" || report.status === filterStatus;
     const matchesType = filterType === "all" || report.type === filterType;
     return matchesStatus && matchesType;
   });
 
-  const pendingCount = mockReports.filter(r => r.status === "pending").length;
-  const approvedCount = mockReports.filter(r => r.status === "approved").length;
-  const rejectedCount = mockReports.filter(r => r.status === "rejected").length;
+  const pendingCount = reports.filter(r => r.status === "pending").length;
+  const approvedCount = reports.filter(r => r.status === "approved").length;
+  const rejectedCount = reports.filter(r => r.status === "rejected").length;
 
   const getTypeIcon = (type: string, contentType?: string) => {
     if (type === "user") return <User className="w-4 h-4" />;
@@ -221,7 +197,7 @@ export default function ModerationPage() {
             bgIcon: "bg-violet-500/20",
             textIcon: "text-violet-400",
             label: "Total",
-            value: mockReports.length.toString(),
+            value: reports.length.toString(),
           },
         ]}
       />

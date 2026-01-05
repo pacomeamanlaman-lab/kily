@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Star,
   Award,
@@ -36,6 +36,40 @@ interface TopTalent {
 }
 
 export default function ReputationPage() {
+  const [loading, setLoading] = useState(true);
+  const [topTalents, setTopTalents] = useState<TopTalent[]>([]);
+
+  // Charger les top talents depuis Supabase
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const { getTopTalents } = await import("@/lib/supabase/admin.service");
+        const talentsData = await getTopTalents(10);
+
+        // Transformer les données
+        const transformedTalents: TopTalent[] = talentsData.map(talent => ({
+          id: talent.id,
+          name: talent.name,
+          avatar: talent.avatar,
+          rating: talent.rating,
+          reviewsCount: talent.reviewsCount,
+          category: talent.category,
+          badges: talent.badges,
+        }));
+
+        setTopTalents(transformedTalents);
+      } catch (error) {
+        console.error('Erreur lors du chargement des top talents:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Badges statiques (peuvent être gérés depuis la DB plus tard)
   const [badges] = useState<Badge[]>([
     {
       id: "1",
@@ -93,54 +127,6 @@ export default function ReputationPage() {
     }
   ]);
 
-  const [topTalents] = useState<TopTalent[]>([
-    {
-      id: "1",
-      name: "Amina Koné",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100",
-      rating: 4.9,
-      reviewsCount: 145,
-      category: "Cuisine",
-      badges: ["1", "2", "3"]
-    },
-    {
-      id: "2",
-      name: "Kofi Mensah",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100",
-      rating: 4.8,
-      reviewsCount: 132,
-      category: "Tech & Code",
-      badges: ["1", "3", "4"]
-    },
-    {
-      id: "3",
-      name: "Sarah Mensah",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100",
-      rating: 4.9,
-      reviewsCount: 98,
-      category: "Design & Créa",
-      badges: ["1", "2", "5"]
-    },
-    {
-      id: "4",
-      name: "Ibrahim Diallo",
-      avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100",
-      rating: 4.7,
-      reviewsCount: 87,
-      category: "Bricolage",
-      badges: ["1", "4"]
-    },
-    {
-      id: "5",
-      name: "Fatou Sow",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100",
-      rating: 4.8,
-      reviewsCount: 76,
-      category: "Marketing",
-      badges: ["1", "5"]
-    }
-  ]);
-
   const getIconComponent = (iconName: string) => {
     const icons: any = {
       CheckCircle,
@@ -157,6 +143,19 @@ export default function ReputationPage() {
 
   const totalBadgesAwarded = badges.reduce((sum, badge) => sum + badge.usersCount, 0);
   const averageRating = (topTalents.reduce((sum, talent) => sum + talent.rating, 0) / topTalents.length).toFixed(1);
+
+  const displayTopTalents = topTalents;
+
+  if (loading) {
+    return (
+      <div className="p-6 min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Chargement de la réputation...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -288,7 +287,7 @@ export default function ReputationPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10">
-              {topTalents.map((talent, index) => (
+              {displayTopTalents.map((talent, index) => (
                 <tr key={talent.id} className="hover:bg-white/5 transition-colors">
                   {/* Rank */}
                   <td className="px-6 py-4">

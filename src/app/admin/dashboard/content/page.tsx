@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   FileText,
@@ -38,80 +38,112 @@ export default function ContentPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
+  const [content, setContent] = useState<Content[]>([]);
 
-  // Mock data
-  const mockContent: Content[] = [
-    {
-      id: "1",
-      type: "post",
-      title: "Les secrets d'une bonne pâtisserie africaine",
-      author: {
-        name: "Amina Koné",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100"
-      },
-      category: "Cuisine",
-      likes: 234,
-      comments: 45,
-      views: 1200,
-      reports: 0,
-      publishedAt: "2024-06-15",
-      thumbnail: "https://images.unsplash.com/photo-1464349153735-7db50ed83c84?w=300"
-    },
-    {
-      id: "2",
-      type: "video",
-      title: "Développer une app mobile en 30min",
-      author: {
-        name: "Kofi Mensah",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100"
-      },
-      category: "Tech & Code",
-      likes: 567,
-      comments: 89,
-      views: 3400,
-      reports: 0,
-      publishedAt: "2024-06-20",
-      thumbnail: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=300"
-    },
-    {
-      id: "3",
-      type: "story",
-      title: "Story du jour - Design UI/UX",
-      author: {
-        name: "Sarah Mensah",
-        avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100"
-      },
-      category: "Design & Créa",
-      likes: 123,
-      comments: 12,
-      views: 890,
-      reports: 0,
-      publishedAt: "2024-06-25",
-      thumbnail: "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=300"
-    },
-    {
-      id: "4",
-      type: "post",
-      title: "Réparer une fuite d'eau en 5 étapes",
-      author: {
-        name: "Ibrahim Diallo",
-        avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100"
-      },
-      category: "Bricolage",
-      likes: 189,
-      comments: 34,
-      views: 980,
-      reports: 2,
-      publishedAt: "2024-06-10"
-    }
-  ];
+  // Charger le contenu depuis Supabase
+  useEffect(() => {
+    const loadContent = async () => {
+      try {
+        setLoading(true);
+        const { loadPosts } = await import("@/lib/supabase/posts.service");
+        const { loadVideos } = await import("@/lib/supabase/videos.service");
+        const { loadStories } = await import("@/lib/supabase/stories.service");
+        const { getUserById } = await import("@/lib/supabase/users.service");
 
-  const filteredContent = mockContent.filter((content) => {
-    const matchesSearch = content.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      content.author.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const [posts, videos, stories] = await Promise.all([
+          loadPosts(1000),
+          loadVideos(1000),
+          loadStories(),
+        ]);
 
-    const matchesType = filterType === "all" || content.type === filterType;
-    const matchesCategory = filterCategory === "all" || content.category === filterCategory;
+        // Transformer les posts
+        const postsContent: Content[] = await Promise.all(
+          posts.map(async (post) => {
+            const author = post.author || await getUserById(post.author_id);
+            return {
+              id: post.id,
+              type: "post" as const,
+              title: post.content.substring(0, 50) + (post.content.length > 50 ? "..." : ""),
+              author: {
+                name: author ? `${author.first_name} ${author.last_name}` : "Utilisateur",
+                avatar: author?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=user",
+              },
+              category: post.category || "Général",
+              likes: post.likes_count || 0,
+              comments: post.comments_count || 0,
+              views: 0, // TODO: Ajouter views_count dans la table posts
+              reports: 0, // TODO: Récupérer depuis la table reports
+              publishedAt: new Date(post.created_at).toISOString().split('T')[0],
+              thumbnail: post.images?.[0] || undefined,
+            };
+          })
+        );
+
+        // Transformer les vidéos
+        const videosContent: Content[] = await Promise.all(
+          videos.map(async (video) => {
+            const author = video.author || await getUserById(video.author_id);
+            return {
+              id: video.id,
+              type: "video" as const,
+              title: video.title,
+              author: {
+                name: author ? `${author.first_name} ${author.last_name}` : "Utilisateur",
+                avatar: author?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=user",
+              },
+              category: video.category || "Général",
+              likes: video.likes_count || 0,
+              comments: video.comments_count || 0,
+              views: parseInt(video.views_count || "0"),
+              reports: 0, // TODO: Récupérer depuis la table reports
+              publishedAt: new Date(video.created_at).toISOString().split('T')[0],
+              thumbnail: video.thumbnail,
+            };
+          })
+        );
+
+        // Transformer les stories
+        const storiesContent: Content[] = await Promise.all(
+          stories.map(async (story) => {
+            const author = story.author || await getUserById(story.author_id);
+            return {
+              id: story.id,
+              type: "story" as const,
+              title: `Story de ${author ? `${author.first_name} ${author.last_name}` : "Utilisateur"}`,
+              author: {
+                name: author ? `${author.first_name} ${author.last_name}` : "Utilisateur",
+                avatar: author?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=user",
+              },
+              category: "Story",
+              likes: 0,
+              comments: 0,
+              views: 0,
+              reports: 0,
+              publishedAt: new Date(story.created_at).toISOString().split('T')[0],
+              thumbnail: story.thumbnail,
+            };
+          })
+        );
+
+        setContent([...postsContent, ...videosContent, ...storiesContent]);
+      } catch (error) {
+        console.error('Erreur lors du chargement du contenu:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadContent();
+  }, []);
+
+
+  const filteredContent = content.filter((contentItem) => {
+    const matchesSearch = contentItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contentItem.author.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesType = filterType === "all" || contentItem.type === filterType;
+    const matchesCategory = filterCategory === "all" || contentItem.category === filterCategory;
 
     return matchesSearch && matchesType && matchesCategory;
   });
@@ -138,6 +170,22 @@ export default function ContentPage() {
     return badges[type as keyof typeof badges];
   };
 
+  // Calculer les stats depuis le contenu chargé
+  const postsCount = content.filter(c => c.type === 'post').length;
+  const videosCount = content.filter(c => c.type === 'video').length;
+  const storiesCount = content.filter(c => c.type === 'story').length;
+
+  if (loading) {
+    return (
+      <div className="p-6 min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Chargement du contenu...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6">
       {/* Header */}
@@ -157,7 +205,7 @@ export default function ContentPage() {
             bgIcon: "bg-pink-500/20",
             textIcon: "text-pink-400",
             label: "Posts",
-            value: "1,234",
+            value: postsCount.toLocaleString(),
           },
           {
             id: "videos",
@@ -167,7 +215,7 @@ export default function ContentPage() {
             bgIcon: "bg-orange-500/20",
             textIcon: "text-orange-400",
             label: "Vidéos",
-            value: "567",
+            value: videosCount.toLocaleString(),
           },
           {
             id: "stories",
@@ -177,7 +225,7 @@ export default function ContentPage() {
             bgIcon: "bg-violet-500/20",
             textIcon: "text-violet-400",
             label: "Stories",
-            value: "892",
+            value: storiesCount.toLocaleString(),
           },
           {
             id: "reports",

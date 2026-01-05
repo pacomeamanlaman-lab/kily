@@ -108,7 +108,7 @@ export default function PostCard({ post }: PostCardProps) {
       commentText,
       {
         name: getUserDisplayName(currentUser),
-        username: `@${currentUser.firstName.toLowerCase()}${currentUser.lastName.toLowerCase()}`,
+        username: `@${currentUser.first_name.toLowerCase()}${currentUser.last_name.toLowerCase()}`,
         avatar: currentUser.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
       }
     );
