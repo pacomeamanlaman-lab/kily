@@ -8,6 +8,9 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
 
+  // Utiliser l'origine de la requête pour construire les URLs de redirection
+  const origin = requestUrl.origin;
+
   if (code) {
     // Échanger le code OAuth contre une session
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
@@ -31,25 +34,25 @@ export async function GET(request: NextRequest) {
         // Si toujours pas de profil, rediriger vers onboarding pour compléter le profil
         if (!user) {
           console.warn('Profil utilisateur non trouvé après OAuth, redirection vers onboarding');
-          return NextResponse.redirect(new URL('/onboarding', request.url));
+          return NextResponse.redirect(new URL('/onboarding', origin));
         }
         
         const redirectPath = getRedirectPath(user);
         
         // Si l'utilisateur n'a pas complété l'onboarding, rediriger vers onboarding
         if (!user.has_completed_onboarding) {
-          return NextResponse.redirect(new URL('/onboarding', request.url));
+          return NextResponse.redirect(new URL('/onboarding', origin));
         }
         
-        return NextResponse.redirect(new URL(redirectPath, request.url));
+        return NextResponse.redirect(new URL(redirectPath, origin));
       } catch (error) {
         console.error('Error getting user for redirect:', error);
         // En cas d'erreur, rediriger vers onboarding pour compléter le profil
-        return NextResponse.redirect(new URL('/onboarding', request.url));
+        return NextResponse.redirect(new URL('/onboarding', origin));
       }
     }
   }
 
   // Redirection par défaut vers le feed
-  return NextResponse.redirect(new URL('/feed', request.url));
+  return NextResponse.redirect(new URL('/feed', origin));
 }
