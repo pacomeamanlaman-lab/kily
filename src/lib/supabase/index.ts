@@ -11,7 +11,26 @@ export * from './auth.service';
 export * from './users.service';
 
 // Services Admin
-export * from './admin.service';
+export {
+  isAdmin,
+  isUserAdmin,
+  getAllAdmins,
+  promoteToAdmin,
+  demoteFromAdmin,
+  createUser as createUserAdmin,
+  getAdminStats,
+  getUserGrowthData,
+  getContentData,
+  getUserTypeData,
+  getTopCitiesData,
+  getAllConversations,
+  getMessagesData,
+  getMessagesHourlyData,
+  getCitiesStats,
+  getCategoriesStats,
+  getTopTalents,
+  getAllReports,
+} from './admin.service';
 
 // Services Posts
 export * from './posts.service';

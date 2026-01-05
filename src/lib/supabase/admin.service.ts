@@ -99,6 +99,53 @@ export const demoteFromAdmin = async (userEmail: string): Promise<{ success: boo
   }
 };
 
+// Créer un nouvel utilisateur (nécessite d'être admin)
+// Utilise une API route server-side pour créer l'utilisateur avec la clé service
+export const createUser = async (userData: {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  user_type: "talent" | "recruiter" | "neighbor";
+  city?: string;
+  is_admin?: boolean;
+}): Promise<{ success: boolean; error?: string; userId?: string }> => {
+  try {
+    // Vérifier que l'utilisateur actuel est admin
+    const currentUserIsAdmin = await isAdmin();
+    if (!currentUserIsAdmin) {
+      return { success: false, error: 'Vous devez être administrateur pour effectuer cette action' };
+    }
+
+    // Obtenir le token de session actuel
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { success: false, error: 'Vous devez être connecté pour effectuer cette action' };
+    }
+
+    // Appeler l'API route server-side
+    const response = await fetch('/api/admin/create-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(userData),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: result.error || 'Erreur lors de la création de l\'utilisateur' };
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error('Erreur lors de la création de l\'utilisateur:', error);
+    return { success: false, error: error.message || 'Une erreur inattendue est survenue' };
+  }
+};
+
 // Obtenir les statistiques admin (nombre d'utilisateurs, posts, etc.)
 export const getAdminStats = async (): Promise<{
   totalUsers: number;

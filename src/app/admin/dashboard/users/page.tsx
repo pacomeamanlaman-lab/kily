@@ -15,8 +15,10 @@ import {
   Briefcase,
   Users as UsersIcon,
   MapPin,
-  Calendar
+  Calendar,
+  UserPlus
 } from "lucide-react";
+import AddUserModal from "@/components/admin/AddUserModal";
 
 interface User {
   id: string;
@@ -39,6 +41,7 @@ export default function UsersPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
 
   // Charger les utilisateurs depuis Supabase
   useEffect(() => {
@@ -85,6 +88,45 @@ export default function UsersPage() {
     loadUsers();
   }, []);
 
+  const handleUserAdded = async () => {
+    // Recharger la liste des utilisateurs après ajout
+    try {
+      setLoading(true);
+      const { getAllUsers } = await import("@/lib/supabase/users.service");
+      const { loadPosts } = await import("@/lib/supabase/posts.service");
+      const { loadFollows } = await import("@/lib/supabase/follows.service");
+      
+      const allUsers = await getAllUsers();
+      const allPosts = await loadPosts(1000);
+      const allFollows = await loadFollows();
+
+      const transformedUsers: User[] = allUsers.map(user => {
+        const userPosts = allPosts.filter(p => p.author_id === user.id);
+        const userFollowers = allFollows.filter(f => f.followed_id === user.id).length;
+
+        return {
+          id: user.id,
+          name: `${user.first_name} ${user.last_name}`,
+          email: user.email,
+          type: user.user_type,
+          city: user.city || "Non spécifié",
+          status: user.verified ? "active" : "active",
+          joinedAt: new Date(user.created_at).toISOString().split('T')[0],
+          avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.first_name}${user.last_name}`,
+          stats: {
+            posts: userPosts.length,
+            followers: userFollowers
+          }
+        };
+      });
+
+      setUsers(transformedUsers);
+    } catch (error) {
+      console.error('Erreur lors du rechargement des utilisateurs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -142,9 +184,19 @@ export default function UsersPage() {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Gestion des Utilisateurs</h1>
-        <p className="text-gray-400">Gérez tous les utilisateurs de la plateforme</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">Gestion des Utilisateurs</h1>
+          <p className="text-gray-400">Gérez tous les utilisateurs de la plateforme</p>
+        </div>
+        <button
+          onClick={() => setShowAddUserModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-violet-500 hover:bg-violet-600 rounded-lg text-white font-medium transition-colors"
+        >
+          <UserPlus className="w-5 h-5" />
+          <span className="hidden sm:inline">Ajouter un utilisateur</span>
+          <span className="sm:hidden">Ajouter</span>
+        </button>
       </div>
 
       {/* Filters */}
@@ -361,6 +413,13 @@ export default function UsersPage() {
           Aucun utilisateur trouvé avec ces critères
         </div>
       )}
+
+      {/* Add User Modal */}
+      <AddUserModal
+        isOpen={showAddUserModal}
+        onClose={() => setShowAddUserModal(false)}
+        onUserAdded={handleUserAdded}
+      />
     </div>
   );
 }
