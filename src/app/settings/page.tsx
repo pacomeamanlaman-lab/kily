@@ -85,10 +85,12 @@ function SettingsPageContent() {
     try {
       const { logout } = await import("@/lib/supabase/auth.service");
       await logout();
-      router.push("/login");
+      // Forcer le rechargement pour s'assurer que la session est bien supprimée
+      window.location.href = "/login";
     } catch (error) {
       console.error('Error logging out:', error);
-      router.push("/login");
+      // En cas d'erreur, forcer quand même la redirection
+      window.location.href = "/login";
     }
   };
 

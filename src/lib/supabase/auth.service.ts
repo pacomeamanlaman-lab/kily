@@ -51,9 +51,22 @@ export const login = async (email: string, password: string): Promise<{ success:
 // Déconnexion
 export const logout = async (): Promise<void> => {
   try {
-    await supabase.auth.signOut();
+    // Déconnexion de Supabase
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Erreur Supabase lors de la déconnexion:', error);
+      throw error;
+    }
+    
+    // Nettoyer le localStorage au cas où
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('kily_logged_in');
+      localStorage.removeItem('kily_user_email');
+      localStorage.removeItem('kily_user_data');
+    }
   } catch (error) {
     console.error('Erreur lors de la déconnexion:', error);
+    throw error;
   }
 };
 

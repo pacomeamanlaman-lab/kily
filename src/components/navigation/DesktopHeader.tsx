@@ -77,8 +77,16 @@ export default function DesktopHeader({ unreadNotifications = 5, disableAutoHide
   };
 
   const handleLogout = async () => {
-    await logout();
-    router.push("/login");
+    try {
+      setShowProfileMenu(false);
+      await logout();
+      // Forcer le rechargement pour s'assurer que la session est bien supprimée
+      window.location.href = "/login";
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+      // En cas d'erreur, forcer quand même la redirection
+      window.location.href = "/login";
+    }
   };
 
   return (
