@@ -20,6 +20,7 @@ import {
   RotateCcw
 } from "lucide-react";
 import AddUserModal from "@/components/admin/AddUserModal";
+import EditUserModal from "@/components/admin/EditUserModal";
 import { useRouter } from "next/navigation";
 import { banUser, suspendUser, activateUser, deleteUserAdmin, updateUserAdmin } from "@/lib/supabase/admin.service";
 
@@ -46,6 +47,9 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isViewMode, setIsViewMode] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     type: "ban" | "suspend" | "delete" | "activate";
@@ -70,11 +74,14 @@ export default function UsersPage() {
           const userPosts = allPosts.filter(p => p.author_id === user.id);
           const userFollowers = allFollows.filter(f => f.followed_id === user.id).length;
 
+          // Debug: vérifier le type d'utilisateur
+          console.log(`User ${user.email}: user_type =`, user.user_type, typeof user.user_type);
+
           return {
             id: user.id,
             name: `${user.first_name} ${user.last_name}`,
             email: user.email,
-            type: user.user_type as "talent" | "recruiter" | "neighbor",
+            type: (user.user_type || "talent") as "talent" | "recruiter" | "neighbor",
             city: user.city || "Non spécifié",
             status: (user.status || "active") as "active" | "banned" | "suspended",
             joinedAt: new Date(user.created_at).toISOString().split('T')[0],
@@ -180,13 +187,62 @@ export default function UsersPage() {
   };
 
   // Handlers pour les actions
-  const handleViewProfile = (userId: string) => {
-    router.push(`/profile/${userId}`);
+  const handleViewProfile = (user: User) => {
+    setEditingUser(user);
+    setIsViewMode(true);
+    setShowEditUserModal(true);
   };
 
   const handleEdit = (user: User) => {
-    // TODO: Ouvrir un modal d'édition
-    alert(`Édition de ${user.name} - Fonctionnalité à venir`);
+    setEditingUser(user);
+    setIsViewMode(false);
+    setShowEditUserModal(true);
+  };
+
+  const handleUserUpdated = async () => {
+    // Recharger les données de l'utilisateur édité depuis Supabase
+    if (editingUser) {
+      try {
+        const { getAllUsers } = await import("@/lib/supabase/users.service");
+        const { loadPosts } = await import("@/lib/supabase/posts.service");
+        const { loadFollows } = await import("@/lib/supabase/follows.service");
+        
+        const allUsers = await getAllUsers();
+        const allPosts = await loadPosts(1000);
+        const allFollows = await loadFollows();
+
+        // Trouver l'utilisateur mis à jour
+        const updatedUser = allUsers.find(u => u.id === editingUser.id);
+        if (updatedUser) {
+          const userPosts = allPosts.filter(p => p.author_id === updatedUser.id);
+          const userFollowers = allFollows.filter(f => f.followed_id === updatedUser.id).length;
+
+          const transformedUser: User = {
+            id: updatedUser.id,
+            name: `${updatedUser.first_name} ${updatedUser.last_name}`,
+            email: updatedUser.email,
+            type: updatedUser.user_type as "talent" | "recruiter" | "neighbor",
+            city: updatedUser.city || "Non spécifié",
+            status: (updatedUser.status || "active") as "active" | "banned" | "suspended",
+            joinedAt: new Date(updatedUser.created_at).toISOString().split('T')[0],
+            avatar: updatedUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${updatedUser.first_name}${updatedUser.last_name}`,
+            stats: {
+              posts: userPosts.length,
+              followers: userFollowers
+            }
+          };
+
+          // Mettre à jour localement l'utilisateur dans la liste
+          setUsers(prevUsers => 
+            prevUsers.map(u => u.id === transformedUser.id ? transformedUser : u)
+          );
+        }
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour:', error);
+        // En cas d'erreur, recharger toute la liste
+        await handleUserAdded();
+      }
+    }
   };
 
   const handleBan = (user: User) => {
@@ -209,6 +265,18 @@ export default function UsersPage() {
 
   const handleDelete = (user: User) => {
     setConfirmAction({ type: "delete", user });
+  };
+
+  // Mettre à jour localement un utilisateur dans la liste (sans recharger)
+  const updateUserInList = (userId: string, updates: Partial<User>) => {
+    setUsers(prevUsers => 
+      prevUsers.map(u => u.id === userId ? { ...u, ...updates } : u)
+    );
+  };
+
+  // Retirer un utilisateur de la liste (pour la suppression)
+  const removeUserFromList = (userId: string) => {
+    setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
   };
 
   const confirmActionHandler = async () => {
@@ -240,13 +308,31 @@ export default function UsersPage() {
         // Fermer le modal immédiatement
         setConfirmAction(null);
         setActionLoading(null);
-        // Recharger les utilisateurs
-        await handleUserAdded();
+        
+        // Mettre à jour localement la liste APRÈS avoir fermé le modal
+        switch (type) {
+          case "ban":
+            updateUserInList(user.id, { status: "banned" });
+            break;
+          case "suspend":
+            updateUserInList(user.id, { status: "suspended" });
+            break;
+          case "delete":
+            removeUserFromList(user.id);
+            break;
+          case "activate":
+            updateUserInList(user.id, { status: "active" });
+            break;
+        }
       } else {
+        // En cas d'erreur, fermer le modal et réinitialiser le loading
+        setConfirmAction(null);
         setActionLoading(null);
         alert(`Erreur: ${result.error}`);
       }
     } catch (error: any) {
+      // En cas d'exception, fermer le modal et réinitialiser le loading
+      setConfirmAction(null);
       setActionLoading(null);
       console.error('Erreur lors de l\'action:', error);
       alert(`Erreur: ${error.message || 'Une erreur est survenue'}`);
@@ -397,7 +483,7 @@ export default function UsersPage() {
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
                     <button
-                      onClick={() => handleViewProfile(user.id)}
+                      onClick={() => handleViewProfile(user)}
                       className="p-2 hover:bg-violet-500/10 rounded-lg transition-colors cursor-pointer"
                       title="Voir profil"
                     >
@@ -405,10 +491,10 @@ export default function UsersPage() {
                     </button>
                     <button
                       onClick={() => handleEdit(user)}
-                      className="p-2 hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer"
+                      className="p-2 hover:bg-violet-500/10 rounded-lg transition-colors cursor-pointer"
                       title="Éditer"
                     >
-                      <Edit className="w-4 h-4 text-blue-400" />
+                      <Edit className="w-4 h-4 text-violet-400" />
                     </button>
                     <button
                       onClick={() => user.status === "banned" ? handleBan(user) : handleSuspend(user)}
@@ -435,10 +521,10 @@ export default function UsersPage() {
                     <button
                       onClick={() => handleDelete(user)}
                       disabled={actionLoading === user.id}
-                      className="p-2 hover:bg-gray-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                      className="p-2 hover:bg-violet-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                       title="Supprimer"
                     >
-                      <Trash2 className="w-4 h-4 text-gray-400" />
+                      <Trash2 className="w-4 h-4 text-violet-400" />
                     </button>
                   </div>
                 </td>
@@ -504,7 +590,7 @@ export default function UsersPage() {
             {/* Actions */}
             <div className="flex items-center gap-2 pt-3 border-t border-white/10">
               <button
-                onClick={() => handleViewProfile(user.id)}
+                onClick={() => handleViewProfile(user)}
                 className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 transition-all text-sm"
               >
                 <Eye className="w-4 h-4" />
@@ -562,6 +648,21 @@ export default function UsersPage() {
         isOpen={showAddUserModal}
         onClose={() => setShowAddUserModal(false)}
         onUserAdded={handleUserAdded}
+      />
+
+      <EditUserModal
+        isOpen={showEditUserModal}
+        onClose={() => {
+          setShowEditUserModal(false);
+          setEditingUser(null);
+          setIsViewMode(false);
+        }}
+        user={editingUser}
+        onUserUpdated={handleUserUpdated}
+        readOnly={isViewMode}
+        onEdit={() => {
+          setIsViewMode(false);
+        }}
       />
 
       {/* Confirmation Modal */}
