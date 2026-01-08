@@ -9,7 +9,8 @@
       "Bash(npm run build:*)",
       "Bash(git restore:*)",
       "Bash(psql:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
