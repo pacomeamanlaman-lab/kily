@@ -79,3 +79,6 @@ COMMENT ON COLUMN users.is_admin IS 'Indique si l''utilisateur est un administra
 COMMENT ON FUNCTION promote_to_admin IS 'Fonction pour promouvoir un utilisateur en administrateur (nécessite les droits appropriés)';
 COMMENT ON FUNCTION demote_from_admin IS 'Fonction pour retirer les droits administrateur d''un utilisateur (nécessite les droits appropriés)';
 
+
+
+

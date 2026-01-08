@@ -19,6 +19,8 @@ import {
   UserPlus
 } from "lucide-react";
 import AddUserModal from "@/components/admin/AddUserModal";
+import { useRouter } from "next/navigation";
+import { banUser, suspendUser, activateUser, deleteUserAdmin, updateUserAdmin } from "@/lib/supabase/admin.service";
 
 interface User {
   id: string;
@@ -36,12 +38,18 @@ interface User {
 }
 
 export default function UsersPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    type: "ban" | "suspend" | "delete" | "activate";
+    user: User | null;
+  } | null>(null);
 
   // Charger les utilisateurs depuis Supabase
   useEffect(() => {
@@ -65,9 +73,9 @@ export default function UsersPage() {
             id: user.id,
             name: `${user.first_name} ${user.last_name}`,
             email: user.email,
-            type: user.user_type,
+            type: user.user_type as "talent" | "recruiter" | "neighbor",
             city: user.city || "Non spécifié",
-            status: user.verified ? "active" : "active", // Mapper "pending" vers "active" pour correspondre à l'interface
+            status: (user.status || "active") as "active" | "banned" | "suspended",
             joinedAt: new Date(user.created_at).toISOString().split('T')[0],
             avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.first_name}${user.last_name}`,
             stats: {
@@ -108,9 +116,9 @@ export default function UsersPage() {
           id: user.id,
           name: `${user.first_name} ${user.last_name}`,
           email: user.email,
-          type: user.user_type,
+          type: user.user_type as "talent" | "recruiter" | "neighbor",
           city: user.city || "Non spécifié",
-          status: user.verified ? "active" : "active",
+          status: (user.status || "active") as "active" | "banned" | "suspended",
           joinedAt: new Date(user.created_at).toISOString().split('T')[0],
           avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.first_name}${user.last_name}`,
           stats: {
@@ -168,6 +176,94 @@ export default function UsersPage() {
       suspended: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
     };
     return badges[status as keyof typeof badges];
+  };
+
+  // Handlers pour les actions
+  const handleViewProfile = (userId: string) => {
+    router.push(`/profile/${userId}`);
+  };
+
+  const handleEdit = (user: User) => {
+    // TODO: Ouvrir un modal d'édition
+    alert(`Édition de ${user.name} - Fonctionnalité à venir`);
+  };
+
+  const handleBan = async (user: User) => {
+    if (user.status === "banned") {
+      // Si déjà banni, réactiver
+      setActionLoading(user.id);
+      const result = await activateUser(user.id);
+      setActionLoading(null);
+      if (result.success) {
+        handleUserAdded();
+      } else {
+        alert(`Erreur: ${result.error}`);
+      }
+    } else {
+      setConfirmAction({ type: "ban", user });
+    }
+  };
+
+  const handleSuspend = async (user: User) => {
+    if (user.status === "suspended") {
+      // Si déjà suspendu, réactiver
+      setActionLoading(user.id);
+      const result = await activateUser(user.id);
+      setActionLoading(null);
+      if (result.success) {
+        handleUserAdded();
+      } else {
+        alert(`Erreur: ${result.error}`);
+      }
+    } else {
+      setConfirmAction({ type: "suspend", user });
+    }
+  };
+
+  const handleDelete = (user: User) => {
+    setConfirmAction({ type: "delete", user });
+  };
+
+  const confirmActionHandler = async () => {
+    if (!confirmAction || !confirmAction.user) return;
+
+    const { type, user } = confirmAction;
+    setActionLoading(user.id);
+
+    try {
+      let result;
+      switch (type) {
+        case "ban":
+          result = await banUser(user.id);
+          break;
+        case "suspend":
+          result = await suspendUser(user.id);
+          break;
+        case "delete":
+          result = await deleteUserAdmin(user.id);
+          break;
+        case "activate":
+          result = await activateUser(user.id);
+          break;
+        default:
+          result = { success: false, error: "Action inconnue" };
+      }
+
+      if (result.success) {
+        // Fermer le modal immédiatement
+        setConfirmAction(null);
+        setActionLoading(null);
+        // Recharger les utilisateurs
+        await handleUserAdded();
+      } else {
+        setActionLoading(null);
+        alert(`Erreur: ${result.error}`);
+      }
+    } catch (error: any) {
+      setActionLoading(null);
+      console.error('Erreur lors de l\'action:', error);
+      alert(`Erreur: ${error.message || 'Une erreur est survenue'}`);
+    }
   };
 
   if (loading) {
@@ -313,16 +409,38 @@ export default function UsersPage() {
                 {/* Actions */}
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
-                    <button className="p-2 hover:bg-violet-500/10 rounded-lg transition-colors cursor-pointer" title="Voir profil">
+                    <button
+                      onClick={() => handleViewProfile(user.id)}
+                      className="p-2 hover:bg-violet-500/10 rounded-lg transition-colors cursor-pointer"
+                      title="Voir profil"
+                    >
                       <Eye className="w-4 h-4 text-violet-400" />
                     </button>
-                    <button className="p-2 hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer" title="Éditer">
+                    <button
+                      onClick={() => handleEdit(user)}
+                      className="p-2 hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer"
+                      title="Éditer"
+                    >
                       <Edit className="w-4 h-4 text-blue-400" />
                     </button>
-                    <button className="p-2 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer" title="Bannir">
-                      <Ban className="w-4 h-4 text-red-400" />
+                    <button
+                      onClick={() => user.status === "banned" ? handleBan(user) : handleSuspend(user)}
+                      disabled={actionLoading === user.id}
+                      className="p-2 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                      title={user.status === "banned" ? "Réactiver" : user.status === "suspended" ? "Réactiver" : "Bannir/Suspendre"}
+                    >
+                      {actionLoading === user.id ? (
+                        <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                      ) : (
+                        <Ban className="w-4 h-4 text-red-400" />
+                      )}
                     </button>
-                    <button className="p-2 hover:bg-gray-500/10 rounded-lg transition-colors cursor-pointer" title="Supprimer">
+                    <button
+                      onClick={() => handleDelete(user)}
+                      disabled={actionLoading === user.id}
+                      className="p-2 hover:bg-gray-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                      title="Supprimer"
+                    >
                       <Trash2 className="w-4 h-4 text-gray-400" />
                     </button>
                   </div>
@@ -388,18 +506,36 @@ export default function UsersPage() {
 
             {/* Actions */}
             <div className="flex items-center gap-2 pt-3 border-t border-white/10">
-              <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 transition-all text-sm">
+              <button
+                onClick={() => handleViewProfile(user.id)}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 transition-all text-sm"
+              >
                 <Eye className="w-4 h-4" />
                 Voir
               </button>
-              <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 transition-all text-sm">
+              <button
+                onClick={() => handleEdit(user)}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg text-blue-400 transition-all text-sm"
+              >
                 <Edit className="w-4 h-4" />
                 Éditer
               </button>
-              <button className="p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 transition-all">
-                <Ban className="w-4 h-4" />
+              <button
+                onClick={() => user.status === "banned" ? handleBan(user) : handleSuspend(user)}
+                disabled={actionLoading === user.id}
+                className="p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 transition-all disabled:opacity-50"
+              >
+                {actionLoading === user.id ? (
+                  <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                ) : (
+                  <Ban className="w-4 h-4" />
+                )}
               </button>
-              <button className="p-2 bg-gray-500/10 hover:bg-gray-500/20 border border-gray-500/30 rounded-lg text-gray-400 transition-all">
+              <button
+                onClick={() => handleDelete(user)}
+                disabled={actionLoading === user.id}
+                className="p-2 bg-gray-500/10 hover:bg-gray-500/20 border border-gray-500/30 rounded-lg text-gray-400 transition-all disabled:opacity-50"
+              >
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
@@ -420,6 +556,43 @@ export default function UsersPage() {
         onClose={() => setShowAddUserModal(false)}
         onUserAdded={handleUserAdded}
       />
+
+      {/* Confirmation Modal */}
+      {confirmAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 max-w-md w-full mx-4 backdrop-blur-xl">
+            <h3 className="text-xl font-bold mb-2">
+              {confirmAction.type === "ban" && "Bannir l'utilisateur"}
+              {confirmAction.type === "suspend" && "Suspendre l'utilisateur"}
+              {confirmAction.type === "delete" && "Supprimer l'utilisateur"}
+            </h3>
+            <p className="text-gray-400 mb-6">
+              {confirmAction.type === "ban" && `Êtes-vous sûr de vouloir bannir ${confirmAction.user?.name} ? Cette action peut être annulée.`}
+              {confirmAction.type === "suspend" && `Êtes-vous sûr de vouloir suspendre ${confirmAction.user?.name} ? Cette action peut être annulée.`}
+              {confirmAction.type === "delete" && `Êtes-vous sûr de vouloir supprimer définitivement ${confirmAction.user?.name} ? Cette action est irréversible.`}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="flex-1 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmActionHandler}
+                disabled={actionLoading !== null}
+                className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                  confirmAction.type === "delete"
+                    ? "bg-red-500 hover:bg-red-600 text-white"
+                    : "bg-yellow-500 hover:bg-yellow-600 text-white"
+                } disabled:opacity-50`}
+              >
+                {actionLoading ? "Traitement..." : "Confirmer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

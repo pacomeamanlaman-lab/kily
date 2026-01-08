@@ -147,3 +147,6 @@ Aucune variable d'environnement supplémentaire n'est nécessaire. Supabase gèr
 - [ ] Profil utilisateur créé automatiquement
 - [ ] Redirection fonctionne correctement
 
+
+
+

@@ -21,6 +21,7 @@ export interface User {
   completed_projects: number;
   has_completed_onboarding?: boolean;
   is_admin?: boolean;
+  status?: "active" | "banned" | "suspended";
   created_at: string;
   updated_at: string;
 }

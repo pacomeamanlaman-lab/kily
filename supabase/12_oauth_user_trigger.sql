@@ -14,23 +14,57 @@ DECLARE
   user_email TEXT;
 BEGIN
   -- Extraire les données depuis user_metadata (fournies par OAuth)
+  -- Google fournit généralement: given_name, family_name, name, picture
+  -- On essaie plusieurs variantes pour maximiser les chances de récupérer les données
+  
+  -- Pour first_name, on essaie dans cet ordre:
+  -- 1. given_name (Google standard)
+  -- 2. first_name (format alternatif)
+  -- 3. name (nom complet, on prend la première partie)
+  -- 4. full_name (format alternatif)
+  -- 5. email (on prend la partie avant @)
+  -- 6. 'Utilisateur' (fallback)
   user_first_name := COALESCE(
+    NEW.raw_user_meta_data->>'given_name',
     NEW.raw_user_meta_data->>'first_name',
-    NEW.raw_user_meta_data->>'name',
-    SPLIT_PART(COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email), ' ', 1),
+    CASE 
+      WHEN NEW.raw_user_meta_data->>'name' IS NOT NULL THEN
+        TRIM(SPLIT_PART(NEW.raw_user_meta_data->>'name', ' ', 1))
+      ELSE NULL
+    END,
+    CASE 
+      WHEN NEW.raw_user_meta_data->>'full_name' IS NOT NULL THEN
+        TRIM(SPLIT_PART(NEW.raw_user_meta_data->>'full_name', ' ', 1))
+      ELSE NULL
+    END,
+    SPLIT_PART(NEW.email, '@', 1),
     'Utilisateur'
   );
   
+  -- Pour last_name, on essaie dans cet ordre:
+  -- 1. family_name (Google standard)
+  -- 2. last_name (format alternatif)
+  -- 3. name (nom complet, on prend la deuxième partie et suivantes)
+  -- 4. full_name (format alternatif)
+  -- 5. '' (vide si on ne trouve rien)
   user_last_name := COALESCE(
+    NEW.raw_user_meta_data->>'family_name',
     NEW.raw_user_meta_data->>'last_name',
-    SPLIT_PART(COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email), ' ', 2),
+    CASE 
+      WHEN NEW.raw_user_meta_data->>'name' IS NOT NULL THEN
+        TRIM(SUBSTRING(NEW.raw_user_meta_data->>'name' FROM POSITION(' ' IN NEW.raw_user_meta_data->>'name') + 1))
+      ELSE NULL
+    END,
+    CASE 
+      WHEN NEW.raw_user_meta_data->>'full_name' IS NOT NULL THEN
+        TRIM(SUBSTRING(NEW.raw_user_meta_data->>'full_name' FROM POSITION(' ' IN NEW.raw_user_meta_data->>'full_name') + 1))
+      ELSE NULL
+    END,
     ''
   );
   
-  -- Si last_name est vide, utiliser une partie de l'email
-  IF user_last_name = '' THEN
-    user_last_name := SPLIT_PART(NEW.email, '@', 1);
-  END IF;
+  -- Si last_name est toujours vide après tous les essais, on laisse vide
+  -- (mieux que d'utiliser l'email qui n'est pas un nom)
   
   user_avatar := COALESCE(
     NEW.raw_user_meta_data->>'avatar_url',
@@ -81,4 +115,7 @@ CREATE TRIGGER on_auth_user_created
 
 -- Commentaire pour documentation
 COMMENT ON FUNCTION public.handle_new_user() IS 'Fonction trigger qui crée automatiquement un profil utilisateur dans la table users quand un nouvel utilisateur s''inscrit via OAuth (Google, Facebook, etc.)';
+
+
+
 

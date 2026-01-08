@@ -98,3 +98,6 @@ Si vous rencontrez des problèmes, vérifiez :
 - Les logs de votre application (Vercel, Netlify, etc.)
 - La console du navigateur pour les erreurs JavaScript
 
+
+
+

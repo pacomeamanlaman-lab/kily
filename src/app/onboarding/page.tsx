@@ -20,13 +20,14 @@ import {
   Plus,
   Check,
   Search,
+  ChevronRight,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { getCurrentUser, updateUser, getRedirectPath } from "@/lib/supabase/users.service";
 import { isLoggedIn } from "@/lib/supabase/auth.service";
 import type { User } from "@/lib/supabase/users.service";
 
-type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6;
+type OnboardingStep = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -37,6 +38,9 @@ export default function OnboardingPage() {
   const portfolioInputRef = useRef<HTMLInputElement>(null);
 
   const isTalent = currentUser?.user_type === "talent";
+  
+  // Détecter si l'utilisateur vient de OAuth (pas de phone/country/city)
+  const isOAuthUser = currentUser && (!currentUser.phone || !currentUser.country || !currentUser.city);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -79,13 +83,23 @@ export default function OnboardingPage() {
         selectedSkills: [], // Will be loaded from skills table if needed
         portfolioItems: [],
       });
+      
+      // Si utilisateur OAuth avec type par défaut "talent", commencer à l'étape 0 pour choisir le type
+      const isOAuth = !user.phone || !user.country || !user.city;
+      if (isOAuth && user.user_type === "talent") {
+        setCurrentStep(0);
+      }
+      
       setLoading(false);
     };
     checkAuth();
   }, [router]);
 
-  const totalSteps = isTalent ? 6 : 4; // 6 for Talents (added skills), 4 for Voisins/Recruteurs (added app tour step)
-  const progress = (currentStep / totalSteps) * 100;
+  // Calculer le nombre total d'étapes (inclut l'étape 0 pour OAuth si nécessaire)
+  const hasUserTypeStep = isOAuthUser && currentUser?.user_type === "talent";
+  const baseSteps = isTalent ? 6 : 4;
+  const totalSteps = hasUserTypeStep ? baseSteps + 1 : baseSteps;
+  const progress = currentStep === 0 ? 0 : ((currentStep / baseSteps) * 100);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -131,15 +145,44 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    // Si on est à l'étape 0 (choix du type), sauvegarder le choix avant de continuer
+    if (currentStep === 0 && currentUser) {
+      // Le type sera mis à jour dans handleUserTypeSelect
+      return;
+    }
+    
     if (currentStep < totalSteps) {
       setCurrentStep((currentStep + 1) as OnboardingStep);
     }
   };
 
   const handleBack = () => {
-    if (currentStep > 1) {
+    if (currentStep > 0) {
       setCurrentStep((currentStep - 1) as OnboardingStep);
+    }
+  };
+  
+  // Handler pour choisir le type d'utilisateur (étape 0)
+  const handleUserTypeSelect = async (userType: "talent" | "neighbor" | "recruiter") => {
+    if (!currentUser) return;
+    
+    setLoading(true);
+    try {
+      // Mettre à jour le type d'utilisateur
+      await updateUser(currentUser.id, { user_type: userType });
+      
+      // Recharger l'utilisateur pour avoir les nouvelles données
+      const updatedUser = await getCurrentUser();
+      if (updatedUser) {
+        setCurrentUser(updatedUser);
+        // Passer à l'étape 1
+        setCurrentStep(1);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du type d'utilisateur:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -269,6 +312,90 @@ export default function OnboardingPage() {
       {/* Content container */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
         <AnimatePresence mode="wait">
+          {/* Step 0: Choose User Type (OAuth users only) */}
+          {currentStep === 0 && (
+            <motion.div
+              key="step0"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              className="max-w-2xl w-full"
+            >
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 sm:p-12">
+                <div className="text-center mb-8">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring" }}
+                    className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center"
+                  >
+                    <UserIcon className="w-10 h-10 text-white" />
+                  </motion.div>
+                  <h2 className="text-3xl font-bold mb-3">Choisis ton profil</h2>
+                  <p className="text-white/60">
+                    Pour mieux personnaliser ton expérience, dis-nous qui tu es
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <button
+                    onClick={() => handleUserTypeSelect("talent")}
+                    className="w-full p-6 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-violet-500 rounded-xl transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-violet-500/20 rounded-xl flex items-center justify-center group-hover:bg-violet-500/30 transition-colors">
+                        <TrendingUp className="w-6 h-6 text-violet-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold mb-1">Talent</h3>
+                        <p className="text-white/60 text-sm">
+                          Je veux montrer mes compétences et trouver des opportunités
+                        </p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-white/40 group-hover:text-violet-400 transition-colors" />
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleUserTypeSelect("neighbor")}
+                    className="w-full p-6 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500 rounded-xl transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">
+                        <Home className="w-6 h-6 text-blue-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold mb-1">Voisin</h3>
+                        <p className="text-white/60 text-sm">
+                          Je cherche des services de proximité près de chez moi
+                        </p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-white/40 group-hover:text-blue-400 transition-colors" />
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleUserTypeSelect("recruiter")}
+                    className="w-full p-6 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-green-500 rounded-xl transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center group-hover:bg-green-500/30 transition-colors">
+                        <Briefcase className="w-6 h-6 text-green-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold mb-1">Recruteur</h3>
+                        <p className="text-white/60 text-sm">
+                          Je cherche des talents à recruter pour mes projets
+                        </p>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-white/40 group-hover:text-green-400 transition-colors" />
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* Step 1: Welcome */}
           {currentStep === 1 && (
             <motion.div
@@ -302,7 +429,9 @@ export default function OnboardingPage() {
                 transition={{ delay: 0.4 }}
                 className="text-xl text-white/80 mb-12 leading-relaxed"
               >
-                {isTalent
+                {isOAuthUser
+                  ? `Bienvenue ${currentUser.first_name || 'sur Kily'} ! Ton compte a été créé avec Google. Complétons ton profil pour commencer.`
+                  : isTalent
                   ? "Tu es sur le point de rejoindre une communauté qui valorise les compétences réelles. Montrons au monde ce dont tu es capable !"
                   : "Découvre des talents incroyables près de chez toi. Prêt à explorer ?"}
               </motion.p>

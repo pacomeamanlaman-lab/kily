@@ -67,9 +67,23 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
     try {
       // Utiliser l'URL actuelle (production ou localhost selon l'environnement)
-      const redirectUrl = typeof window !== 'undefined' 
-        ? `${window.location.origin}/auth/callback`
-        : '/auth/callback';
+      // En production, utiliser toujours l'URL de production pour éviter les redirections vers localhost
+      let redirectUrl = '/auth/callback';
+      if (typeof window !== 'undefined') {
+        const origin = window.location.origin;
+        // Si on est en production (pas localhost), utiliser l'URL de production
+        if (origin.includes('vercel.app') || origin.includes('kily')) {
+          redirectUrl = `${origin}/auth/callback`;
+        } else if (!origin.includes('localhost')) {
+          // Si ce n'est pas localhost, utiliser l'origine actuelle
+          redirectUrl = `${origin}/auth/callback`;
+        } else {
+          // En localhost, utiliser localhost
+          redirectUrl = `${origin}/auth/callback`;
+        }
+      }
+      
+      console.log('🔗 URL de redirection OAuth:', redirectUrl);
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',

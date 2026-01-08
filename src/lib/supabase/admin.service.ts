@@ -99,6 +99,140 @@ export const demoteFromAdmin = async (userEmail: string): Promise<{ success: boo
   }
 };
 
+// Bannir un utilisateur (nécessite d'être admin)
+export const banUser = async (userId: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const currentUserIsAdmin = await isAdmin();
+    if (!currentUserIsAdmin) {
+      return { success: false, error: 'Vous devez être administrateur pour effectuer cette action' };
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({ status: 'banned' })
+      .eq('id', userId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleSupabaseError(error) };
+  }
+};
+
+// Suspendre un utilisateur (nécessite d'être admin)
+export const suspendUser = async (userId: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const currentUserIsAdmin = await isAdmin();
+    if (!currentUserIsAdmin) {
+      return { success: false, error: 'Vous devez être administrateur pour effectuer cette action' };
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({ status: 'suspended' })
+      .eq('id', userId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleSupabaseError(error) };
+  }
+};
+
+// Réactiver un utilisateur (nécessite d'être admin)
+export const activateUser = async (userId: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const currentUserIsAdmin = await isAdmin();
+    if (!currentUserIsAdmin) {
+      return { success: false, error: 'Vous devez être administrateur pour effectuer cette action' };
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({ status: 'active' })
+      .eq('id', userId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: handleSupabaseError(error) };
+  }
+};
+
+// Supprimer un utilisateur (nécessite d'être admin)
+// Utilise une API route server-side pour supprimer l'utilisateur avec la clé service
+export const deleteUserAdmin = async (userId: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    // Vérifier que l'utilisateur actuel est admin
+    const currentUserIsAdmin = await isAdmin();
+    if (!currentUserIsAdmin) {
+      return { success: false, error: 'Vous devez être administrateur pour effectuer cette action' };
+    }
+
+    // Obtenir le token de session actuel
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { success: false, error: 'Vous devez être connecté pour effectuer cette action' };
+    }
+
+    // Appeler l'API route server-side
+    const response = await fetch('/api/admin/delete-user', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ userId }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: result.error || 'Erreur lors de la suppression de l\'utilisateur' };
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error('Erreur lors de la suppression de l\'utilisateur:', error);
+    return { success: false, error: error.message || 'Une erreur inattendue est survenue' };
+  }
+};
+
+// Mettre à jour un utilisateur (nécessite d'être admin)
+export const updateUserAdmin = async (
+  userId: string,
+  updates: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+    city?: string;
+    country?: string;
+    user_type?: "talent" | "neighbor" | "recruiter";
+    verified?: boolean;
+    status?: "active" | "banned" | "suspended";
+  }
+): Promise<{ success: boolean; error?: string; user?: User }> => {
+  try {
+    const currentUserIsAdmin = await isAdmin();
+    if (!currentUserIsAdmin) {
+      return { success: false, error: 'Vous devez être administrateur pour effectuer cette action' };
+    }
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, user: user as User };
+  } catch (error: any) {
+    return { success: false, error: handleSupabaseError(error) };
+  }
+};
+
 // Créer un nouvel utilisateur (nécessite d'être admin)
 // Utilise une API route server-side pour créer l'utilisateur avec la clé service
 export const createUser = async (userData: {
