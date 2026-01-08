@@ -9,6 +9,7 @@ import Input from "@/components/ui/Input";
 import { login, isLoggedIn } from "@/lib/supabase/auth.service";
 import { getRedirectPath } from "@/lib/supabase/users.service";
 import { supabase } from "@/lib/supabase";
+import GoogleOneTap from "@/components/auth/GoogleOneTap";
 
 function LoginPageContent() {
   const router = useRouter();
@@ -189,6 +190,9 @@ function LoginPageContent() {
       </div>
 
       <div className="flex-1 flex items-center justify-center px-4 py-8">
+        {/* Google One Tap */}
+        <GoogleOneTap />
+
         <div className="w-full max-w-md">
 
         {/* Logo & Title */}

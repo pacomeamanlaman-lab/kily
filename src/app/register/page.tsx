@@ -11,6 +11,7 @@ import StepIndicator from "@/components/ui/StepIndicator";
 import { countries, getCitiesByCountry, abidjanCommunes, requiresCommune } from "@/lib/locationData";
 import { register } from "@/lib/supabase/auth.service";
 import { supabase } from "@/lib/supabase";
+import GoogleOneTap from "@/components/auth/GoogleOneTap";
 
 type UserType = "talent" | "neighbor" | "recruiter";
 
@@ -495,6 +496,9 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
+      {/* Google One Tap */}
+      <GoogleOneTap />
+
       {/* Header */}
       <div className="sticky top-0 z-40 bg-black/95 backdrop-blur-lg border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
