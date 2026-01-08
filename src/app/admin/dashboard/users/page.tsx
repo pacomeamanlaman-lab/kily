@@ -33,6 +33,7 @@ interface User {
   status: "active" | "banned" | "suspended";
   joinedAt: string;
   avatar: string;
+  is_admin?: boolean;
   stats: {
     posts: number;
     followers: number;
@@ -74,9 +75,6 @@ export default function UsersPage() {
           const userPosts = allPosts.filter(p => p.author_id === user.id);
           const userFollowers = allFollows.filter(f => f.followed_id === user.id).length;
 
-          // Debug: vérifier le type d'utilisateur
-          console.log(`User ${user.email}: user_type =`, user.user_type, typeof user.user_type);
-
           return {
             id: user.id,
             name: `${user.first_name} ${user.last_name}`,
@@ -86,6 +84,7 @@ export default function UsersPage() {
             status: (user.status || "active") as "active" | "banned" | "suspended",
             joinedAt: new Date(user.created_at).toISOString().split('T')[0],
             avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.first_name}${user.last_name}`,
+            is_admin: user.is_admin || false,
             stats: {
               posts: userPosts.length,
               followers: userFollowers
@@ -129,6 +128,7 @@ export default function UsersPage() {
           status: (user.status || "active") as "active" | "banned" | "suspended",
           joinedAt: new Date(user.created_at).toISOString().split('T')[0],
           avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.first_name}${user.last_name}`,
+          is_admin: user.is_admin || false,
           stats: {
             posts: userPosts.length,
             followers: userFollowers
@@ -155,7 +155,10 @@ export default function UsersPage() {
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  const getUserTypeIcon = (type: string) => {
+  const getUserTypeIcon = (type: string, isAdmin?: boolean) => {
+    if (isAdmin) {
+      return <Briefcase className="w-4 h-4" />;
+    }
     switch (type) {
       case "talent":
         return <User className="w-4 h-4" />;
@@ -168,13 +171,32 @@ export default function UsersPage() {
     }
   };
 
-  const getUserTypeBadge = (type: string) => {
+  const getUserTypeBadge = (type: string, isAdmin?: boolean) => {
+    if (isAdmin) {
+      return "bg-purple-500/20 text-purple-400 border-purple-500/30";
+    }
     const badges = {
       talent: "bg-violet-500/20 text-violet-400 border-violet-500/30",
       recruiter: "bg-pink-500/20 text-pink-400 border-pink-500/30",
       neighbor: "bg-orange-500/20 text-orange-400 border-orange-500/30",
     };
-    return badges[type as keyof typeof badges];
+    return badges[type as keyof typeof badges] || badges.talent;
+  };
+
+  const getUserTypeLabel = (type: string, isAdmin?: boolean) => {
+    if (isAdmin) {
+      return "Super Admin";
+    }
+    switch (type) {
+      case "talent":
+        return "Talent";
+      case "recruiter":
+        return "Recruteur";
+      case "neighbor":
+        return "Voisin";
+      default:
+        return "Talent";
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -226,6 +248,7 @@ export default function UsersPage() {
             status: (updatedUser.status || "active") as "active" | "banned" | "suspended",
             joinedAt: new Date(updatedUser.created_at).toISOString().split('T')[0],
             avatar: updatedUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${updatedUser.first_name}${updatedUser.last_name}`,
+            is_admin: updatedUser.is_admin || false,
             stats: {
               posts: userPosts.length,
               followers: userFollowers
@@ -450,9 +473,9 @@ export default function UsersPage() {
 
                 {/* Type */}
                 <td className="px-6 py-4">
-                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getUserTypeBadge(user.type)}`}>
-                    {getUserTypeIcon(user.type)}
-                    {user.type === "talent" ? "Talent" : user.type === "recruiter" ? "Recruteur" : "Voisin"}
+                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getUserTypeBadge(user.type, user.is_admin)}`}>
+                    {getUserTypeIcon(user.type, user.is_admin)}
+                    {getUserTypeLabel(user.type, user.is_admin)}
                   </span>
                 </td>
 
@@ -566,9 +589,9 @@ export default function UsersPage() {
 
             {/* Badges */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getUserTypeBadge(user.type)}`}>
-                {getUserTypeIcon(user.type)}
-                {user.type === "talent" ? "Talent" : user.type === "recruiter" ? "Recruteur" : "Voisin"}
+              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getUserTypeBadge(user.type, user.is_admin)}`}>
+                {getUserTypeIcon(user.type, user.is_admin)}
+                {getUserTypeLabel(user.type, user.is_admin)}
               </span>
             </div>
 
