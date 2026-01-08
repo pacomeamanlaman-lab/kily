@@ -22,18 +22,36 @@ export default function MessagesPage() {
   const [messagesData, setMessagesData] = useState<Array<{ name: string; messages: number }>>([]);
   const [hourlyData, setHourlyData] = useState<Array<{ hour: string; count: number }>>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [growth, setGrowth] = useState<number>(0);
 
   // Charger les données depuis Supabase
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const { getAllConversations, getMessagesData, getMessagesHourlyData } = await import("@/lib/supabase/admin.service");
+        const { 
+          getAllConversations, 
+          getMessagesData, 
+          getMessagesHourlyData,
+          getMessagesCountByConversation,
+          getReportedConversations,
+          getMessagesGrowth
+        } = await import("@/lib/supabase/admin.service");
         
-        const [conversationsData, messagesStats, hourlyStats] = await Promise.all([
+        const [
+          conversationsData, 
+          messagesStats, 
+          hourlyStats, 
+          messagesCount,
+          reportedConversations,
+          growthValue
+        ] = await Promise.all([
           getAllConversations(),
           getMessagesData(),
           getMessagesHourlyData(),
+          getMessagesCountByConversation(),
+          getReportedConversations(),
+          getMessagesGrowth(),
         ]);
 
         // Transformer les conversations
@@ -53,15 +71,16 @@ export default function MessagesPage() {
               avatar: conv.participant_2?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=user2",
             },
           },
-          messagesCount: 0, // TODO: Compter les messages par conversation
+          messagesCount: messagesCount[conv.id] || 0,
           lastMessage: conv.last_message || "",
           lastMessageAt: conv.last_message_at,
-          reported: false, // TODO: Vérifier si la conversation est signalée
+          reported: reportedConversations.has(conv.id),
         }));
 
         setConversations(transformedConversations);
         setMessagesData(messagesStats);
         setHourlyData(hourlyStats);
+        setGrowth(growthValue);
       } catch (error) {
         console.error('Erreur lors du chargement des messages:', error);
       } finally {
@@ -126,9 +145,9 @@ export default function MessagesPage() {
             bgIcon: "bg-green-500/20",
             textIcon: "text-green-400",
             label: "Croissance",
-            value: "+18%",
-            change: "+18%",
-            changeColor: "text-green-400",
+            value: `${growth >= 0 ? '+' : ''}${growth}%`,
+            change: `${growth >= 0 ? '+' : ''}${growth}%`,
+            changeColor: growth >= 0 ? "text-green-400" : "text-red-400",
           },
           {
             id: "reported",
@@ -227,7 +246,11 @@ export default function MessagesPage() {
                         Signalé
                       </span>
                     )}
-                    <button className="p-2 hover:bg-violet-500/10 rounded-lg transition-colors cursor-pointer" title="Voir conversation">
+                    <button 
+                      onClick={() => window.open(`/messages/${conversation.id}`, '_blank')}
+                      className="p-2 hover:bg-violet-500/10 rounded-lg transition-colors cursor-pointer" 
+                      title="Voir conversation"
+                    >
                       <Eye className="w-4 h-4 text-violet-400" />
                     </button>
                   </div>

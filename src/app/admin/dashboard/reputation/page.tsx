@@ -14,6 +14,7 @@ import {
   TrendingUp
 } from "lucide-react";
 import StatsCardsCarousel from "@/components/admin/StatsCardsCarousel";
+import BadgeModal from "@/components/admin/BadgeModal";
 
 interface Badge {
   id: string;
@@ -29,38 +30,74 @@ interface TopTalent {
   id: string;
   name: string;
   avatar: string;
+  email: string;
   rating: number;
   reviewsCount: number;
   category: string;
   badges: string[];
 }
 
+type BadgeCategory = "all" | "verification" | "performance" | "progression" | "quality" | "specialization";
+
 export default function ReputationPage() {
   const [loading, setLoading] = useState(true);
   const [topTalents, setTopTalents] = useState<TopTalent[]>([]);
+  const [badges, setBadges] = useState<Badge[]>([]);
+  const [averageRating, setAverageRating] = useState<number>(0);
+  const [showBadgeModal, setShowBadgeModal] = useState(false);
+  const [editingBadge, setEditingBadge] = useState<Badge | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<BadgeCategory>("all");
 
-  // Charger les top talents depuis Supabase
+  // Charger les données depuis Supabase
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const { getTopTalents } = await import("@/lib/supabase/admin.service");
-        const talentsData = await getTopTalents(10);
+        const { 
+          getTopTalents, 
+          getAllBadges,
+          getAverageRating 
+        } = await import("@/lib/supabase/admin.service");
+        
+        const [talentsData, badgesData, avgRating] = await Promise.all([
+          getTopTalents(10),
+          getAllBadges(),
+          getAverageRating(),
+        ]);
 
-        // Transformer les données
+        // Transformer les talents
         const transformedTalents: TopTalent[] = talentsData.map(talent => ({
           id: talent.id,
           name: talent.name,
           avatar: talent.avatar,
+          email: talent.email,
           rating: talent.rating,
           reviewsCount: talent.reviewsCount,
           category: talent.category,
           badges: talent.badges,
         }));
 
+        // Transformer les badges
+        const transformedBadges: Badge[] = badgesData.map(badge => ({
+          id: badge.id,
+          name: badge.name,
+          description: badge.description,
+          icon: badge.icon,
+          color: badge.color,
+          usersCount: badge.usersCount,
+          criteria: badge.criteria,
+        }));
+
         setTopTalents(transformedTalents);
+        setBadges(transformedBadges);
+        setAverageRating(avgRating);
       } catch (error) {
-        console.error('Erreur lors du chargement des top talents:', error);
+        console.error('Erreur lors du chargement des données:', error);
+        // En cas d'erreur, garder des valeurs par défaut
+        setBadges([]);
+        setTopTalents([]);
+        setAverageRating(0);
       } finally {
         setLoading(false);
       }
@@ -68,64 +105,6 @@ export default function ReputationPage() {
 
     loadData();
   }, []);
-
-  // Badges statiques (peuvent être gérés depuis la DB plus tard)
-  const [badges] = useState<Badge[]>([
-    {
-      id: "1",
-      name: "Talent Vérifié",
-      description: "Identité vérifiée par l'équipe Kily",
-      icon: "CheckCircle",
-      color: "#10b981",
-      usersCount: 245,
-      criteria: "Vérification manuelle admin"
-    },
-    {
-      id: "2",
-      name: "Top Talent",
-      description: "Dans le top 10% des talents les mieux notés",
-      icon: "Crown",
-      color: "#f59e0b",
-      usersCount: 89,
-      criteria: "Note moyenne ≥ 4.8/5"
-    },
-    {
-      id: "3",
-      name: "Expert",
-      description: "Expertise reconnue dans son domaine",
-      icon: "Award",
-      color: "#8b5cf6",
-      usersCount: 167,
-      criteria: "50+ projets complétés"
-    },
-    {
-      id: "4",
-      name: "Professionnel",
-      description: "Service professionnel et fiable",
-      icon: "Shield",
-      color: "#06b6d4",
-      usersCount: 312,
-      criteria: "Note moyenne ≥ 4.5/5 + 20+ avis"
-    },
-    {
-      id: "5",
-      name: "Rising Star",
-      description: "Nouveau talent prometteur",
-      icon: "Zap",
-      color: "#ec4899",
-      usersCount: 134,
-      criteria: "Inscrit < 3 mois + note ≥ 4.5"
-    },
-    {
-      id: "6",
-      name: "Talent de l'Année",
-      description: "Meilleur talent de l'année",
-      icon: "Star",
-      color: "#fbbf24",
-      usersCount: 12,
-      criteria: "Attribution manuelle"
-    }
-  ]);
 
   const getIconComponent = (iconName: string) => {
     const icons: any = {
@@ -139,12 +118,158 @@ export default function ReputationPage() {
     return icons[iconName] || Star;
   };
 
+  const handleCreateBadge = () => {
+    setEditingBadge(null);
+    setShowBadgeModal(true);
+  };
+
+  const handleEditBadge = (badge: Badge) => {
+    setEditingBadge(badge);
+    setShowBadgeModal(true);
+  };
+
+  const handleSaveBadge = async (badgeData: { id?: string; name: string; description: string; icon: string; color: string; criteria: string }) => {
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error('Vous devez être connecté');
+      }
+
+      const isEdit = !!badgeData.id;
+      const url = isEdit ? '/api/admin/update-badge' : '/api/admin/create-badge';
+      const method = isEdit ? 'PATCH' : 'POST';
+      const body = isEdit 
+        ? { badgeId: badgeData.id, ...badgeData }
+        : badgeData;
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Une erreur est survenue');
+      }
+
+      // Recharger les badges
+      const { getAllBadges } = await import("@/lib/supabase/admin.service");
+      const badgesData = await getAllBadges();
+      const transformedBadges: Badge[] = badgesData.map(badge => ({
+        id: badge.id,
+        name: badge.name,
+        description: badge.description,
+        icon: badge.icon,
+        color: badge.color,
+        usersCount: badge.usersCount,
+        criteria: badge.criteria,
+      }));
+      setBadges(transformedBadges);
+    } catch (error: any) {
+      throw error;
+    }
+  };
+
+  const handleDeleteBadge = async (badgeId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce badge ? Toutes les attributions seront également supprimées.')) {
+      return;
+    }
+
+    setActionLoading(badgeId);
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        alert('Vous devez être connecté');
+        return;
+      }
+
+      const response = await fetch('/api/admin/delete-badge', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ badgeId }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Retirer le badge de la liste
+        setBadges(prev => prev.filter(b => b.id !== badgeId));
+      } else {
+        alert(`Erreur: ${result.error}`);
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de la suppression:', error);
+      alert(`Erreur: ${error.message}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const getBadgeById = (id: string) => badges.find(b => b.id === id);
 
   const totalBadgesAwarded = badges.reduce((sum, badge) => sum + badge.usersCount, 0);
-  const averageRating = (topTalents.reduce((sum, talent) => sum + talent.rating, 0) / topTalents.length).toFixed(1);
+
+  // Fonction pour déterminer la catégorie d'un badge
+  const getBadgeCategory = (badge: Badge): BadgeCategory => {
+    const name = badge.name.toLowerCase();
+    
+    // Vérification & Statut
+    if (name.includes('vérifié') || name.includes('premium') || name.includes('compte')) {
+      return 'verification';
+    }
+    
+    // Performance
+    if (name.includes('top talent') || name.includes('expert') || name.includes('professionnel') || name.includes('talent de l\'année')) {
+      return 'performance';
+    }
+    
+    // Progression
+    if (name.includes('rising star') || name.includes('confirmé') || name.includes('actif') || name.includes('membre')) {
+      return 'progression';
+    }
+    
+    // Qualité
+    if (name.includes('excellence') || name.includes('fiable') || name.includes('communication')) {
+      return 'quality';
+    }
+    
+    // Spécialisation
+    if (name.includes('spécialiste') || name.includes('multidisciplinaire')) {
+      return 'specialization';
+    }
+    
+    // Par défaut
+    return 'performance';
+  };
+
+  // Filtrer les badges selon la catégorie active
+  const filteredBadges = activeCategory === 'all' 
+    ? badges 
+    : badges.filter(badge => getBadgeCategory(badge) === activeCategory);
 
   const displayTopTalents = topTalents;
+
+  // Définir les tabs
+  const badgeTabs: Array<{ id: BadgeCategory; label: string; count: number }> = [
+    { id: 'all', label: 'Tous', count: badges.length },
+    { id: 'verification', label: 'Vérification & Statut', count: badges.filter(b => getBadgeCategory(b) === 'verification').length },
+    { id: 'performance', label: 'Performance', count: badges.filter(b => getBadgeCategory(b) === 'performance').length },
+    { id: 'progression', label: 'Progression', count: badges.filter(b => getBadgeCategory(b) === 'progression').length },
+    { id: 'quality', label: 'Qualité', count: badges.filter(b => getBadgeCategory(b) === 'quality').length },
+    { id: 'specialization', label: 'Spécialisation', count: badges.filter(b => getBadgeCategory(b) === 'specialization').length },
+  ];
 
   if (loading) {
     return (
@@ -165,7 +290,10 @@ export default function ReputationPage() {
           <h1 className="text-2xl font-bold mb-2">Système de Réputation</h1>
           <p className="text-gray-400">Gérez les badges et récompenses</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 rounded-xl text-white font-medium transition-all cursor-pointer">
+        <button 
+          onClick={handleCreateBadge}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 rounded-xl text-white font-medium transition-all cursor-pointer"
+        >
           <Plus className="w-5 h-5" />
           Nouveau Badge
         </button>
@@ -202,7 +330,7 @@ export default function ReputationPage() {
             bgIcon: "bg-green-500/20",
             textIcon: "text-green-400",
             label: "Note moyenne",
-            value: averageRating.toString(),
+            value: averageRating > 0 ? averageRating.toFixed(1) : "0.0",
           },
           {
             id: "growth",
@@ -212,8 +340,8 @@ export default function ReputationPage() {
             bgIcon: "bg-pink-500/20",
             textIcon: "text-pink-400",
             label: "Croissance avis",
-            value: "+23%",
-            change: "+23%",
+            value: "+0%",
+            change: "+0%",
             changeColor: "text-pink-400",
           },
         ]}
@@ -221,9 +349,39 @@ export default function ReputationPage() {
 
       {/* Badges Grid */}
       <div className="mb-6">
-        <h2 className="text-xl font-bold mb-4">Badges Disponibles</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Badges Disponibles</h2>
+        </div>
+
+        {/* Tabs */}
+        <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-2 horizontal-scrollbar">
+          {badgeTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveCategory(tab.id)}
+              className={`px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-all ${
+                activeCategory === tab.id
+                  ? 'bg-violet-600 text-white'
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {tab.label}
+              {tab.count > 0 && (
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                  activeCategory === tab.id
+                    ? 'bg-white/20'
+                    : 'bg-white/10'
+                }`}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {badges.map((badge) => {
+          {filteredBadges.length > 0 ? (
+            filteredBadges.map((badge) => {
             const IconComponent = getIconComponent(badge.icon);
 
             return (
@@ -240,11 +398,24 @@ export default function ReputationPage() {
                     <IconComponent className="w-7 h-7" style={{ color: badge.color }} />
                   </div>
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-2 hover:bg-violet-500/10 rounded-lg transition-colors cursor-pointer" title="Éditer">
+                    <button 
+                      onClick={() => handleEditBadge(badge)}
+                      className="p-2 hover:bg-violet-500/10 rounded-lg transition-colors cursor-pointer" 
+                      title="Éditer"
+                    >
                       <Edit className="w-4 h-4 text-violet-400" />
                     </button>
-                    <button className="p-2 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer" title="Supprimer">
-                      <Trash2 className="w-4 h-4 text-red-400" />
+                    <button 
+                      onClick={() => handleDeleteBadge(badge.id)}
+                      disabled={actionLoading === badge.id}
+                      className="p-2 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50" 
+                      title="Supprimer"
+                    >
+                      {actionLoading === badge.id ? (
+                        <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -266,7 +437,14 @@ export default function ReputationPage() {
                 </div>
               </div>
             );
-          })}
+            })
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <Award className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-400 text-lg">Aucun badge dans cette catégorie</p>
+              <p className="text-gray-500 text-sm mt-2">Créez un nouveau badge pour commencer</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -275,11 +453,12 @@ export default function ReputationPage() {
         <h2 className="text-xl font-bold mb-4">Top Talents par Note</h2>
         <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
           <div className="overflow-x-auto horizontal-scrollbar">
-            <table className="w-full min-w-[700px]">
+            <table className="w-full min-w-[900px]">
             <thead className="bg-white/5 border-b border-white/10">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Classement</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Talent</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Email</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Catégorie</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Note</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Avis</th>
@@ -303,15 +482,11 @@ export default function ReputationPage() {
 
                   {/* Talent */}
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={talent.avatar}
-                        alt={talent.name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <span className="font-semibold text-white">{talent.name}</span>
-                    </div>
+                    <span className="font-semibold text-white">{talent.name}</span>
                   </td>
+
+                  {/* Email */}
+                  <td className="px-6 py-4 text-white text-sm">{talent.email}</td>
 
                   {/* Category */}
                   <td className="px-6 py-4 text-white">{talent.category}</td>
@@ -355,6 +530,18 @@ export default function ReputationPage() {
           </div>
         </div>
       </div>
+
+      {/* Badge Modal */}
+      <BadgeModal
+        isOpen={showBadgeModal}
+        onClose={() => {
+          setShowBadgeModal(false);
+          setEditingBadge(null);
+        }}
+        onSave={handleSaveBadge}
+        badge={editingBadge}
+        mode={editingBadge ? "edit" : "create"}
+      />
     </div>
   );
 }

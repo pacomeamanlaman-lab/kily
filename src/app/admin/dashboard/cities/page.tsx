@@ -34,7 +34,14 @@ export default function CitiesPage() {
       try {
         setLoading(true);
         const { getCitiesStats } = await import("@/lib/supabase/admin.service");
-        const citiesData = await getCitiesStats();
+        const { getAllUsers } = await import("@/lib/supabase/users.service");
+        const { loadPosts } = await import("@/lib/supabase/posts.service");
+        
+        const [citiesData, allUsers, allPosts] = await Promise.all([
+          getCitiesStats(),
+          getAllUsers(),
+          loadPosts(10000),
+        ]);
 
         // Transformer les données
         const transformedCities: City[] = citiesData.map((city, index) => ({
@@ -50,24 +57,45 @@ export default function CitiesPage() {
 
         setCities(transformedCities);
 
-        // Pour les communes d'Abidjan, données par défaut
-        // TODO: Implémenter la récupération des communes depuis Supabase si nécessaire
-        setAbidjanCommunesData([
-          { name: "Cocody", usersCount: 98, talentsCount: 56, postsCount: 145 },
-          { name: "Yopougon", usersCount: 87, talentsCount: 45, postsCount: 132 },
-          { name: "Abobo", usersCount: 76, talentsCount: 42, postsCount: 118 },
-          { name: "Marcory", usersCount: 65, talentsCount: 38, postsCount: 103 },
-          { name: "Adjamé", usersCount: 54, talentsCount: 32, postsCount: 89 },
-          { name: "Le Plateau", usersCount: 48, talentsCount: 28, postsCount: 76 },
-          { name: "Treichville", usersCount: 34, talentsCount: 21, postsCount: 55 },
-        ]);
+        // Pour les communes d'Abidjan, récupérer depuis les utilisateurs
+        // Filtrer les utilisateurs d'Abidjan et grouper par commune
+        const abidjanUsers = allUsers?.filter(u => 
+          u.city && (u.city.toLowerCase().includes('abidjan') || u.city.toLowerCase() === 'abidjan')
+        ) || [];
+        
+        const communeStats: Record<string, { usersCount: number; talentsCount: number; postsCount: number }> = {};
+        
+        abidjanUsers.forEach(user => {
+          const commune = user.commune || 'Non spécifié';
+          if (!communeStats[commune]) {
+            communeStats[commune] = { usersCount: 0, talentsCount: 0, postsCount: 0 };
+          }
+          communeStats[commune].usersCount++;
+          if (user.user_type === 'talent') {
+            communeStats[commune].talentsCount++;
+          }
+        });
+
+        // Compter les posts par commune
+        if (allPosts && allUsers) {
+          const userMap = new Map(allUsers.map(u => [u.id, u]));
+          allPosts.forEach(post => {
+            const user = userMap.get(post.author_id);
+            if (user?.commune && communeStats[user.commune]) {
+              communeStats[user.commune].postsCount++;
+            }
+          });
+        }
+
+        const communesArray = Object.entries(communeStats)
+          .map(([name, stats]) => ({ name, ...stats }))
+          .sort((a, b) => b.usersCount - a.usersCount);
+
+        setAbidjanCommunesData(communesArray);
       } catch (error) {
         console.error('Erreur lors du chargement des villes:', error);
         // En cas d'erreur, garder un tableau vide
-        setCities([
-          { id: "1", name: "Abidjan", country: "Côte d'Ivoire", flag: "🇨🇮", usersCount: 456, talentsCount: 245, postsCount: 678, growth: 12 },
-          { id: "2", name: "Lagos", country: "Nigeria", flag: "🇳🇬", usersCount: 389, talentsCount: 198, postsCount: 534, growth: 18 },
-        ]);
+        setCities([]);
       } finally {
         setLoading(false);
       }
@@ -181,7 +209,6 @@ export default function CitiesPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-white">{city.name}</p>
-                      <p className="text-xs text-gray-400">{city.flag}</p>
                     </div>
                   </div>
                 </td>

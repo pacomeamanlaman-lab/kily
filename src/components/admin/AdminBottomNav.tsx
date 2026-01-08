@@ -53,6 +53,12 @@ export default function AdminBottomNav() {
 
   const moreMenuItems = [
     {
+      id: "reputation",
+      label: "Réputation",
+      icon: Star,
+      path: "/admin/dashboard/reputation",
+    },
+    {
       id: "categories",
       label: "Catégories",
       icon: Tag,
@@ -69,12 +75,6 @@ export default function AdminBottomNav() {
       label: "Messages",
       icon: MessageSquare,
       path: "/admin/dashboard/messages",
-    },
-    {
-      id: "reputation",
-      label: "Réputation",
-      icon: Star,
-      path: "/admin/dashboard/reputation",
     },
     {
       id: "settings",

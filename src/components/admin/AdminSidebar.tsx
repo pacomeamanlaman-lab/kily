@@ -49,6 +49,12 @@ export default function AdminSidebar({ isOpen = true, onClose }: AdminSidebarPro
       path: "/admin/dashboard/content",
     },
     {
+      id: "reputation",
+      label: "Réputation",
+      icon: Star,
+      path: "/admin/dashboard/reputation",
+    },
+    {
       id: "moderation",
       label: "Modération",
       icon: Shield,
@@ -71,12 +77,6 @@ export default function AdminSidebar({ isOpen = true, onClose }: AdminSidebarPro
       label: "Messages",
       icon: MessageSquare,
       path: "/admin/dashboard/messages",
-    },
-    {
-      id: "reputation",
-      label: "Réputation",
-      icon: Star,
-      path: "/admin/dashboard/reputation",
     },
     {
       id: "settings",

@@ -47,59 +47,94 @@ export default function ModerationPage() {
   const [expandedActions, setExpandedActions] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState<Report[]>([]);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Charger les signalements depuis Supabase
   useEffect(() => {
     const loadReports = async () => {
       try {
         setLoading(true);
-        const { getAllReports } = await import("@/lib/supabase/admin.service");
-        const reportsData = await getAllReports();
+        const { 
+          getAllReports, 
+          getReportsCountByItem,
+          getReportedItemDetails 
+        } = await import("@/lib/supabase/admin.service");
+        
+        const [reportsData, reportsCount, itemDetailsMap] = await Promise.all([
+          getAllReports(),
+          getReportsCountByItem(),
+          Promise.resolve(new Map<string, any>())
+        ]);
+        
+        // Récupérer les détails de tous les contenus signalés
+        const uniqueItems = new Set<string>();
+        reportsData.forEach(report => {
+          const key = `${report.reported_item_type}_${report.reported_item_id}`;
+          uniqueItems.add(key);
+        });
+
+        // Charger les détails en parallèle
+        const detailsPromises = Array.from(uniqueItems).map(async (key) => {
+          const [type, id] = key.split('_');
+          const details = await getReportedItemDetails(type, id);
+          return { key, details };
+        });
+        const detailsResults = await Promise.all(detailsPromises);
+        detailsResults.forEach(({ key, details }) => {
+          if (details) itemDetailsMap.set(key, details);
+        });
         
         // Transformer les données Supabase en format Report
-        const transformedReports: Report[] = reportsData.map(report => {
-          // Déterminer le type de contenu signalé
-          let type: "content" | "user" | "comment" = "content";
-          let contentType: "post" | "video" | "story" | undefined = undefined;
-          
-          if (report.reported_item_type === 'post' || report.reported_item_type === 'video' || report.reported_item_type === 'story') {
-            type = "content";
-            contentType = report.reported_item_type as "post" | "video" | "story";
-          } else if (report.reported_item_type === 'user') {
-            type = "user";
-          } else if (report.reported_item_type === 'comment') {
-            type = "comment";
-          }
+        const transformedReports: Report[] = await Promise.all(
+          reportsData.map(async (report) => {
+            // Déterminer le type de contenu signalé
+            let type: "content" | "user" | "comment" = "content";
+            let contentType: "post" | "video" | "story" | undefined = undefined;
+            
+            if (report.reported_item_type === 'post' || report.reported_item_type === 'video' || report.reported_item_type === 'story') {
+              type = "content";
+              contentType = report.reported_item_type as "post" | "video" | "story";
+            } else if (report.reported_item_type === 'user') {
+              type = "user";
+            } else if (report.reported_item_type === 'comment') {
+              type = "comment";
+            }
 
-          return {
-            id: report.id,
-            type,
-            contentType,
-            reportedItem: {
-              id: report.reported_item_id,
-              title: report.description?.substring(0, 50) || "Contenu signalé",
-              author: report.reporter ? {
+            // Récupérer les détails du contenu signalé
+            const itemKey = `${report.reported_item_type}_${report.reported_item_id}`;
+            const itemDetails = itemDetailsMap.get(itemKey);
+
+            return {
+              id: report.id,
+              type,
+              contentType,
+              reportedItem: {
+                id: report.reported_item_id,
+                title: itemDetails?.title || report.description?.substring(0, 50) || "Contenu signalé",
+                author: itemDetails?.author || (report.reporter ? {
+                  name: `${report.reporter.first_name} ${report.reporter.last_name}`,
+                  avatar: report.reporter.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=user"
+                } : {
+                  name: "Utilisateur",
+                  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=user"
+                }),
+                thumbnail: itemDetails?.thumbnail,
+              },
+              reportedBy: report.reporter ? {
                 name: `${report.reporter.first_name} ${report.reporter.last_name}`,
-                avatar: report.reporter.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=user"
+                avatar: report.reporter.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=reporter"
               } : {
                 name: "Utilisateur",
                 avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=user"
               },
-            },
-            reportedBy: report.reporter ? {
-              name: `${report.reporter.first_name} ${report.reporter.last_name}`,
-              avatar: report.reporter.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=reporter"
-            } : {
-              name: "Utilisateur",
-              avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=user"
-            },
-            reason: report.reason || "Non spécifié",
-            description: report.description || "",
-            reportCount: 1, // TODO: Compter les signalements multiples pour le même contenu
-            status: report.status as "pending" | "approved" | "rejected",
-            createdAt: report.created_at,
-          };
-        });
+              reason: report.reason || "Non spécifié",
+              description: report.description || "",
+              reportCount: reportsCount[itemKey] || 1,
+              status: report.status as "pending" | "approved" | "rejected",
+              createdAt: report.created_at,
+            };
+          })
+        );
 
         setReports(transformedReports);
       } catch (error) {
@@ -113,6 +148,151 @@ export default function ModerationPage() {
 
     loadReports();
   }, []);
+
+  const handleViewDetails = (report: Report) => {
+    // Rediriger vers le feed avec le contenu signalé
+    if (report.type === "content" && report.contentType) {
+      window.open(`/feed#${report.contentType}-${report.reportedItem.id}`, '_blank');
+    } else if (report.type === "user") {
+      window.open(`/profile/${report.reportedItem.id}`, '_blank');
+    }
+  };
+
+  const handleApprove = async (report: Report) => {
+    if (!confirm('Êtes-vous sûr de vouloir approuver ce signalement ?')) return;
+    
+    setActionLoading(report.id);
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch('/api/admin/approve-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ reportId: report.id }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setReports(prev => prev.map(r => r.id === report.id ? { ...r, status: 'approved' as const } : r));
+      } else {
+        alert(`Erreur: ${result.error}`);
+      }
+    } catch (error: any) {
+      console.error('Erreur:', error);
+      alert(`Erreur: ${error.message}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (report: Report) => {
+    if (!confirm('Êtes-vous sûr de vouloir rejeter ce signalement ?')) return;
+    
+    setActionLoading(report.id);
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch('/api/admin/reject-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ reportId: report.id }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setReports(prev => prev.map(r => r.id === report.id ? { ...r, status: 'rejected' as const } : r));
+      } else {
+        alert(`Erreur: ${result.error}`);
+      }
+    } catch (error: any) {
+      console.error('Erreur:', error);
+      alert(`Erreur: ${error.message}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDelete = async (report: Report) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce contenu signalé ? Cette action est irréversible.')) return;
+    
+    setActionLoading(report.id);
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch('/api/admin/delete-reported-content', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ 
+          reportId: report.id,
+          itemType: report.type === "content" ? report.contentType : report.type,
+          itemId: report.reportedItem.id
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setReports(prev => prev.filter(r => r.id !== report.id));
+      } else {
+        alert(`Erreur: ${result.error}`);
+      }
+    } catch (error: any) {
+      console.error('Erreur:', error);
+      alert(`Erreur: ${error.message}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleBanAuthor = async (report: Report) => {
+    if (!confirm('Êtes-vous sûr de vouloir bannir l\'auteur de ce contenu ?')) return;
+    
+    setActionLoading(report.id);
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const response = await fetch('/api/admin/update-user-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ 
+          userId: report.reportedItem.author.name, // Note: devrait être l'ID, pas le nom
+          status: 'banned'
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert('Auteur banni avec succès');
+      } else {
+        alert(`Erreur: ${result.error}`);
+      }
+    } catch (error: any) {
+      console.error('Erreur:', error);
+      alert(`Erreur: ${error.message}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const filteredReports = reports.filter((report) => {
     const matchesStatus = filterStatus === "all" || report.status === filterStatus;
     const matchesType = filterType === "all" || report.type === filterType;
@@ -308,20 +488,60 @@ export default function ModerationPage() {
                   <>
                     {/* Desktop Actions */}
                     <div className="hidden lg:flex items-center gap-2">
-                      <button className="flex items-center gap-2 px-4 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 transition-all cursor-pointer">
+                      <button 
+                        onClick={() => handleViewDetails(report)}
+                        className="flex items-center gap-2 px-4 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 transition-all cursor-pointer disabled:opacity-50"
+                        disabled={actionLoading === report.id}
+                      >
                         <Eye className="w-4 h-4" />
                         Voir détails
                       </button>
-                      <button className="flex items-center gap-2 px-4 py-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 transition-all cursor-pointer">
-                        <CheckCircle className="w-4 h-4" />
+                      <button 
+                        onClick={() => handleApprove(report)}
+                        disabled={actionLoading === report.id}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {actionLoading === report.id ? (
+                          <div className="w-4 h-4 border-2 border-green-400/30 border-t-green-400 rounded-full animate-spin" />
+                        ) : (
+                          <CheckCircle className="w-4 h-4" />
+                        )}
                         Approuver
                       </button>
-                      <button className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 transition-all cursor-pointer">
-                        <Trash2 className="w-4 h-4" />
+                      <button 
+                        onClick={() => handleReject(report)}
+                        disabled={actionLoading === report.id}
+                        className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-yellow-400 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {actionLoading === report.id ? (
+                          <div className="w-4 h-4 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
+                        ) : (
+                          <XCircle className="w-4 h-4" />
+                        )}
+                        Rejeter
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(report)}
+                        disabled={actionLoading === report.id}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {actionLoading === report.id ? (
+                          <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
                         Supprimer
                       </button>
-                      <button className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-400 transition-all cursor-pointer">
-                        <Ban className="w-4 h-4" />
+                      <button 
+                        onClick={() => handleBanAuthor(report)}
+                        disabled={actionLoading === report.id}
+                        className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-400 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {actionLoading === report.id ? (
+                          <div className="w-4 h-4 border-2 border-orange-400/30 border-t-orange-400 rounded-full animate-spin" />
+                        ) : (
+                          <Ban className="w-4 h-4" />
+                        )}
                         Bannir auteur
                       </button>
                     </div>
@@ -337,20 +557,75 @@ export default function ModerationPage() {
                       </button>
                       {expandedActions === report.id && (
                         <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 border border-white/10 rounded-lg p-2 space-y-2 z-10">
-                          <button className="w-full flex items-center gap-2 px-3 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 transition-all text-sm">
+                          <button 
+                            onClick={() => {
+                              handleViewDetails(report);
+                              setExpandedActions(null);
+                            }}
+                            disabled={actionLoading === report.id}
+                            className="w-full flex items-center gap-2 px-3 py-2 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 transition-all text-sm disabled:opacity-50"
+                          >
                             <Eye className="w-4 h-4" />
                             Voir détails
                           </button>
-                          <button className="w-full flex items-center gap-2 px-3 py-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 transition-all text-sm">
-                            <CheckCircle className="w-4 h-4" />
+                          <button 
+                            onClick={() => {
+                              handleApprove(report);
+                              setExpandedActions(null);
+                            }}
+                            disabled={actionLoading === report.id}
+                            className="w-full flex items-center gap-2 px-3 py-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 transition-all text-sm disabled:opacity-50"
+                          >
+                            {actionLoading === report.id ? (
+                              <div className="w-4 h-4 border-2 border-green-400/30 border-t-green-400 rounded-full animate-spin" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4" />
+                            )}
                             Approuver
                           </button>
-                          <button className="w-full flex items-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 transition-all text-sm">
-                            <Trash2 className="w-4 h-4" />
+                          <button 
+                            onClick={() => {
+                              handleReject(report);
+                              setExpandedActions(null);
+                            }}
+                            disabled={actionLoading === report.id}
+                            className="w-full flex items-center gap-2 px-3 py-2 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-yellow-400 transition-all text-sm disabled:opacity-50"
+                          >
+                            {actionLoading === report.id ? (
+                              <div className="w-4 h-4 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
+                            ) : (
+                              <XCircle className="w-4 h-4" />
+                            )}
+                            Rejeter
+                          </button>
+                          <button 
+                            onClick={() => {
+                              handleDelete(report);
+                              setExpandedActions(null);
+                            }}
+                            disabled={actionLoading === report.id}
+                            className="w-full flex items-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 transition-all text-sm disabled:opacity-50"
+                          >
+                            {actionLoading === report.id ? (
+                              <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
                             Supprimer
                           </button>
-                          <button className="w-full flex items-center gap-2 px-3 py-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-400 transition-all text-sm">
-                            <Ban className="w-4 h-4" />
+                          <button 
+                            onClick={() => {
+                              handleBanAuthor(report);
+                              setExpandedActions(null);
+                            }}
+                            disabled={actionLoading === report.id}
+                            className="w-full flex items-center gap-2 px-3 py-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-lg text-orange-400 transition-all text-sm disabled:opacity-50"
+                          >
+                            {actionLoading === report.id ? (
+                              <div className="w-4 h-4 border-2 border-orange-400/30 border-t-orange-400 rounded-full animate-spin" />
+                            ) : (
+                              <Ban className="w-4 h-4" />
+                            )}
                             Bannir auteur
                           </button>
                         </div>

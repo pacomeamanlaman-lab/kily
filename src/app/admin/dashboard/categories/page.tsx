@@ -39,10 +39,7 @@ export default function CategoriesPage() {
       } catch (error) {
         console.error('Erreur lors du chargement des catégories:', error);
         // En cas d'erreur, garder un tableau vide
-        setCategories([
-          { id: "1", name: "Tech & Code", icon: "Code", color: "#8b5cf6", talentsCount: 245, postsCount: 567 },
-          { id: "2", name: "Design & Créa", icon: "Palette", color: "#ec4899", talentsCount: 198, postsCount: 432 },
-        ]);
+        setCategories([]);
       } finally {
         setLoading(false);
       }

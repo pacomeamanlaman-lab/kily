@@ -40,6 +40,61 @@ export default function ContentPage() {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState<Content[]>([]);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  // Fonction pour voir le contenu
+  const handleView = (contentItem: Content) => {
+    // Rediriger vers le feed avec un hash pour identifier le contenu
+    // TODO: Créer des routes dédiées /posts/[id], /videos/[id], /stories/[id] pour une meilleure UX
+    const url = `/feed#${contentItem.type}-${contentItem.id}`;
+    window.open(url, '_blank');
+  };
+
+  // Fonction pour supprimer le contenu
+  const handleDelete = async (contentItem: Content) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer ce ${contentItem.type} ?`)) {
+      return;
+    }
+
+    setDeleting(contentItem.id);
+
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        alert('Vous devez être connecté');
+        return;
+      }
+
+      const response = await fetch('/api/admin/delete-content', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          contentId: contentItem.id,
+          contentType: contentItem.type,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Retirer le contenu de la liste
+        setContent(content.filter(c => c.id !== contentItem.id));
+        alert(`${contentItem.type} supprimé avec succès`);
+      } else {
+        alert(`Erreur: ${result.error}`);
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de la suppression:', error);
+      alert(`Erreur: ${error.message}`);
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   // Charger le contenu depuis Supabase
   useEffect(() => {
@@ -50,17 +105,20 @@ export default function ContentPage() {
         const { loadVideos } = await import("@/lib/supabase/videos.service");
         const { loadStories } = await import("@/lib/supabase/stories.service");
         const { getUserById } = await import("@/lib/supabase/users.service");
+        const { getReportsCountByContent } = await import("@/lib/supabase/admin.service");
 
-        const [posts, videos, stories] = await Promise.all([
+        const [posts, videos, stories, reportsCount] = await Promise.all([
           loadPosts(1000),
           loadVideos(1000),
           loadStories(),
+          getReportsCountByContent(),
         ]);
 
         // Transformer les posts
         const postsContent: Content[] = await Promise.all(
           posts.map(async (post) => {
             const author = post.author || await getUserById(post.author_id);
+            const reportKey = `post_${post.id}`;
             return {
               id: post.id,
               type: "post" as const,
@@ -72,8 +130,8 @@ export default function ContentPage() {
               category: post.category || "Général",
               likes: post.likes_count || 0,
               comments: post.comments_count || 0,
-              views: 0, // TODO: Ajouter views_count dans la table posts
-              reports: 0, // TODO: Récupérer depuis la table reports
+              views: post.views_count || 0,
+              reports: reportsCount[reportKey] || 0,
               publishedAt: new Date(post.created_at).toISOString().split('T')[0],
               thumbnail: post.images?.[0] || undefined,
             };
@@ -84,6 +142,7 @@ export default function ContentPage() {
         const videosContent: Content[] = await Promise.all(
           videos.map(async (video) => {
             const author = video.author || await getUserById(video.author_id);
+            const reportKey = `video_${video.id}`;
             return {
               id: video.id,
               type: "video" as const,
@@ -96,7 +155,7 @@ export default function ContentPage() {
               likes: video.likes_count || 0,
               comments: video.comments_count || 0,
               views: parseInt(video.views_count || "0"),
-              reports: 0, // TODO: Récupérer depuis la table reports
+              reports: reportsCount[reportKey] || 0,
               publishedAt: new Date(video.created_at).toISOString().split('T')[0],
               thumbnail: video.thumbnail,
             };
@@ -107,6 +166,7 @@ export default function ContentPage() {
         const storiesContent: Content[] = await Promise.all(
           stories.map(async (story) => {
             const author = story.author || await getUserById(story.author_id);
+            const reportKey = `story_${story.id}`;
             return {
               id: story.id,
               type: "story" as const,
@@ -119,7 +179,7 @@ export default function ContentPage() {
               likes: 0,
               comments: 0,
               views: 0,
-              reports: 0,
+              reports: reportsCount[reportKey] || 0,
               publishedAt: new Date(story.created_at).toISOString().split('T')[0],
               thumbnail: story.thumbnail,
             };
@@ -370,10 +430,19 @@ export default function ContentPage() {
                 {/* Actions */}
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
-                    <button className="p-2 hover:bg-violet-500/10 rounded-lg transition-colors cursor-pointer" title="Voir">
+                    <button
+                      onClick={() => handleView(content)}
+                      className="p-2 hover:bg-violet-500/10 rounded-lg transition-colors cursor-pointer"
+                      title="Voir"
+                    >
                       <Eye className="w-4 h-4 text-violet-400" />
                     </button>
-                    <button className="p-2 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer" title="Supprimer">
+                    <button
+                      onClick={() => handleDelete(content)}
+                      disabled={deleting === content.id}
+                      className="p-2 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Supprimer"
+                    >
                       <Trash2 className="w-4 h-4 text-red-400" />
                     </button>
                   </div>
@@ -455,11 +524,18 @@ export default function ContentPage() {
                 <span>{new Date(content.publishedAt).toLocaleDateString("fr-FR")}</span>
               </div>
               <div className="flex items-center gap-2">
-                <button className="px-3 py-1.5 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 transition-all text-xs">
+                <button
+                  onClick={() => handleView(content)}
+                  className="px-3 py-1.5 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 rounded-lg text-violet-400 transition-all text-xs"
+                >
                   <Eye className="w-3 h-3 inline mr-1" />
                   Voir
                 </button>
-                <button className="p-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 transition-all">
+                <button
+                  onClick={() => handleDelete(content)}
+                  disabled={deleting === content.id}
+                  className="p-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   <Trash2 className="w-3 h-3" />
                 </button>
               </div>
