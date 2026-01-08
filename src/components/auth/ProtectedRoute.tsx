@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { isLoggedIn } from "@/lib/supabase/auth.service";
+import { getCurrentUser } from "@/lib/supabase/users.service";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -23,9 +24,25 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         // Save the intended destination
         sessionStorage.setItem("redirectAfterLogin", pathname);
         router.push("/login");
-      } else {
-        setIsChecking(false);
+        return;
       }
+
+      // Vérifier le status de l'utilisateur
+      const user = await getCurrentUser();
+      
+      if (!user) {
+        // Si getCurrentUser retourne null, l'utilisateur a peut-être été banni/suspendu
+        router.push("/login");
+        return;
+      }
+
+      if (user.status === 'banned' || user.status === 'suspended') {
+        // L'utilisateur est banni ou suspendu, rediriger vers login avec message d'erreur
+        router.push(`/login?error=${user.status}`);
+        return;
+      }
+
+      setIsChecking(false);
     };
 
     checkAuth();

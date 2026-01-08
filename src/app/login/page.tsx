@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Sparkles } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -21,6 +22,16 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // Vérifier les paramètres d'URL pour les erreurs de bannissement/suspension
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam === 'banned') {
+      setErrors({ email: 'Votre compte a été banni. Veuillez contacter le support pour plus d\'informations.' });
+    } else if (errorParam === 'suspended') {
+      setErrors({ email: 'Votre compte a été suspendu. Veuillez contacter le support pour plus d\'informations.' });
+    }
+  }, [searchParams]);
 
   // Redirect if already logged in
   useEffect(() => {

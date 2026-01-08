@@ -152,6 +152,13 @@ export const getCurrentUser = async (): Promise<User | null> => {
 
     if (error) throw error;
     
+    // Vérifier le status de l'utilisateur - bloquer les utilisateurs bannis/suspendus
+    if (user.status === 'banned' || user.status === 'suspended') {
+      // Déconnecter l'utilisateur immédiatement
+      await supabase.auth.signOut();
+      return null;
+    }
+    
     // Debug: vérifier si is_admin est bien récupéré
     if (user && 'is_admin' in user) {
       console.log('👤 getCurrentUser - is_admin:', user.is_admin, 'email:', user.email);

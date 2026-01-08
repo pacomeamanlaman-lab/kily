@@ -42,6 +42,19 @@ export const login = async (email: string, password: string): Promise<{ success:
 
     if (profileError) throw profileError;
 
+    // Vérifier le status de l'utilisateur
+    if (userProfile.status === 'banned') {
+      // Déconnecter l'utilisateur immédiatement
+      await supabase.auth.signOut();
+      return { success: false, error: 'Votre compte a été banni. Veuillez contacter le support pour plus d\'informations.' };
+    }
+
+    if (userProfile.status === 'suspended') {
+      // Déconnecter l'utilisateur immédiatement
+      await supabase.auth.signOut();
+      return { success: false, error: 'Votre compte a été suspendu. Veuillez contacter le support pour plus d\'informations.' };
+    }
+
     return { success: true, user: userProfile };
   } catch (error: any) {
     return { success: false, error: handleSupabaseError(error) };

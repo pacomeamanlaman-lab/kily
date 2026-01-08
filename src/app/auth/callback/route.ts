@@ -37,6 +37,19 @@ export async function GET(request: NextRequest) {
           return NextResponse.redirect(new URL('/onboarding', origin));
         }
         
+        // Vérifier le status de l'utilisateur - bloquer les utilisateurs bannis/suspendus
+        if (user.status === 'banned') {
+          // Déconnecter l'utilisateur
+          await supabase.auth.signOut();
+          return NextResponse.redirect(new URL('/login?error=banned', origin));
+        }
+        
+        if (user.status === 'suspended') {
+          // Déconnecter l'utilisateur
+          await supabase.auth.signOut();
+          return NextResponse.redirect(new URL('/login?error=suspended', origin));
+        }
+        
         const redirectPath = getRedirectPath(user);
         
         // Si l'utilisateur n'a pas complété l'onboarding, rediriger vers onboarding
