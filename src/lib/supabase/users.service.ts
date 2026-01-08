@@ -43,21 +43,53 @@ export interface CreateUserData {
 // Créer un nouvel utilisateur
 export const createUser = async (userData: CreateUserData): Promise<User> => {
   try {
+    // Nettoyer l'email (trim et lowercase)
+    const cleanEmail = userData.email.trim().toLowerCase();
+
+    // Vérifier si l'utilisateur existe déjà dans public.users
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('email', cleanEmail)
+      .single();
+
+    if (existingUser) {
+      throw new Error("Un compte avec cet email existe déjà");
+    }
+
     // 1. Créer l'utilisateur avec Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: userData.email,
+      email: cleanEmail,
       password: userData.password,
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      console.error('Supabase Auth Error:', authError);
+      console.error('Email sent:', cleanEmail);
+
+      // Si l'erreur est "User already registered", vérifier s'il existe dans public.users
+      if (authError.message.includes('already') || authError.message.includes('existe')) {
+        const { data: userInDb } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', cleanEmail)
+          .single();
+
+        if (!userInDb) {
+          throw new Error("Un problème est survenu lors de l'inscription. Veuillez contacter le support ou essayer avec un autre email.");
+        }
+      }
+
+      throw authError;
+    }
     if (!authData.user) throw new Error("Échec de création de l'utilisateur");
 
-    // 2. Créer le profil utilisateur dans la table users
+    // 2. Mettre à jour le profil utilisateur dans la table users
+    // (Le trigger on_auth_user_created a déjà créé le profil de base)
     const { data: user, error: userError } = await supabase
       .from('users')
-      .insert({
-        id: authData.user.id, // Utiliser l'ID de Supabase Auth
-        email: userData.email,
+      .update({
+        email: cleanEmail,
         first_name: userData.first_name,
         last_name: userData.last_name,
         phone: userData.phone,
@@ -74,6 +106,7 @@ export const createUser = async (userData: CreateUserData): Promise<User> => {
         completed_projects: 0,
         has_completed_onboarding: false,
       })
+      .eq('id', authData.user.id)
       .select()
       .single();
 

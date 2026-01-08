@@ -16,7 +16,8 @@ import {
   Users as UsersIcon,
   MapPin,
   Calendar,
-  UserPlus
+  UserPlus,
+  RotateCcw
 } from "lucide-react";
 import AddUserModal from "@/components/admin/AddUserModal";
 import { useRouter } from "next/navigation";
@@ -188,33 +189,19 @@ export default function UsersPage() {
     alert(`Édition de ${user.name} - Fonctionnalité à venir`);
   };
 
-  const handleBan = async (user: User) => {
+  const handleBan = (user: User) => {
     if (user.status === "banned") {
-      // Si déjà banni, réactiver
-      setActionLoading(user.id);
-      const result = await activateUser(user.id);
-      setActionLoading(null);
-      if (result.success) {
-        handleUserAdded();
-      } else {
-        alert(`Erreur: ${result.error}`);
-      }
+      // Si déjà banni, proposer de réactiver
+      setConfirmAction({ type: "activate", user });
     } else {
       setConfirmAction({ type: "ban", user });
     }
   };
 
-  const handleSuspend = async (user: User) => {
+  const handleSuspend = (user: User) => {
     if (user.status === "suspended") {
-      // Si déjà suspendu, réactiver
-      setActionLoading(user.id);
-      const result = await activateUser(user.id);
-      setActionLoading(null);
-      if (result.success) {
-        handleUserAdded();
-      } else {
-        alert(`Erreur: ${result.error}`);
-      }
+      // Si déjà suspendu, proposer de réactiver
+      setConfirmAction({ type: "activate", user });
     } else {
       setConfirmAction({ type: "suspend", user });
     }
@@ -426,11 +413,21 @@ export default function UsersPage() {
                     <button
                       onClick={() => user.status === "banned" ? handleBan(user) : handleSuspend(user)}
                       disabled={actionLoading === user.id}
-                      className="p-2 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                      className={`p-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50 ${
+                        user.status === "banned" || user.status === "suspended"
+                          ? "hover:bg-green-500/10"
+                          : "hover:bg-red-500/10"
+                      }`}
                       title={user.status === "banned" ? "Réactiver" : user.status === "suspended" ? "Réactiver" : "Bannir/Suspendre"}
                     >
                       {actionLoading === user.id ? (
-                        <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                        <div className={`w-4 h-4 border-2 rounded-full animate-spin ${
+                          user.status === "banned" || user.status === "suspended"
+                            ? "border-green-400/30 border-t-green-400"
+                            : "border-red-400/30 border-t-red-400"
+                        }`} />
+                      ) : user.status === "banned" || user.status === "suspended" ? (
+                        <RotateCcw className="w-4 h-4 text-green-400" />
                       ) : (
                         <Ban className="w-4 h-4 text-red-400" />
                       )}
@@ -523,10 +520,20 @@ export default function UsersPage() {
               <button
                 onClick={() => user.status === "banned" ? handleBan(user) : handleSuspend(user)}
                 disabled={actionLoading === user.id}
-                className="p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 transition-all disabled:opacity-50"
+                className={`p-2 border rounded-lg transition-all disabled:opacity-50 ${
+                  user.status === "banned" || user.status === "suspended"
+                    ? "bg-green-500/10 hover:bg-green-500/20 border-green-500/30 text-green-400"
+                    : "bg-red-500/10 hover:bg-red-500/20 border-red-500/30 text-red-400"
+                }`}
               >
                 {actionLoading === user.id ? (
-                  <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                  <div className={`w-4 h-4 border-2 rounded-full animate-spin ${
+                    user.status === "banned" || user.status === "suspended"
+                      ? "border-green-400/30 border-t-green-400"
+                      : "border-red-400/30 border-t-red-400"
+                  }`} />
+                ) : user.status === "banned" || user.status === "suspended" ? (
+                  <RotateCcw className="w-4 h-4" />
                 ) : (
                   <Ban className="w-4 h-4" />
                 )}
@@ -565,11 +572,13 @@ export default function UsersPage() {
               {confirmAction.type === "ban" && "Bannir l'utilisateur"}
               {confirmAction.type === "suspend" && "Suspendre l'utilisateur"}
               {confirmAction.type === "delete" && "Supprimer l'utilisateur"}
+              {confirmAction.type === "activate" && "Réactiver l'utilisateur"}
             </h3>
             <p className="text-gray-400 mb-6">
               {confirmAction.type === "ban" && `Êtes-vous sûr de vouloir bannir ${confirmAction.user?.name} ? Cette action peut être annulée.`}
               {confirmAction.type === "suspend" && `Êtes-vous sûr de vouloir suspendre ${confirmAction.user?.name} ? Cette action peut être annulée.`}
               {confirmAction.type === "delete" && `Êtes-vous sûr de vouloir supprimer définitivement ${confirmAction.user?.name} ? Cette action est irréversible.`}
+              {confirmAction.type === "activate" && `Êtes-vous sûr de vouloir réactiver ${confirmAction.user?.name} ? L'utilisateur pourra à nouveau accéder à la plateforme.`}
             </p>
             <div className="flex gap-3">
               <button
@@ -584,6 +593,8 @@ export default function UsersPage() {
                 className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
                   confirmAction.type === "delete"
                     ? "bg-red-500 hover:bg-red-600 text-white"
+                    : confirmAction.type === "activate"
+                    ? "bg-green-500 hover:bg-green-600 text-white"
                     : "bg-yellow-500 hover:bg-yellow-600 text-white"
                 } disabled:opacity-50`}
               >

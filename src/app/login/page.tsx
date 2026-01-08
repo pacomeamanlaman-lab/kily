@@ -41,7 +41,7 @@ export default function LoginPage() {
       case "email":
         if (!value.trim()) {
           newErrors.email = "L'email est requis";
-        } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) {
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
           newErrors.email = "Format d'email invalide (ex: exemple@email.com)";
         } else {
           delete newErrors.email;
@@ -113,7 +113,7 @@ export default function LoginPage() {
 
     if (!formData.email.trim()) {
       newErrors.email = "L'email est requis";
-    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Format d'email invalide (ex: exemple@email.com)";
     }
 

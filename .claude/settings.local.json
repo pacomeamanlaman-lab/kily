@@ -7,7 +7,9 @@
       "Read(//c/Users/OMEN/Documents/video/**)",
       "Bash(npm install:*)",
       "Bash(npm run build:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(psql:*)",
+      "Bash(npx supabase:*)"
     ],
     "deny": [],
     "ask": []

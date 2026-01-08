@@ -100,6 +100,7 @@ export const demoteFromAdmin = async (userEmail: string): Promise<{ success: boo
 };
 
 // Bannir un utilisateur (nécessite d'être admin)
+// Utilise une API route server-side pour mettre à jour le status avec la clé service
 export const banUser = async (userId: string): Promise<{ success: boolean; error?: string }> => {
   try {
     const currentUserIsAdmin = await isAdmin();
@@ -107,19 +108,35 @@ export const banUser = async (userId: string): Promise<{ success: boolean; error
       return { success: false, error: 'Vous devez être administrateur pour effectuer cette action' };
     }
 
-    const { error } = await supabase
-      .from('users')
-      .update({ status: 'banned' })
-      .eq('id', userId);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { success: false, error: 'Vous devez être connecté pour effectuer cette action' };
+    }
 
-    if (error) throw error;
-    return { success: true };
+    const response = await fetch('/api/admin/update-user-status', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ userId, status: 'banned' }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: result.error || 'Erreur lors du bannissement de l\'utilisateur' };
+    }
+
+    return result;
   } catch (error: any) {
-    return { success: false, error: handleSupabaseError(error) };
+    console.error('Erreur lors du bannissement:', error);
+    return { success: false, error: error.message || 'Une erreur inattendue est survenue' };
   }
 };
 
 // Suspendre un utilisateur (nécessite d'être admin)
+// Utilise une API route server-side pour mettre à jour le status avec la clé service
 export const suspendUser = async (userId: string): Promise<{ success: boolean; error?: string }> => {
   try {
     const currentUserIsAdmin = await isAdmin();
@@ -127,19 +144,35 @@ export const suspendUser = async (userId: string): Promise<{ success: boolean; e
       return { success: false, error: 'Vous devez être administrateur pour effectuer cette action' };
     }
 
-    const { error } = await supabase
-      .from('users')
-      .update({ status: 'suspended' })
-      .eq('id', userId);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { success: false, error: 'Vous devez être connecté pour effectuer cette action' };
+    }
 
-    if (error) throw error;
-    return { success: true };
+    const response = await fetch('/api/admin/update-user-status', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ userId, status: 'suspended' }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: result.error || 'Erreur lors de la suspension de l\'utilisateur' };
+    }
+
+    return result;
   } catch (error: any) {
-    return { success: false, error: handleSupabaseError(error) };
+    console.error('Erreur lors de la suspension:', error);
+    return { success: false, error: error.message || 'Une erreur inattendue est survenue' };
   }
 };
 
 // Réactiver un utilisateur (nécessite d'être admin)
+// Utilise une API route server-side pour mettre à jour le status avec la clé service
 export const activateUser = async (userId: string): Promise<{ success: boolean; error?: string }> => {
   try {
     const currentUserIsAdmin = await isAdmin();
@@ -147,15 +180,30 @@ export const activateUser = async (userId: string): Promise<{ success: boolean; 
       return { success: false, error: 'Vous devez être administrateur pour effectuer cette action' };
     }
 
-    const { error } = await supabase
-      .from('users')
-      .update({ status: 'active' })
-      .eq('id', userId);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return { success: false, error: 'Vous devez être connecté pour effectuer cette action' };
+    }
 
-    if (error) throw error;
-    return { success: true };
+    const response = await fetch('/api/admin/update-user-status', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ userId, status: 'active' }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: result.error || 'Erreur lors de la réactivation de l\'utilisateur' };
+    }
+
+    return result;
   } catch (error: any) {
-    return { success: false, error: handleSupabaseError(error) };
+    console.error('Erreur lors de la réactivation:', error);
+    return { success: false, error: error.message || 'Une erreur inattendue est survenue' };
   }
 };
 

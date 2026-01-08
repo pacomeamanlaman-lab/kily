@@ -113,7 +113,7 @@ export default function RegisterPage() {
 
     if (!formData.email.trim()) {
       newErrors.email = "L'email est requis";
-    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)) {
+    } else if (!formData.email.includes('@') || !formData.email.includes('.') || formData.email.indexOf('@') >= formData.email.lastIndexOf('.')) {
       newErrors.email = "Format d'email invalide (ex: exemple@email.com)";
     }
 
@@ -190,7 +190,7 @@ export default function RegisterPage() {
       case "email":
         if (!value.trim()) {
           newErrors.email = "L'email est requis";
-        } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) {
+        } else if (!value.includes('@') || !value.includes('.') || value.indexOf('@') >= value.lastIndexOf('.')) {
           newErrors.email = "Format d'email invalide (ex: exemple@email.com)";
         } else {
           delete newErrors.email;
@@ -382,9 +382,48 @@ export default function RegisterPage() {
         return;
       }
 
+      // Nettoyer l'email (trim)
+      const cleanEmail = formData.email.trim();
+      
+      // Valider le format de l'email avant de continuer
+      if (!cleanEmail.includes('@') || !cleanEmail.includes('.') || cleanEmail.indexOf('@') >= cleanEmail.lastIndexOf('.')) {
+        setErrors({ 
+          email: "Format d'email invalide (ex: exemple@email.com)" 
+        });
+        // Retourner à l'étape 2 pour corriger l'email
+        setCurrentStep(2);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Valider aussi les autres champs de l'étape 2
+      const step2Errors: Record<string, string> = {};
+      if (!formData.firstName.trim() || formData.firstName.trim().length < 2) {
+        step2Errors.firstName = "Le prénom doit contenir au moins 2 caractères";
+      }
+      if (!formData.lastName.trim() || formData.lastName.trim().length < 2) {
+        step2Errors.lastName = "Le nom doit contenir au moins 2 caractères";
+      }
+      if (!formData.phone.trim()) {
+        step2Errors.phone = "Le téléphone est requis";
+      }
+      if (!formData.country.trim()) {
+        step2Errors.country = "Le pays est requis";
+      }
+      if (!formData.city.trim()) {
+        step2Errors.city = "La ville est requise";
+      }
+
+      if (Object.keys(step2Errors).length > 0) {
+        setErrors(step2Errors);
+        setCurrentStep(2);
+        setIsSubmitting(false);
+        return;
+      }
+
       // Create user with Supabase (bio and skills will be filled in onboarding)
       const { success, user: newUser, error } = await register({
-        email: formData.email,
+        email: cleanEmail,
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -400,6 +439,17 @@ export default function RegisterPage() {
       if (!success || !newUser) {
         console.error("Create user error:", error);
         setIsSubmitting(false);
+        
+        // Si l'erreur concerne l'email, retourner à l'étape 2
+        const emailError = error?.toLowerCase().includes('email') || 
+                           error?.toLowerCase().includes('mail') ||
+                           error?.toLowerCase().includes('format');
+        
+        if (emailError) {
+          setCurrentStep(2);
+          setTouched({ ...touched, email: true });
+        }
+        
         setErrors({
           email: error || "Un compte avec cet email existe déjà" 
         });
