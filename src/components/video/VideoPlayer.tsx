@@ -93,7 +93,17 @@ export default function VideoPlayer({
   // Initialiser HLS.js pour les vidéos HLS
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !isHlsVideo || !currentVideo?.videoUrl) return;
+    if (!video || !isHlsVideo || !currentVideo?.videoUrl) {
+      console.log('HLS init skipped:', { 
+        hasVideo: !!video, 
+        isHlsVideo, 
+        videoUrl: currentVideo?.videoUrl,
+        isOpen 
+      });
+      return;
+    }
+    
+    console.log('HLS init started for:', currentVideo.videoUrl);
 
     // Nettoyer l'instance HLS précédente
     if (hlsRef.current) {
@@ -101,14 +111,56 @@ export default function VideoPlayer({
       hlsRef.current = null;
     }
 
+    // Arrêter proprement la vidéo avant de changer
+    video.pause();
+    video.src = '';
+    try {
+      video.load();
+    } catch (e) {
+      // Ignorer les erreurs de nettoyage
+    }
+
     // Vérifier si le navigateur supporte HLS nativement (Safari)
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      console.log('Support HLS natif (Safari)');
       video.src = currentVideo.videoUrl;
+      video.load();
+      // Attendre que la vidéo soit prête avant de jouer
+      const playWhenReady = () => {
+        if (video.readyState >= 2) {
+          console.log('Vidéo prête (Safari), démarrage...');
+          video.play().then(() => {
+            console.log('Vidéo en lecture (Safari)');
+            setIsPlaying(true);
+          }).catch((error) => {
+            if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+              console.error('Erreur lecture vidéo native:', error);
+            }
+          });
+        } else {
+          console.log('Attente canplay (Safari)...');
+          const handleCanPlay = () => {
+            console.log('canplay event (Safari), démarrage...');
+            video.play().then(() => {
+              console.log('Vidéo en lecture après canplay (Safari)');
+              setIsPlaying(true);
+            }).catch((error) => {
+              if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+                console.error('Erreur lecture vidéo native:', error);
+              }
+            });
+          };
+          video.addEventListener('canplay', handleCanPlay, { once: true });
+          video.addEventListener('loadeddata', handleCanPlay, { once: true });
+        }
+      };
+      playWhenReady();
       return;
     }
 
     // Utiliser HLS.js pour les autres navigateurs
     if (Hls.isSupported()) {
+      console.log('HLS.js supporté, initialisation...');
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
@@ -117,10 +169,48 @@ export default function VideoPlayer({
       hls.loadSource(currentVideo.videoUrl);
       hls.attachMedia(video);
       
+      let playPromise: Promise<void> | null = null;
+      
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch((error) => {
-          console.error('Erreur lecture vidéo:', error);
-        });
+        console.log('Manifest HLS parsé, préparation lecture...');
+        // Attendre un peu que la vidéo soit prête
+        setTimeout(() => {
+          if (video && video.readyState >= 2) {
+            console.log('Vidéo prête (HLS.js), démarrage...');
+            playPromise = video.play();
+            playPromise.then(() => {
+              console.log('Vidéo en lecture (HLS.js)');
+              setIsPlaying(true);
+            }).catch((error) => {
+              if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+                console.error('Erreur lecture vidéo:', error);
+              } else if (error.name === 'NotAllowedError') {
+                console.log('Autoplay bloqué, utilisateur devra cliquer');
+              }
+            });
+          } else {
+            console.log('Vidéo pas encore prête, attente...');
+            // Attendre que la vidéo soit prête
+            const tryPlayWhenReady = () => {
+              if (video.readyState >= 2) {
+                console.log('Vidéo prête après attente (HLS.js), démarrage...');
+                playPromise = video.play();
+                playPromise.then(() => {
+                  console.log('Vidéo en lecture après attente (HLS.js)');
+                  setIsPlaying(true);
+                }).catch((error) => {
+                  if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+                    console.error('Erreur lecture vidéo:', error);
+                  }
+                });
+              } else {
+                video.addEventListener('canplay', tryPlayWhenReady, { once: true });
+                video.addEventListener('loadeddata', tryPlayWhenReady, { once: true });
+              }
+            };
+            tryPlayWhenReady();
+          }
+        }, 300);
       });
 
       hls.on(Hls.Events.ERROR, (event, data) => {
@@ -145,6 +235,8 @@ export default function VideoPlayer({
       hlsRef.current = hls;
     } else {
       console.error('HLS.js n\'est pas supporté par ce navigateur');
+      video.src = currentVideo.videoUrl;
+      video.load();
     }
 
     // Nettoyage
@@ -154,7 +246,45 @@ export default function VideoPlayer({
         hlsRef.current = null;
       }
     };
-  }, [currentVideoIndex, isHlsVideo, currentVideo?.videoUrl]);
+  }, [currentVideoIndex, isHlsVideo, currentVideo?.videoUrl, isOpen]);
+
+  // Forcer l'initialisation quand le modal s'ouvre pour la première fois
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    // Attendre que le DOM soit complètement monté
+    const timeout = setTimeout(() => {
+      const video = videoRef.current;
+      if (!video) {
+        console.log('Force init: video ref pas encore disponible');
+        return;
+      }
+      
+      // Si c'est une vidéo HLS et qu'elle n'est pas en cours de lecture
+      if (isHlsVideo && currentVideo?.videoUrl) {
+        console.log('Force init: vérification état vidéo', {
+          paused: video.paused,
+          readyState: video.readyState,
+          hasHls: !!hlsRef.current
+        });
+        
+        // Si la vidéo est prête mais pas en lecture, forcer le play
+        if (video.readyState >= 2 && video.paused) {
+          console.log('Force init: vidéo prête mais en pause, tentative de play');
+          video.play().then(() => {
+            console.log('Force init: vidéo démarrée avec succès');
+            setIsPlaying(true);
+          }).catch((error) => {
+            if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+              console.error('Force init: erreur play:', error);
+            }
+          });
+        }
+      }
+    }, 800); // Délai plus long pour s'assurer que tout est monté
+    
+    return () => clearTimeout(timeout);
+  }, [isOpen, isHlsVideo, currentVideo?.videoUrl]);
 
   // Navigation vidéo
   const navigateToVideo = (direction: "next" | "prev") => {
@@ -177,13 +307,26 @@ export default function VideoPlayer({
 
   // Toggle play/pause
   const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
+    const video = videoRef.current;
+    if (!video) return;
+    
+    if (isPlaying) {
+      video.pause();
+      setIsPlaying(false);
+    } else {
+      // Attendre que toute opération play() en cours soit terminée
+      const playVideo = async () => {
+        try {
+          await video.play();
+          setIsPlaying(true);
+        } catch (error: any) {
+          if (error.name !== 'AbortError') {
+            console.error('Erreur play:', error);
+          }
+          // Ne pas mettre à jour isPlaying si le play échoue
+        }
+      };
+      playVideo();
     }
   };
 
@@ -544,12 +687,25 @@ export default function VideoPlayer({
                       autoPlay
                       muted={isMuted}
                       playsInline
+                      onAbort={(e) => {
+                        // Ignorer silencieusement les événements abort (normaux lors du changement de vidéo)
+                      }}
                       onError={(e) => {
-                        console.error("Erreur vidéo:", e);
                         const video = e.target as HTMLVideoElement;
                         const error = video.error;
+                        
+                        // Ignorer les AbortError (code 20)
+                        if (error && (error.code === 20 || error.message?.includes('aborted'))) {
+                          return;
+                        }
+                        
                         if (error) {
-                          console.error("Code d'erreur vidéo:", error.code, "Message:", error.message);
+                          console.error("Erreur vidéo:", {
+                            code: error.code,
+                            message: error.message
+                          });
+                        } else {
+                          console.error("Erreur vidéo (sans détails):", e);
                         }
                       }}
                       onLoadedMetadata={(e) => {
