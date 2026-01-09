@@ -426,10 +426,12 @@ export const deleteComment = async (commentId: string): Promise<boolean> => {
 // Obtenir le nombre de commentaires d'un post
 export const getCommentsCount = async (postId: string): Promise<number> => {
   try {
+    // Compter seulement les commentaires principaux (sans parent_comment_id)
     const { count, error } = await supabase
       .from('comments')
       .select('*', { count: 'exact', head: true })
-      .eq('post_id', postId);
+      .eq('post_id', postId)
+      .is('parent_comment_id', null);
 
     if (error) throw error;
     return count || 0;

@@ -894,7 +894,14 @@ function FeedPageContent() {
                 transition={{ delay: index * 0.1 }}
               >
                 {item.type === "post" ? (
-                  <PostCard post={item.data} />
+                  <PostCard 
+                    post={item.data} 
+                    onPostUpdate={(updatedPost) => {
+                      setPosts(prevPosts => 
+                        prevPosts.map(p => p.id === updatedPost.id ? updatedPost : p)
+                      );
+                    }}
+                  />
                 ) : (
                   <VideoCardFeed
                     video={item.data}

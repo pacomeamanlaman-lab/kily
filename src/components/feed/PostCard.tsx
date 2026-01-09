@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
 import { togglePostLike, isPostLiked, deletePost, updatePost, Post } from "@/lib/posts";
-import { loadComments as loadCommentsFromSupabase, addComment as addCommentToSupabase, toggleCommentLike, isCommentLiked, type Comment as SupabaseComment } from "@/lib/supabase/posts.service";
+import { loadComments as loadCommentsFromSupabase, addComment as addCommentToSupabase, toggleCommentLike, isCommentLiked, getPostById, getCommentsCount, type Comment as SupabaseComment } from "@/lib/supabase/posts.service";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getUserDisplayName } from "@/lib/supabase/users.service";
 import { hidePost } from "@/lib/hiddenContent";
@@ -19,6 +19,7 @@ import { toggleFollow, isFollowing } from "@/lib/follows";
 
 interface PostCardProps {
   post: Post;
+  onPostUpdate?: (updatedPost: Post) => void;
 }
 
 interface Comment {
@@ -33,12 +34,15 @@ interface Comment {
   parentCommentId?: string | null;
 }
 
-export default function PostCard({ post }: PostCardProps) {
+export default function PostCard({ post, onPostUpdate }: PostCardProps) {
   const router = useRouter();
   const { user: currentUser } = useCurrentUser();
   const currentUserId = currentUser?.id || null;
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes);
+  // Utiliser le max entre post.comments et 0 pour éviter les valeurs négatives
+  // Le compteur sera mis à jour quand on charge les commentaires
+  const [commentsCount, setCommentsCount] = useState(Math.max(post.comments || 0, 0));
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState("");
@@ -63,7 +67,21 @@ export default function PostCard({ post }: PostCardProps) {
   // Check if post belongs to current user
   const isOwnPost = currentUserId === post.author.id;
 
-  // Load existing comments and like status on mount
+  // Load comments count on mount to update the counter
+  useEffect(() => {
+    const loadCommentsCount = async () => {
+      try {
+        const count = await getCommentsCount(post.id);
+        setCommentsCount(count);
+      } catch (error) {
+        console.error('Erreur chargement nombre commentaires:', error);
+      }
+    };
+
+    loadCommentsCount();
+  }, [post.id]);
+
+  // Load existing comments when popup is opened
   useEffect(() => {
     const loadComments = async () => {
       try {
@@ -97,6 +115,8 @@ export default function PostCard({ post }: PostCardProps) {
         setComments(formattedComments);
         setHasMoreComments(result.hasMore);
         setCommentsOffset(20);
+        // Mettre à jour le compteur avec le nombre réel de commentaires chargés
+        setCommentsCount(formattedComments.length);
       } catch (error) {
         console.error('Erreur chargement commentaires:', error);
         setComments([]);
@@ -155,6 +175,8 @@ export default function PostCard({ post }: PostCardProps) {
         timestamp: new Date().toISOString(),
       };
 
+      // Optimistic update: incrémenter le compteur et ajouter le commentaire
+      setCommentsCount(prev => prev + 1);
       setComments([...comments, optimisticComment]);
       setCommentText("");
 
@@ -191,6 +213,7 @@ export default function PostCard({ post }: PostCardProps) {
       console.error('Erreur ajout commentaire:', error);
       // Remove optimistic comment on error
       setComments(prevComments => prevComments.filter(c => !c.id.startsWith('temp-')));
+      setCommentsCount(prev => Math.max(0, prev - 1)); // Revert le compteur en cas d'erreur
       setToast({
         message: error?.message || "Erreur lors de l'ajout du commentaire",
         type: "error",
@@ -234,6 +257,8 @@ export default function PostCard({ post }: PostCardProps) {
       setComments(prev => [...prev, ...newComments]);
       setHasMoreComments(result.hasMore);
       setCommentsOffset(prev => prev + 20);
+      // Mettre à jour le compteur avec le nombre total de commentaires chargés
+      setCommentsCount(prev => prev + newComments.length);
     } catch (error) {
       console.error('Erreur chargement commentaires supplémentaires:', error);
     } finally {
@@ -824,7 +849,7 @@ export default function PostCard({ post }: PostCardProps) {
             className="flex items-center gap-1 text-sm text-gray-400 hover:text-violet-400 transition-colors cursor-pointer"
           >
             <MessageCircle className="w-4 h-4" />
-            <span>{comments.length} commentaires</span>
+            <span>{commentsCount} commentaires</span>
           </button>
         </div>
 
@@ -877,7 +902,7 @@ export default function PostCard({ post }: PostCardProps) {
             >
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <h2 className="text-xl font-bold">Commentaires ({comments.length})</h2>
+                <h2 className="text-xl font-bold">Commentaires ({commentsCount})</h2>
                 <button
                   onClick={() => setShowComments(false)}
                   className="p-2 hover:bg-white/10 rounded-full transition-colors"

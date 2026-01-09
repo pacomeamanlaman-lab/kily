@@ -40,6 +40,9 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
   const currentUserId = currentUser?.id || null;
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(video.likes);
+  // Utiliser le max entre video.comments et 0 pour éviter les valeurs négatives
+  // Le compteur sera mis à jour quand on charge les commentaires
+  const [commentsCount, setCommentsCount] = useState(Math.max(video.comments || 0, 0));
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState("");
@@ -90,6 +93,8 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
           timestamp: vc.created_at,
         }));
         setComments(transformedComments);
+        // Mettre à jour le compteur avec le nombre réel de commentaires chargés
+        setCommentsCount(transformedComments.length);
       } catch (error) {
         console.error('Erreur chargement commentaires:', error);
         setComments([]);
@@ -310,6 +315,7 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
       };
 
       setComments([...comments, optimisticComment]);
+      setCommentsCount(prev => prev + 1); // Optimistic update du compteur
       setCommentText("");
 
       // Save to Supabase
@@ -345,6 +351,7 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
       console.error('Erreur ajout commentaire:', error);
       // Remove optimistic comment on error
       setComments(prevComments => prevComments.filter(c => !c.id.startsWith('temp-')));
+      setCommentsCount(prev => Math.max(0, prev - 1)); // Revert le compteur en cas d'erreur
       setToast({
         message: error?.message || "Erreur lors de l'ajout du commentaire",
         type: "error",
@@ -388,6 +395,8 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
       setComments(prev => [...prev, ...newComments]);
       setHasMoreComments(result.hasMore);
       setCommentsOffset(prev => prev + 20);
+      // Mettre à jour le compteur avec le nombre total de commentaires chargés
+      setCommentsCount(prev => prev + newComments.length);
     } catch (error) {
       console.error('Erreur chargement commentaires supplémentaires:', error);
     } finally {
@@ -722,7 +731,7 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
             className="flex items-center gap-1 text-sm text-gray-400 hover:text-violet-400 transition-colors cursor-pointer"
           >
             <MessageCircle className="w-4 h-4" />
-            <span>{formatNumber(comments.length || video.comments)} commentaires</span>
+            <span>{formatNumber(commentsCount)} commentaires</span>
           </button>
         </div>
 
@@ -778,7 +787,7 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
             >
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <h2 className="text-xl font-bold">Commentaires ({comments.length})</h2>
+                <h2 className="text-xl font-bold">Commentaires ({commentsCount})</h2>
                 <button
                   onClick={() => setShowComments(false)}
                   className="p-2 hover:bg-white/10 rounded-full transition-colors"
