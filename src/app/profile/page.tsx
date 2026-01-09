@@ -16,6 +16,7 @@ import { Skill, SkillCategory } from "@/types";
 import { getCurrentUser, updateUser, getUserFullName } from "@/lib/supabase/users.service";
 import { isLoggedIn } from "@/lib/supabase/auth.service";
 import type { User } from "@/lib/supabase/users.service";
+import { uploadAvatar, uploadCoverImage, uploadPortfolioImage } from "@/lib/supabase/storage.service";
 
 function ProfilePageContent() {
   const router = useRouter();
@@ -226,48 +227,69 @@ function ProfilePageContent() {
   const processFiles = async (files: FileList) => {
     if (!files || files.length === 0 || !user) return;
 
+    setLoading(true);
     const newItems: Array<{ id: string; title: string; description: string; imageUrl: string }> = [];
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
 
-      // Vérifier que c'est une image
-      if (!file.type.startsWith('image/')) continue;
+        // Vérifier que c'est une image
+        if (!file.type.startsWith('image/')) continue;
 
-      const reader = new FileReader();
+        // Upload vers Supabase Storage
+        const result = await uploadPortfolioImage(user.id, file);
+        
+        if (result.error) {
+          console.error(`Erreur upload image ${i + 1}:`, result.error);
+          continue;
+        }
 
-      await new Promise((resolve) => {
-        reader.onloadend = () => {
-          const portfolioItemNumber = (user?.portfolio.length || 0) + newItems.length + 1;
-          newItems.push({
-            id: `${Date.now()}-${i}`,
-            title: `Portfolio item ${portfolioItemNumber}`,
-            description: "",
-            imageUrl: reader.result as string,
-          });
-          resolve(null);
-        };
-        reader.readAsDataURL(file);
+        const portfolioItemNumber = (user?.portfolio.length || 0) + newItems.length + 1;
+        newItems.push({
+          id: `${Date.now()}-${i}`,
+          title: `Portfolio item ${portfolioItemNumber}`,
+          description: "",
+          imageUrl: result.url,
+        });
+      }
+
+      if (newItems.length === 0) {
+        setToast({
+          message: "Aucune image n'a pu être uploadée",
+          type: "error",
+          isVisible: true,
+        });
+        return;
+      }
+
+      // TODO: Sauvegarder les items du portfolio dans la table portfolio_items de Supabase
+      // Pour l'instant, on met juste à jour l'état local
+      setUser({
+        ...user,
+        portfolio: [...user.portfolio, ...newItems],
       });
-    }
 
-    if (newItems.length === 0) return;
+      setIsAddingPortfolio(false);
+      setToast({
+        message: `${newItems.length} image(s) ajoutée(s) avec succès !`,
+        type: "success",
+        isVisible: true,
+      });
 
-    setUser({
-      ...user,
-      portfolio: [...user.portfolio, ...newItems],
-    });
-
-    setIsAddingPortfolio(false);
-    setToast({
-      message: `${newItems.length} image(s) ajoutée(s) avec succès !`,
-      type: "success",
-      isVisible: true,
-    });
-
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error) {
+      console.error('Erreur processFiles:', error);
+      setToast({
+        message: "Erreur lors de l'upload des images",
+        type: "error",
+        isVisible: true,
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -324,43 +346,100 @@ function ProfilePageContent() {
       });
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('image/') || !user) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (!user) return;
-      setUser({
-        ...user,
-        avatar: reader.result as string,
+    try {
+      setLoading(true);
+      
+      // Upload vers Supabase Storage
+      const result = await uploadAvatar(user.id, file);
+      
+      if (result.error) {
+        setToast({
+          message: result.error,
+          type: "error",
+          isVisible: true,
+        });
+        return;
+      }
+
+      // Mettre à jour l'utilisateur dans Supabase avec la nouvelle URL
+      const updatedUser = await updateUser(user.id, {
+        avatar: result.url,
       });
+
+      if (updatedUser) {
+        // Mettre à jour l'état local
+        setUser({
+          ...user,
+          avatar: result.url,
+        });
+        setToast({
+          message: "Photo de profil mise à jour !",
+          type: "success",
+          isVisible: true,
+        });
+      }
+    } catch (error) {
+      console.error('Erreur upload avatar:', error);
       setToast({
-        message: "Photo de profil mise à jour !",
-        type: "success",
+        message: "Erreur lors de l'upload de la photo de profil",
+        type: "error",
         isVisible: true,
       });
-    };
-    reader.readAsDataURL(file);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('image/') || !user) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setUser({
-        ...user,
-        coverImage: reader.result as string,
+    try {
+      setLoading(true);
+      
+      // Upload vers Supabase Storage
+      const result = await uploadCoverImage(user.id, file);
+      
+      if (result.error) {
+        setToast({
+          message: result.error,
+          type: "error",
+          isVisible: true,
+        });
+        return;
+      }
+
+      // Mettre à jour l'utilisateur dans Supabase avec la nouvelle URL
+      const updatedUser = await updateUser(user.id, {
+        cover_image: result.url,
       });
+
+      if (updatedUser) {
+        // Mettre à jour l'état local
+        setUser({
+          ...user,
+          coverImage: result.url,
+        });
+        setToast({
+          message: "Photo de couverture mise à jour !",
+          type: "success",
+          isVisible: true,
+        });
+      }
+    } catch (error) {
+      console.error('Erreur upload cover:', error);
       setToast({
-        message: "Photo de couverture mise à jour !",
-        type: "success",
+        message: "Erreur lors de l'upload de la photo de couverture",
+        type: "error",
         isVisible: true,
       });
-    };
-    reader.readAsDataURL(file);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Compétences prédéfinies par catégorie

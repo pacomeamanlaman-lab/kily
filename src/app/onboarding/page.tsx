@@ -189,21 +189,56 @@ export default function OnboardingPage() {
   const handleComplete = async () => {
     setLoading(true);
 
-    // Update user with onboarding data
-    if (currentUser) {
-      await updateUser(currentUser.id, {
-        avatar: formData.avatar || currentUser.avatar,
-        bio: formData.bio || currentUser.bio,
-        has_completed_onboarding: true,
-      });
-      
-      // TODO: Save skills and portfolio items to Supabase tables
-      // For now, we'll just mark onboarding as complete
-    }
+    try {
+      // Update user with onboarding data
+      if (currentUser) {
+        let avatarUrl = currentUser.avatar;
 
-    if (currentUser) {
-      const redirectPath = getRedirectPath(currentUser);
-      router.push(redirectPath);
+        // Si un avatar a été sélectionné et que c'est une data URL, l'uploader vers Storage
+        if (formData.avatar && formData.avatar.startsWith('data:')) {
+          // Convertir la data URL en File
+          const response = await fetch(formData.avatar);
+          const blob = await response.blob();
+          const file = new File([blob], 'avatar.jpg', { type: blob.type });
+
+          // Uploader vers Supabase Storage
+          const { uploadAvatar } = await import('@/lib/supabase/storage.service');
+          const result = await uploadAvatar(currentUser.id, file);
+          
+          if (result.error) {
+            console.error('Erreur upload avatar:', result.error);
+            // On continue avec l'avatar par défaut si l'upload échoue
+          } else {
+            avatarUrl = result.url;
+          }
+        } else if (formData.avatar && !formData.avatar.startsWith('data:')) {
+          // Si c'est déjà une URL (pas une data URL), l'utiliser directement
+          avatarUrl = formData.avatar;
+        }
+
+        await updateUser(currentUser.id, {
+          avatar: avatarUrl,
+          bio: formData.bio || currentUser.bio,
+          has_completed_onboarding: true,
+        });
+        
+        // TODO: Save skills and portfolio items to Supabase tables
+        // For now, we'll just mark onboarding as complete
+      }
+
+      if (currentUser) {
+        const redirectPath = getRedirectPath(currentUser);
+        router.push(redirectPath);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la complétion de l\'onboarding:', error);
+      // Même en cas d'erreur, on redirige l'utilisateur
+      if (currentUser) {
+        const redirectPath = getRedirectPath(currentUser);
+        router.push(redirectPath);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
