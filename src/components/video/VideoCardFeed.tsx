@@ -10,7 +10,7 @@ import { Video } from "@/lib/videoData";
 import Toast from "@/components/ui/Toast";
 import { isVideoLiked, getVideoLikesCount, toggleVideoLike, initVideoLikesCount } from "@/lib/videoLikes";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { loadVideoComments, addVideoComment, type VideoComment } from "@/lib/supabase/videos.service";
+import { loadVideoComments, addVideoComment, toggleVideoCommentLike, isVideoCommentLiked, type VideoComment } from "@/lib/supabase/videos.service";
 import { deleteVideo, updateVideo } from "@/lib/videos";
 import EditVideoModal from "@/components/video/EditVideoModal";
 import { toggleFollow, isFollowing } from "@/lib/follows";
@@ -28,6 +28,10 @@ interface Comment {
   avatar: string;
   content: string;
   timestamp: string;
+  likesCount?: number;
+  isLiked?: boolean;
+  replies?: Comment[];
+  parentCommentId?: string | null;
 }
 
 export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
@@ -40,6 +44,11 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState<{ [commentId: string]: string }>({});
+  const [hasMoreComments, setHasMoreComments] = useState(false);
+  const [commentsOffset, setCommentsOffset] = useState(0);
+  const [loadingMoreComments, setLoadingMoreComments] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -103,7 +112,7 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
       const following = isFollowing(currentUserId, video.author.id);
       setIsFollowingAuthor(following);
     }
-  }, [video.id, video.likes, currentUserId, video.author.id]);
+  }, [video.id, video.likes, currentUserId, video.author.id, showComments]);
 
   const handleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -338,6 +347,138 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
       setComments(prevComments => prevComments.filter(c => !c.id.startsWith('temp-')));
       setToast({
         message: error?.message || "Erreur lors de l'ajout du commentaire",
+        type: "error",
+        visible: true,
+      });
+    }
+  };
+
+  const handleLoadMoreComments = async () => {
+    if (loadingMoreComments || !hasMoreComments) return;
+    
+    setLoadingMoreComments(true);
+    try {
+      const result = await loadVideoComments(video.id, 20, commentsOffset);
+      const newComments: Comment[] = await Promise.all(
+        result.comments.map(async (vc: any) => {
+          const isLiked = currentUserId ? await isVideoCommentLiked(vc.id, currentUserId) : false;
+          const replies = (vc.replies || []).map((r: any) => ({
+            id: r.id,
+            author: r.author ? `${r.author.first_name} ${r.author.last_name}` : 'Utilisateur',
+            avatar: r.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${r.author?.first_name || 'user'}`,
+            content: r.content,
+            timestamp: r.created_at,
+            likesCount: r.likes_count || 0,
+            isLiked: false,
+          }));
+          
+          return {
+            id: vc.id,
+            author: vc.author ? `${vc.author.first_name} ${vc.author.last_name}` : 'Utilisateur',
+            avatar: vc.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${vc.author?.first_name || 'user'}`,
+            content: vc.content,
+            timestamp: vc.created_at,
+            likesCount: vc.likes_count || 0,
+            isLiked,
+            replies,
+          };
+        })
+      );
+      
+      setComments(prev => [...prev, ...newComments]);
+      setHasMoreComments(result.hasMore);
+      setCommentsOffset(prev => prev + 20);
+    } catch (error) {
+      console.error('Erreur chargement commentaires supplémentaires:', error);
+    } finally {
+      setLoadingMoreComments(false);
+    }
+  };
+
+  const handleCommentLike = async (commentId: string) => {
+    if (!currentUserId) {
+      setToast({
+        message: "Vous devez être connecté pour liker",
+        type: "error",
+        visible: true,
+      });
+      return;
+    }
+
+    try {
+      const result = await toggleVideoCommentLike(commentId, currentUserId);
+      setComments(prevComments => 
+        prevComments.map(c => {
+          if (c.id === commentId) {
+            return { ...c, isLiked: result.liked, likesCount: result.likesCount };
+          }
+          // Also update in replies
+          if (c.replies) {
+            return {
+              ...c,
+              replies: c.replies.map(r => 
+                r.id === commentId 
+                  ? { ...r, isLiked: result.liked, likesCount: result.likesCount }
+                  : r
+              ),
+            };
+          }
+          return c;
+        })
+      );
+    } catch (error: any) {
+      console.error('Erreur like commentaire:', error);
+      setToast({
+        message: error?.message || "Erreur lors du like",
+        type: "error",
+        visible: true,
+      });
+    }
+  };
+
+  const handleAddReply = async (parentCommentId: string) => {
+    const text = replyText[parentCommentId];
+    if (!text?.trim() || !currentUser) return;
+
+    try {
+      const savedReply = await addVideoComment(
+        video.id,
+        text,
+        currentUser.id,
+        parentCommentId
+      );
+
+      if (savedReply) {
+        const formattedReply: Comment = {
+          id: savedReply.id,
+          author: savedReply.author ? `${savedReply.author.first_name} ${savedReply.author.last_name}` : 'Utilisateur',
+          avatar: savedReply.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${savedReply.author?.first_name || 'user'}`,
+          content: savedReply.content,
+          timestamp: savedReply.created_at,
+          likesCount: savedReply.likes_count || 0,
+          isLiked: false,
+        };
+
+        setComments(prevComments =>
+          prevComments.map(c =>
+            c.id === parentCommentId
+              ? { ...c, replies: [...(c.replies || []), formattedReply] }
+              : c
+          )
+        );
+
+        setReplyText(prev => ({ ...prev, [parentCommentId]: '' }));
+        setReplyingTo(null);
+        setToast({
+          message: "Réponse ajoutée !",
+          type: "success",
+          visible: true,
+        });
+      }
+    } catch (error: any) {
+      console.error('Erreur ajout réponse:', error);
+      setToast({
+        message: error?.message || "Erreur lors de l'ajout de la réponse",
         type: "error",
         visible: true,
       });
@@ -662,41 +803,149 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
                 ) : null}
 
                 {comments.map((comment) => (
-                  <motion.div
-                    key={comment.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex gap-3"
-                  >
-                    <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                      {comment.avatar?.includes('dicebear.com') ? (
-                        <img
-                          src={comment.avatar}
-                          alt={comment.author}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Image
-                          src={comment.avatar}
-                          alt={comment.author}
-                          fill
-                          className="object-cover"
-                          sizes="40px"
-                          unoptimized={comment.avatar?.endsWith('.svg')}
-                        />
-                      )}
-                    </div>
-                    <div className="flex-1 bg-white/5 rounded-xl p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-sm">{comment.author}</span>
-                        <span className="text-xs text-gray-500">
-                          {getTimeAgo(comment.timestamp)}
-                        </span>
+                  <div key={comment.id} className="space-y-3">
+                    {/* Commentaire principal */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex gap-3"
+                    >
+                      <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                        {comment.avatar?.includes('dicebear.com') ? (
+                          <img
+                            src={comment.avatar}
+                            alt={comment.author}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Image
+                            src={comment.avatar}
+                            alt={comment.author}
+                            fill
+                            className="object-cover"
+                            sizes="40px"
+                            unoptimized={comment.avatar?.endsWith('.svg')}
+                          />
+                        )}
                       </div>
-                      <p className="text-sm text-gray-300">{comment.content}</p>
-                    </div>
-                  </motion.div>
+                      <div className="flex-1 bg-white/5 rounded-xl p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-semibold text-sm">{comment.author}</span>
+                          <span className="text-xs text-gray-500">
+                            {getTimeAgo(comment.timestamp)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-300 mb-2">{comment.content}</p>
+                        {/* Boutons J'aime et Répondre */}
+                        <div className="flex items-center gap-4 mt-2">
+                          <button
+                            onClick={() => handleCommentLike(comment.id)}
+                            className={`flex items-center gap-1 text-xs transition-colors ${
+                              comment.isLiked
+                                ? 'text-violet-400'
+                                : 'text-gray-400 hover:text-violet-400'
+                            }`}
+                          >
+                            <Heart className={`w-4 h-4 ${comment.isLiked ? 'fill-current' : ''}`} />
+                            <span>{comment.likesCount || 0}</span>
+                          </button>
+                          <button
+                            onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                            className="flex items-center gap-1 text-xs text-gray-400 hover:text-violet-400 transition-colors"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                            <span>Répondre</span>
+                          </button>
+                        </div>
+                        {/* Input de réponse */}
+                        {replyingTo === comment.id && (
+                          <div className="mt-3 flex gap-2">
+                            <input
+                              type="text"
+                              value={replyText[comment.id] || ''}
+                              onChange={(e) => setReplyText(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                              onKeyPress={(e) => e.key === "Enter" && handleAddReply(comment.id)}
+                              placeholder="Écrire une réponse..."
+                              className="flex-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500 transition-colors"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleAddReply(comment.id)}
+                              disabled={!replyText[comment.id]?.trim()}
+                              className="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 disabled:bg-white/10 disabled:text-gray-600 rounded-lg text-sm transition-colors"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                    {/* Réponses */}
+                    {comment.replies && comment.replies.length > 0 && (
+                      <div className="ml-13 space-y-2">
+                        {comment.replies.map((reply) => (
+                          <motion.div
+                            key={reply.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="flex gap-3"
+                          >
+                            <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                              {reply.avatar?.includes('dicebear.com') ? (
+                                <img
+                                  src={reply.avatar}
+                                  alt={reply.author}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <Image
+                                  src={reply.avatar}
+                                  alt={reply.author}
+                                  fill
+                                  className="object-cover"
+                                  sizes="32px"
+                                  unoptimized={reply.avatar?.endsWith('.svg')}
+                                />
+                              )}
+                            </div>
+                            <div className="flex-1 bg-white/3 rounded-lg p-2">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-semibold text-xs">{reply.author}</span>
+                                <span className="text-xs text-gray-500">
+                                  {getTimeAgo(reply.timestamp)}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-300">{reply.content}</p>
+                              <button
+                                onClick={() => handleCommentLike(reply.id)}
+                                className={`flex items-center gap-1 text-xs mt-1 transition-colors ${
+                                  reply.isLiked
+                                    ? 'text-violet-400'
+                                    : 'text-gray-400 hover:text-violet-400'
+                                }`}
+                              >
+                                <Heart className={`w-3 h-3 ${reply.isLiked ? 'fill-current' : ''}`} />
+                                <span>{reply.likesCount || 0}</span>
+                              </button>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
+                {/* Bouton Charger plus */}
+                {hasMoreComments && (
+                  <div className="flex justify-center pt-4">
+                    <button
+                      onClick={handleLoadMoreComments}
+                      disabled={loadingMoreComments}
+                      className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white transition-colors disabled:opacity-50"
+                    >
+                      {loadingMoreComments ? 'Chargement...' : 'Charger plus'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Comment Input */}

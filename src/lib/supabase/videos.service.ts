@@ -255,8 +255,8 @@ export const loadVideoComments = async (
   offset: number = 0
 ): Promise<{ comments: VideoComment[]; hasMore: boolean }> => {
   try {
-    // Charger les commentaires principaux (sans parent)
-    const { data: comments, error } = await supabase
+    // Essayer d'abord avec parent_comment_id (si la migration est appliquée)
+    let query = supabase
       .from('video_comments')
       .select(`
         *,
@@ -268,16 +268,23 @@ export const loadVideoComments = async (
         )
       `)
       .eq('video_id', videoId)
-      .is('parent_comment_id', null)
       .order('created_at', { ascending: true })
       .range(offset, offset + limit - 1);
 
-    if (error) throw error;
+    // Essayer avec parent_comment_id si disponible
+    try {
+      query = query.is('parent_comment_id', null);
+    } catch (e) {
+      // Si la colonne n'existe pas encore, on continue sans filtre
+      console.warn('parent_comment_id column may not exist yet, loading all comments');
+    }
 
-    // Charger les réponses pour chaque commentaire
-    const commentsWithReplies = await Promise.all(
-      (comments || []).map(async (comment) => {
-        const { data: replies } = await supabase
+    const { data: comments, error } = await query;
+
+    if (error) {
+      // Si l'erreur est liée à parent_comment_id, essayer sans
+      if (error.message?.includes('parent_comment_id') || error.code === '42703') {
+        const { data: allComments, error: fallbackError } = await supabase
           .from('video_comments')
           .select(`
             *,
@@ -288,23 +295,65 @@ export const loadVideoComments = async (
               avatar
             )
           `)
-          .eq('parent_comment_id', comment.id)
-          .order('created_at', { ascending: true });
+          .eq('video_id', videoId)
+          .order('created_at', { ascending: true })
+          .range(offset, offset + limit - 1);
+
+        if (fallbackError) throw fallbackError;
 
         return {
-          ...comment,
-          replies: replies || [],
+          comments: (allComments || []).map(c => ({ ...c, replies: [] })) as any,
+          hasMore: (allComments?.length || 0) >= limit,
         };
+      }
+      throw error;
+    }
+
+    // Charger les réponses pour chaque commentaire (si parent_comment_id existe)
+    const commentsWithReplies = await Promise.all(
+      (comments || []).map(async (comment) => {
+        try {
+          const { data: replies } = await supabase
+            .from('video_comments')
+            .select(`
+              *,
+              author:users!author_id (
+                id,
+                first_name,
+                last_name,
+                avatar
+              )
+            `)
+            .eq('parent_comment_id', comment.id)
+            .order('created_at', { ascending: true });
+
+          return {
+            ...comment,
+            replies: replies || [],
+          };
+        } catch (e) {
+          // Si parent_comment_id n'existe pas, pas de réponses
+          return {
+            ...comment,
+            replies: [],
+          };
+        }
       })
     );
 
     // Vérifier s'il y a plus de commentaires
-    const { count } = await supabase
+    let countQuery = supabase
       .from('video_comments')
       .select('*', { count: 'exact', head: true })
-      .eq('video_id', videoId)
-      .is('parent_comment_id', null);
+      .eq('video_id', videoId);
 
+    try {
+      countQuery = countQuery.is('parent_comment_id', null);
+    } catch (e) {
+      // Ignorer si la colonne n'existe pas
+    }
+
+    const { count } = await countQuery;
     const hasMore = (count || 0) > offset + limit;
 
     return {
@@ -312,7 +361,7 @@ export const loadVideoComments = async (
       hasMore,
     };
   } catch (error: any) {
-    console.error('Erreur loadVideoComments:', error);
+    console.error('Erreur loadVideoComments:', error?.message || error);
     return { comments: [], hasMore: false };
   }
 };

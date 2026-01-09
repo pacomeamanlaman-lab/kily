@@ -7,6 +7,10 @@ export interface Comment {
   avatar: string;
   content: string;
   timestamp: string;
+  likesCount?: number;
+  isLiked?: boolean;
+  replies?: Comment[];
+  parentCommentId?: string | null;
 }
 
 export const mockStories: Story[] = [
