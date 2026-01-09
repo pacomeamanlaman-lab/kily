@@ -27,6 +27,7 @@ import {
   ChevronLeft,
   CheckCircle,
   Users,
+  User,
   MoreVertical,
   Lock,
   ArrowDown,
@@ -37,10 +38,12 @@ import {
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Video } from "@/lib/videoData";
-import { mockComments, Comment } from "@/lib/feedData";
+import { Comment } from "@/lib/feedData";
 import Toast from "@/components/ui/Toast";
 import { Send, X } from "lucide-react";
 import { isVideoLiked, getVideoLikesCount, toggleVideoLike, initVideoLikesCount } from "@/lib/videoLikes";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { loadVideoComments, addVideoComment, type VideoComment } from "@/lib/supabase/videos.service";
 
 interface VideoPlayerProps {
   videos: Video[];
@@ -57,6 +60,7 @@ export default function VideoPlayer({
 }: VideoPlayerProps) {
   const router = useRouter();
   const isMobile = useIsMobile();
+  const { user: currentUser } = useCurrentUser();
   const [currentVideoIndex, setCurrentVideoIndex] = useState(initialIndex);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -71,6 +75,7 @@ export default function VideoPlayer({
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState("");
+  const [loadingComments, setLoadingComments] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
@@ -389,24 +394,61 @@ export default function VideoPlayer({
     setLikesCount(result.likesCount);
   };
 
-  const handleAddComment = () => {
-    if (!commentText.trim()) return;
+  const handleAddComment = async () => {
+    if (!commentText.trim() || !currentUser || !currentVideo) return;
 
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      author: "Vous",
-      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
-      content: commentText,
-      timestamp: new Date().toISOString(),
-    };
+    try {
+      // Optimistic update: add comment immediately to UI
+      const optimisticComment: Comment = {
+        id: `temp-${Date.now()}`,
+        author: `${currentUser.first_name} ${currentUser.last_name}`,
+        avatar: currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.first_name}${currentUser.last_name}`,
+        content: commentText,
+        timestamp: new Date().toISOString(),
+      };
 
-    setComments([...comments, newComment]);
-    setCommentText("");
-    setToast({
-      message: "Commentaire ajouté !",
-      type: "success",
-      visible: true,
-    });
+      setComments([...comments, optimisticComment]);
+      setCommentText("");
+
+      // Save to Supabase
+      const savedComment = await addVideoComment(
+        currentVideo.id,
+        commentText,
+        currentUser.id
+      );
+
+      if (savedComment) {
+        // Replace optimistic comment with real one
+        setComments(prevComments => 
+          prevComments.map(c => 
+            c.id === optimisticComment.id 
+              ? {
+                  id: savedComment.id,
+                  author: savedComment.author ? `${savedComment.author.first_name} ${savedComment.author.last_name}` : 'Utilisateur',
+                  avatar: savedComment.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${savedComment.author?.first_name || 'user'}`,
+                  content: savedComment.content,
+                  timestamp: savedComment.created_at,
+                }
+              : c
+          )
+        );
+
+        setToast({
+          message: "Commentaire ajouté !",
+          type: "success",
+          visible: true,
+        });
+      }
+    } catch (error: any) {
+      console.error('Erreur ajout commentaire:', error);
+      // Remove optimistic comment on error
+      setComments(prevComments => prevComments.filter(c => !c.id.startsWith('temp-')));
+      setToast({
+        message: error?.message || "Erreur lors de l'ajout du commentaire",
+        type: "error",
+        visible: true,
+      });
+    }
   };
 
   const handleShare = () => {
@@ -492,8 +534,29 @@ export default function VideoPlayer({
   // Load comments and likes when video changes
   useEffect(() => {
     if (currentVideo) {
-      const existingComments = mockComments[currentVideo.id] || [];
-      setComments(existingComments);
+      // Load comments from Supabase
+      const loadComments = async () => {
+        setLoadingComments(true);
+        try {
+          const videoComments = await loadVideoComments(currentVideo.id);
+          // Transform Supabase comments to frontend Comment format
+          const transformedComments: Comment[] = videoComments.map((vc: VideoComment) => ({
+            id: vc.id,
+            author: vc.author ? `${vc.author.first_name} ${vc.author.last_name}` : 'Utilisateur',
+            avatar: vc.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${vc.author?.first_name || 'user'}`,
+            content: vc.content,
+            timestamp: vc.created_at,
+          }));
+          setComments(transformedComments);
+        } catch (error) {
+          console.error('Erreur chargement commentaires:', error);
+          setComments([]);
+        } finally {
+          setLoadingComments(false);
+        }
+      };
+      
+      loadComments();
       
       // Initialize likes count in localStorage
       initVideoLikesCount(currentVideo.id, currentVideo.likes);
@@ -957,13 +1020,18 @@ export default function VideoPlayer({
 
               {/* Comments List */}
               <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
-                {comments.length === 0 && (
+                {loadingComments ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50 animate-pulse" />
+                    <p>Chargement des commentaires...</p>
+                  </div>
+                ) : comments.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">
                     <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p>Aucun commentaire pour le moment</p>
                     <p className="text-sm mt-1">Soyez le premier à commenter !</p>
                   </div>
-                )}
+                ) : null}
 
                 {comments.map((comment) => (
                   <motion.div
@@ -972,11 +1040,20 @@ export default function VideoPlayer({
                     animate={{ opacity: 1, y: 0 }}
                     className="flex gap-3"
                   >
-                    <img
-                      src={comment.avatar}
-                      alt={comment.author}
-                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                    />
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                      <Image
+                        src={comment.avatar}
+                        alt={comment.author}
+                        fill
+                        className="object-cover"
+                        sizes="40px"
+                        onError={(e) => {
+                          // Fallback vers un avatar par défaut si l'image ne charge pas
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.author}`;
+                        }}
+                      />
+                    </div>
                     <div className="flex-1 bg-white/5 rounded-xl p-3">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-semibold text-sm">{comment.author}</span>
@@ -993,11 +1070,26 @@ export default function VideoPlayer({
               {/* Comment Input */}
               <div className="p-4 border-t border-white/10 flex-shrink-0">
                 <div className="flex gap-3">
-                  <img
-                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400"
-                    alt="Vous"
-                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                  />
+                  {currentUser ? (
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                      <Image
+                        src={currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.first_name}${currentUser.last_name}`}
+                        alt={currentUser.first_name || "Vous"}
+                        fill
+                        className="object-cover"
+                        sizes="40px"
+                        onError={(e) => {
+                          // Fallback vers un avatar par défaut si l'image ne charge pas
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.first_name}${currentUser.last_name}`;
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center flex-shrink-0">
+                      <User className="w-6 h-6 text-white" />
+                    </div>
+                  )}
                   <div className="flex-1 flex gap-2">
                     <input
                       type="text"

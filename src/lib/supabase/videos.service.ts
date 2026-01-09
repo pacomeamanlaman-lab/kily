@@ -228,3 +228,78 @@ export const isVideoLiked = async (videoId: string, userId: string): Promise<boo
     return false;
   }
 };
+
+// ========== COMMENTAIRES ==========
+
+export interface VideoComment {
+  id: string;
+  video_id: string;
+  author_id: string;
+  content: string;
+  likes_count: number;
+  created_at: string;
+  author?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    avatar: string;
+  };
+}
+
+// Charger les commentaires d'une vidéo
+export const loadVideoComments = async (videoId: string): Promise<VideoComment[]> => {
+  try {
+    const { data: comments, error } = await supabase
+      .from('video_comments')
+      .select(`
+        *,
+        author:users!author_id (
+          id,
+          first_name,
+          last_name,
+          avatar
+        )
+      `)
+      .eq('video_id', videoId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return comments || [];
+  } catch (error: any) {
+    console.error('Erreur loadVideoComments:', error);
+    return [];
+  }
+};
+
+// Ajouter un commentaire à une vidéo
+export const addVideoComment = async (
+  videoId: string,
+  content: string,
+  authorId: string
+): Promise<VideoComment | null> => {
+  try {
+    const { data: comment, error } = await supabase
+      .from('video_comments')
+      .insert({
+        video_id: videoId,
+        author_id: authorId,
+        content: content.trim(),
+      })
+      .select(`
+        *,
+        author:users!author_id (
+          id,
+          first_name,
+          last_name,
+          avatar
+        )
+      `)
+      .single();
+
+    if (error) throw error;
+    return comment;
+  } catch (error: any) {
+    console.error('Erreur addVideoComment:', error);
+    throw new Error(handleSupabaseError(error));
+  }
+};
