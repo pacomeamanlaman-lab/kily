@@ -1,16 +1,16 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, MessageCircle, Share2, MoreHorizontal, CheckCircle, Play, Send, X, Edit, Trash2, Flag, EyeOff, Copy, UserPlus, UserMinus, Link } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, CheckCircle, Play, Send, X, Edit, Trash2, Flag, EyeOff, Copy, UserPlus, UserMinus, Link, User } from "lucide-react";
 import ShareModal from "@/components/share/ShareModal";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Video } from "@/lib/videoData";
-import { mockComments } from "@/lib/feedData";
 import Toast from "@/components/ui/Toast";
 import { isVideoLiked, getVideoLikesCount, toggleVideoLike, initVideoLikesCount } from "@/lib/videoLikes";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { loadVideoComments, addVideoComment, type VideoComment } from "@/lib/supabase/videos.service";
 import { deleteVideo, updateVideo } from "@/lib/videos";
 import EditVideoModal from "@/components/video/EditVideoModal";
 import { toggleFollow, isFollowing } from "@/lib/follows";
@@ -39,6 +39,7 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState("");
+  const [loadingComments, setLoadingComments] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -67,8 +68,28 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
 
   // Load existing comments and likes on mount
   useEffect(() => {
-    const existingComments = mockComments[video.id] || [];
-    setComments(existingComments);
+    const loadComments = async () => {
+      setLoadingComments(true);
+      try {
+        const videoComments = await loadVideoComments(video.id);
+        // Transform Supabase comments to frontend Comment format
+        const transformedComments: Comment[] = videoComments.map((vc: VideoComment) => ({
+          id: vc.id,
+          author: vc.author ? `${vc.author.first_name} ${vc.author.last_name}` : 'Utilisateur',
+          avatar: vc.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${vc.author?.first_name || 'user'}`,
+          content: vc.content,
+          timestamp: vc.created_at,
+        }));
+        setComments(transformedComments);
+      } catch (error) {
+        console.error('Erreur chargement commentaires:', error);
+        setComments([]);
+      } finally {
+        setLoadingComments(false);
+      }
+    };
+
+    loadComments();
     
     // Initialize likes count in localStorage
     initVideoLikesCount(video.id, video.likes);
@@ -257,24 +278,70 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
     });
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!commentText.trim()) return;
+    
+    if (!currentUser) {
+      setToast({
+        message: "Vous devez être connecté pour commenter",
+        type: "error",
+        visible: true,
+      });
+      return;
+    }
 
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      author: "Vous",
-      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
-      content: commentText,
-      timestamp: new Date().toISOString(),
-    };
+    try {
+      // Optimistic update: add comment immediately to UI
+      const optimisticComment: Comment = {
+        id: `temp-${Date.now()}`,
+        author: `${currentUser.first_name} ${currentUser.last_name}`,
+        avatar: currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.first_name}${currentUser.last_name}`,
+        content: commentText,
+        timestamp: new Date().toISOString(),
+      };
 
-    setComments([...comments, newComment]);
-    setCommentText("");
-    setToast({
-      message: "Commentaire ajouté !",
-      type: "success",
-      visible: true,
-    });
+      setComments([...comments, optimisticComment]);
+      setCommentText("");
+
+      // Save to Supabase
+      const savedComment = await addVideoComment(
+        video.id,
+        commentText,
+        currentUser.id
+      );
+
+      if (savedComment) {
+        // Replace optimistic comment with real one
+        const formattedComment: Comment = {
+          id: savedComment.id,
+          author: savedComment.author ? `${savedComment.author.first_name} ${savedComment.author.last_name}` : 'Utilisateur',
+          avatar: savedComment.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${savedComment.author?.first_name || 'user'}`,
+          content: savedComment.content,
+          timestamp: savedComment.created_at,
+        };
+
+        setComments(prevComments => 
+          prevComments.map(c => 
+            c.id === optimisticComment.id ? formattedComment : c
+          )
+        );
+
+        setToast({
+          message: "Commentaire ajouté !",
+          type: "success",
+          visible: true,
+        });
+      }
+    } catch (error: any) {
+      console.error('Erreur ajout commentaire:', error);
+      // Remove optimistic comment on error
+      setComments(prevComments => prevComments.filter(c => !c.id.startsWith('temp-')));
+      setToast({
+        message: error?.message || "Erreur lors de l'ajout du commentaire",
+        type: "error",
+        visible: true,
+      });
+    }
   };
 
   const getTimeAgo = (timestamp: string) => {
@@ -581,13 +648,18 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
 
               {/* Comments List */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                {comments.length === 0 && (
+                {loadingComments ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50 animate-pulse" />
+                    <p>Chargement des commentaires...</p>
+                  </div>
+                ) : comments.length === 0 ? (
                   <div className="text-center py-8 text-gray-400">
                     <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p>Aucun commentaire pour le moment</p>
                     <p className="text-sm mt-1">Soyez le premier à commenter !</p>
                   </div>
-                )}
+                ) : null}
 
                 {comments.map((comment) => (
                   <motion.div
@@ -596,11 +668,20 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex gap-3"
                   >
-                    <img
-                      src={comment.avatar}
-                      alt={comment.author}
-                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                    />
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                      <Image
+                        src={comment.avatar}
+                        alt={comment.author}
+                        fill
+                        className="object-cover"
+                        sizes="40px"
+                        onError={(e) => {
+                          // Fallback vers un avatar par défaut si l'image ne charge pas
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.author}`;
+                        }}
+                      />
+                    </div>
                     <div className="flex-1 bg-white/5 rounded-xl p-3">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-semibold text-sm">{comment.author}</span>
@@ -617,11 +698,26 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
               {/* Comment Input */}
               <div className="p-4 border-t border-white/10">
                 <div className="flex gap-3">
-                  <img
-                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400"
-                    alt="Vous"
-                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                  />
+                  {currentUser ? (
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                      <Image
+                        src={currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.first_name}${currentUser.last_name}`}
+                        alt={currentUser.first_name || "Vous"}
+                        fill
+                        className="object-cover"
+                        sizes="40px"
+                        onError={(e) => {
+                          // Fallback vers un avatar par défaut si l'image ne charge pas
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.first_name}${currentUser.last_name}`;
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center flex-shrink-0">
+                      <User className="w-6 h-6 text-white" />
+                    </div>
+                  )}
                   <div className="flex-1 flex gap-2">
                     <input
                       type="text"

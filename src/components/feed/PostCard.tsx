@@ -9,7 +9,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
-import { togglePostLike, isPostLiked, addComment, loadComments, deletePost, updatePost, Post } from "@/lib/posts";
+import { togglePostLike, isPostLiked, deletePost, updatePost, Post } from "@/lib/posts";
+import { loadComments as loadCommentsFromSupabase, addComment as addCommentToSupabase, type Comment as SupabaseComment } from "@/lib/supabase/posts.service";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getUserDisplayName } from "@/lib/supabase/users.service";
 import { hidePost } from "@/lib/hiddenContent";
@@ -55,15 +56,25 @@ export default function PostCard({ post }: PostCardProps) {
 
   // Load existing comments and like status on mount
   useEffect(() => {
-    const existingComments = loadComments(post.id);
-    const formattedComments = existingComments.map(c => ({
-      id: c.id,
-      author: c.author.name,
-      avatar: c.author.avatar,
-      content: c.content,
-      timestamp: c.timestamp,
-    }));
-    setComments(formattedComments);
+    const loadComments = async () => {
+      try {
+        const supabaseComments = await loadCommentsFromSupabase(post.id);
+        // Transform Supabase comments to frontend Comment format
+        const formattedComments: Comment[] = supabaseComments.map((c: SupabaseComment) => ({
+          id: c.id,
+          author: c.author ? `${c.author.first_name} ${c.author.last_name}` : 'Utilisateur',
+          avatar: c.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.author?.first_name || 'user'}`,
+          content: c.content,
+          timestamp: c.created_at,
+        }));
+        setComments(formattedComments);
+      } catch (error) {
+        console.error('Erreur chargement commentaires:', error);
+        setComments([]);
+      }
+    };
+
+    loadComments();
 
     if (currentUserId) {
       const isLiked = isPostLiked(post.id, currentUserId);
@@ -91,7 +102,7 @@ export default function PostCard({ post }: PostCardProps) {
     setLikesCount(result.likesCount);
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!commentText.trim()) return;
     
     if (!currentUser) {
@@ -103,31 +114,58 @@ export default function PostCard({ post }: PostCardProps) {
       return;
     }
 
-    const newComment = addComment(
-      post.id,
-      commentText,
-      {
-        name: getUserDisplayName(currentUser),
-        username: `@${currentUser.first_name.toLowerCase()}${currentUser.last_name.toLowerCase()}`,
-        avatar: currentUser.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+    try {
+      // Optimistic update: add comment immediately to UI
+      const optimisticComment: Comment = {
+        id: `temp-${Date.now()}`,
+        author: getUserDisplayName(currentUser),
+        avatar: currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.first_name}${currentUser.last_name}`,
+        content: commentText,
+        timestamp: new Date().toISOString(),
+      };
+
+      setComments([...comments, optimisticComment]);
+      setCommentText("");
+
+      // Save to Supabase
+      const savedComment = await addCommentToSupabase(
+        post.id,
+        commentText,
+        currentUser.id
+      );
+
+      if (savedComment) {
+        // Replace optimistic comment with real one
+        const formattedComment: Comment = {
+          id: savedComment.id,
+          author: savedComment.author ? `${savedComment.author.first_name} ${savedComment.author.last_name}` : 'Utilisateur',
+          avatar: savedComment.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${savedComment.author?.first_name || 'user'}`,
+          content: savedComment.content,
+          timestamp: savedComment.created_at,
+        };
+
+        setComments(prevComments => 
+          prevComments.map(c => 
+            c.id === optimisticComment.id ? formattedComment : c
+          )
+        );
+
+        setToast({
+          message: "Commentaire ajouté !",
+          type: "success",
+          visible: true,
+        });
       }
-    );
-
-    const formattedComment: Comment = {
-      id: newComment.id,
-      author: newComment.author.name,
-      avatar: newComment.author.avatar,
-      content: newComment.content,
-      timestamp: newComment.timestamp,
-    };
-
-    setComments([...comments, formattedComment]);
-    setCommentText("");
-    setToast({
-      message: "Commentaire ajouté !",
-      type: "success",
-      visible: true,
-    });
+    } catch (error: any) {
+      console.error('Erreur ajout commentaire:', error);
+      // Remove optimistic comment on error
+      setComments(prevComments => prevComments.filter(c => !c.id.startsWith('temp-')));
+      setToast({
+        message: error?.message || "Erreur lors de l'ajout du commentaire",
+        type: "error",
+        visible: true,
+      });
+    }
   };
 
   const handleShare = () => {
