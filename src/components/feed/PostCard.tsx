@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
 import { togglePostLike, isPostLiked, deletePost, updatePost, Post } from "@/lib/posts";
-import { loadComments as loadCommentsFromSupabase, addComment as addCommentToSupabase, type Comment as SupabaseComment } from "@/lib/supabase/posts.service";
+import { loadComments as loadCommentsFromSupabase, addComment as addCommentToSupabase, toggleCommentLike, isCommentLiked, type Comment as SupabaseComment } from "@/lib/supabase/posts.service";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { getUserDisplayName } from "@/lib/supabase/users.service";
 import { hidePost } from "@/lib/hiddenContent";
@@ -27,6 +27,10 @@ interface Comment {
   avatar: string;
   content: string;
   timestamp: string;
+  likesCount?: number;
+  isLiked?: boolean;
+  replies?: Comment[];
+  parentCommentId?: string | null;
 }
 
 export default function PostCard({ post }: PostCardProps) {
@@ -38,6 +42,11 @@ export default function PostCard({ post }: PostCardProps) {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState("");
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState<{ [commentId: string]: string }>({});
+  const [hasMoreComments, setHasMoreComments] = useState(false);
+  const [commentsOffset, setCommentsOffset] = useState(0);
+  const [loadingMoreComments, setLoadingMoreComments] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showLightbox, setShowLightbox] = useState(false);
@@ -58,23 +67,45 @@ export default function PostCard({ post }: PostCardProps) {
   useEffect(() => {
     const loadComments = async () => {
       try {
-        const supabaseComments = await loadCommentsFromSupabase(post.id);
+        const result = await loadCommentsFromSupabase(post.id, 20, 0);
         // Transform Supabase comments to frontend Comment format
-        const formattedComments: Comment[] = supabaseComments.map((c: SupabaseComment) => ({
-          id: c.id,
-          author: c.author ? `${c.author.first_name} ${c.author.last_name}` : 'Utilisateur',
-          avatar: c.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.author?.first_name || 'user'}`,
-          content: c.content,
-          timestamp: c.created_at,
-        }));
+        const formattedComments: Comment[] = await Promise.all(
+          result.comments.map(async (c: any) => {
+            const isLiked = currentUserId ? await isCommentLiked(c.id, currentUserId) : false;
+            const replies = (c.replies || []).map((r: any) => ({
+              id: r.id,
+              author: r.author ? `${r.author.first_name} ${r.author.last_name}` : 'Utilisateur',
+              avatar: r.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${r.author?.first_name || 'user'}`,
+              content: r.content,
+              timestamp: r.created_at,
+              likesCount: r.likes_count || 0,
+              isLiked: false, // Will be loaded separately if needed
+            }));
+            
+            return {
+              id: c.id,
+              author: c.author ? `${c.author.first_name} ${c.author.last_name}` : 'Utilisateur',
+              avatar: c.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.author?.first_name || 'user'}`,
+              content: c.content,
+              timestamp: c.created_at,
+              likesCount: c.likes_count || 0,
+              isLiked,
+              replies,
+            };
+          })
+        );
         setComments(formattedComments);
+        setHasMoreComments(result.hasMore);
+        setCommentsOffset(20);
       } catch (error) {
         console.error('Erreur chargement commentaires:', error);
         setComments([]);
       }
     };
 
-    loadComments();
+    if (showComments) {
+      loadComments();
+    }
 
     if (currentUserId) {
       const isLiked = isPostLiked(post.id, currentUserId);
@@ -86,7 +117,7 @@ export default function PostCard({ post }: PostCardProps) {
         setIsFollowingAuthor(following);
       }
     }
-  }, [post.id, currentUserId, post.author.id]);
+  }, [post.id, currentUserId, post.author.id, showComments]);
 
   const handleLike = () => {
     if (!currentUserId) {
@@ -162,6 +193,138 @@ export default function PostCard({ post }: PostCardProps) {
       setComments(prevComments => prevComments.filter(c => !c.id.startsWith('temp-')));
       setToast({
         message: error?.message || "Erreur lors de l'ajout du commentaire",
+        type: "error",
+        visible: true,
+      });
+    }
+  };
+
+  const handleLoadMoreComments = async () => {
+    if (loadingMoreComments || !hasMoreComments) return;
+    
+    setLoadingMoreComments(true);
+    try {
+      const result = await loadCommentsFromSupabase(post.id, 20, commentsOffset);
+      const newComments: Comment[] = await Promise.all(
+        result.comments.map(async (c: any) => {
+          const isLiked = currentUserId ? await isCommentLiked(c.id, currentUserId) : false;
+          const replies = (c.replies || []).map((r: any) => ({
+            id: r.id,
+            author: r.author ? `${r.author.first_name} ${r.author.last_name}` : 'Utilisateur',
+            avatar: r.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${r.author?.first_name || 'user'}`,
+            content: r.content,
+            timestamp: r.created_at,
+            likesCount: r.likes_count || 0,
+            isLiked: false,
+          }));
+          
+          return {
+            id: c.id,
+            author: c.author ? `${c.author.first_name} ${c.author.last_name}` : 'Utilisateur',
+            avatar: c.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${c.author?.first_name || 'user'}`,
+            content: c.content,
+            timestamp: c.created_at,
+            likesCount: c.likes_count || 0,
+            isLiked,
+            replies,
+          };
+        })
+      );
+      
+      setComments(prev => [...prev, ...newComments]);
+      setHasMoreComments(result.hasMore);
+      setCommentsOffset(prev => prev + 20);
+    } catch (error) {
+      console.error('Erreur chargement commentaires supplémentaires:', error);
+    } finally {
+      setLoadingMoreComments(false);
+    }
+  };
+
+  const handleCommentLike = async (commentId: string) => {
+    if (!currentUserId) {
+      setToast({
+        message: "Vous devez être connecté pour liker",
+        type: "error",
+        visible: true,
+      });
+      return;
+    }
+
+    try {
+      const result = await toggleCommentLike(commentId, currentUserId);
+      setComments(prevComments => 
+        prevComments.map(c => {
+          if (c.id === commentId) {
+            return { ...c, isLiked: result.liked, likesCount: result.likesCount };
+          }
+          // Also update in replies
+          if (c.replies) {
+            return {
+              ...c,
+              replies: c.replies.map(r => 
+                r.id === commentId 
+                  ? { ...r, isLiked: result.liked, likesCount: result.likesCount }
+                  : r
+              ),
+            };
+          }
+          return c;
+        })
+      );
+    } catch (error: any) {
+      console.error('Erreur like commentaire:', error);
+      setToast({
+        message: error?.message || "Erreur lors du like",
+        type: "error",
+        visible: true,
+      });
+    }
+  };
+
+  const handleAddReply = async (parentCommentId: string) => {
+    const text = replyText[parentCommentId];
+    if (!text?.trim() || !currentUser) return;
+
+    try {
+      const savedReply = await addCommentToSupabase(
+        post.id,
+        text,
+        currentUser.id,
+        parentCommentId
+      );
+
+      if (savedReply) {
+        const formattedReply: Comment = {
+          id: savedReply.id,
+          author: savedReply.author ? `${savedReply.author.first_name} ${savedReply.author.last_name}` : 'Utilisateur',
+          avatar: savedReply.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${savedReply.author?.first_name || 'user'}`,
+          content: savedReply.content,
+          timestamp: savedReply.created_at,
+          likesCount: savedReply.likes_count || 0,
+          isLiked: false,
+        };
+
+        setComments(prevComments =>
+          prevComments.map(c =>
+            c.id === parentCommentId
+              ? { ...c, replies: [...(c.replies || []), formattedReply] }
+              : c
+          )
+        );
+
+        setReplyText(prev => ({ ...prev, [parentCommentId]: '' }));
+        setReplyingTo(null);
+        setToast({
+          message: "Réponse ajoutée !",
+          type: "success",
+          visible: true,
+        });
+      }
+    } catch (error: any) {
+      console.error('Erreur ajout réponse:', error);
+      setToast({
+        message: error?.message || "Erreur lors de l'ajout de la réponse",
         type: "error",
         visible: true,
       });
@@ -734,28 +897,123 @@ export default function PostCard({ post }: PostCardProps) {
                 )}
 
                 {comments.map((comment) => (
-                  <motion.div
-                    key={comment.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex gap-3"
-                  >
-                    <img
-                      src={comment.avatar}
-                      alt={comment.author}
-                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                    />
-                    <div className="flex-1 bg-white/5 rounded-xl p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-sm">{comment.author}</span>
-                        <span className="text-xs text-gray-500">
-                          {getTimeAgo(comment.timestamp)}
-                        </span>
+                  <div key={comment.id} className="space-y-3">
+                    {/* Commentaire principal */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex gap-3"
+                    >
+                      <img
+                        src={comment.avatar}
+                        alt={comment.author}
+                        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                      />
+                      <div className="flex-1 bg-white/5 rounded-xl p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-semibold text-sm">{comment.author}</span>
+                          <span className="text-xs text-gray-500">
+                            {getTimeAgo(comment.timestamp)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-300 mb-2">{comment.content}</p>
+                        {/* Boutons J'aime et Répondre */}
+                        <div className="flex items-center gap-4 mt-2">
+                          <button
+                            onClick={() => handleCommentLike(comment.id)}
+                            className={`flex items-center gap-1 text-xs transition-colors ${
+                              comment.isLiked
+                                ? 'text-violet-400'
+                                : 'text-gray-400 hover:text-violet-400'
+                            }`}
+                          >
+                            <Heart className={`w-4 h-4 ${comment.isLiked ? 'fill-current' : ''}`} />
+                            <span>{comment.likesCount || 0}</span>
+                          </button>
+                          <button
+                            onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                            className="flex items-center gap-1 text-xs text-gray-400 hover:text-violet-400 transition-colors"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                            <span>Répondre</span>
+                          </button>
+                        </div>
+                        {/* Input de réponse */}
+                        {replyingTo === comment.id && (
+                          <div className="mt-3 flex gap-2">
+                            <input
+                              type="text"
+                              value={replyText[comment.id] || ''}
+                              onChange={(e) => setReplyText(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                              onKeyPress={(e) => e.key === "Enter" && handleAddReply(comment.id)}
+                              placeholder="Écrire une réponse..."
+                              className="flex-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500 transition-colors"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleAddReply(comment.id)}
+                              disabled={!replyText[comment.id]?.trim()}
+                              className="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 disabled:bg-white/10 disabled:text-gray-600 rounded-lg text-sm transition-colors"
+                            >
+                              <Send className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-sm text-gray-300">{comment.content}</p>
-                    </div>
-                  </motion.div>
+                    </motion.div>
+                    {/* Réponses */}
+                    {comment.replies && comment.replies.length > 0 && (
+                      <div className="ml-13 space-y-2">
+                        {comment.replies.map((reply) => (
+                          <motion.div
+                            key={reply.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="flex gap-3"
+                          >
+                            <img
+                              src={reply.avatar}
+                              alt={reply.author}
+                              className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                            />
+                            <div className="flex-1 bg-white/3 rounded-lg p-2">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-semibold text-xs">{reply.author}</span>
+                                <span className="text-xs text-gray-500">
+                                  {getTimeAgo(reply.timestamp)}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-300">{reply.content}</p>
+                              <button
+                                onClick={() => handleCommentLike(reply.id)}
+                                className={`flex items-center gap-1 text-xs mt-1 transition-colors ${
+                                  reply.isLiked
+                                    ? 'text-violet-400'
+                                    : 'text-gray-400 hover:text-violet-400'
+                                }`}
+                              >
+                                <Heart className={`w-3 h-3 ${reply.isLiked ? 'fill-current' : ''}`} />
+                                <span>{reply.likesCount || 0}</span>
+                              </button>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
+                {/* Bouton Charger plus */}
+                {hasMoreComments && (
+                  <div className="flex justify-center pt-4">
+                    <button
+                      onClick={handleLoadMoreComments}
+                      disabled={loadingMoreComments}
+                      className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm text-white transition-colors disabled:opacity-50"
+                    >
+                      {loadingMoreComments ? 'Chargement...' : 'Charger plus'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Comment Input */}

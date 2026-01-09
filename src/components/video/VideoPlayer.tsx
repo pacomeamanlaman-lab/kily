@@ -538,9 +538,9 @@ export default function VideoPlayer({
       const loadComments = async () => {
         setLoadingComments(true);
         try {
-          const videoComments = await loadVideoComments(currentVideo.id);
+          const result = await loadVideoComments(currentVideo.id, 20, 0);
           // Transform Supabase comments to frontend Comment format
-          const transformedComments: Comment[] = videoComments.map((vc: VideoComment) => ({
+          const transformedComments: Comment[] = result.comments.map((vc: any) => ({
             id: vc.id,
             author: vc.author ? `${vc.author.first_name} ${vc.author.last_name}` : 'Utilisateur',
             avatar: vc.author?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${vc.author?.first_name || 'user'}`,
