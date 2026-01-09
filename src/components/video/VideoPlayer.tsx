@@ -81,7 +81,7 @@ export default function VideoPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<HlsType | null>(null);
-  const [hlsModule, setHlsModule] = useState<typeof HlsType | null>(null);
+  const [hlsModule, setHlsModule] = useState<{ default: typeof HlsType } | null>(null);
 
   const currentVideo = videos[currentVideoIndex];
   const isYouTubeVideo =
@@ -94,8 +94,8 @@ export default function VideoPlayer({
   // Charger HLS.js dynamiquement
   useEffect(() => {
     if (typeof window !== 'undefined' && isHlsVideo) {
-      import('hls.js').then((Hls) => {
-        setHlsModule(Hls.default);
+      import('hls.js').then((HlsModule) => {
+        setHlsModule(HlsModule);
       }).catch((error) => {
         console.error('Erreur chargement HLS.js:', error);
       });
@@ -131,15 +131,17 @@ export default function VideoPlayer({
     }
 
     // Vérifier que HLS.js est disponible
-    if (!hlsModule) {
+    if (!hlsModule || !hlsModule.default) {
       console.log('HLS.js en cours de chargement...');
       return;
     }
 
+    const Hls = hlsModule.default;
+
     // Utiliser HLS.js pour les autres navigateurs
-    if (hlsModule.isSupported()) {
+    if (Hls.isSupported()) {
       console.log('HLS.js est supporté, initialisation...');
-      const hls = new hlsModule({
+      const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
         debug: false,
@@ -148,22 +150,22 @@ export default function VideoPlayer({
       hls.loadSource(currentVideo.videoUrl);
       hls.attachMedia(video);
       
-      hls.on(hlsModule.Events.MANIFEST_PARSED, () => {
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
         console.log('Manifest HLS parsé, démarrage de la lecture...');
         video.play().catch((error) => {
           console.error('Erreur lecture vidéo:', error);
         });
       });
 
-      hls.on(hlsModule.Events.ERROR, (event, data) => {
+      hls.on(Hls.Events.ERROR, (event, data) => {
         console.error('Erreur HLS:', data);
         if (data.fatal) {
           switch (data.type) {
-            case hlsModule.ErrorTypes.NETWORK_ERROR:
+            case Hls.ErrorTypes.NETWORK_ERROR:
               console.error('Erreur réseau HLS, tentative de récupération...');
               hls.startLoad();
               break;
-            case hlsModule.ErrorTypes.MEDIA_ERROR:
+            case Hls.ErrorTypes.MEDIA_ERROR:
               console.error('Erreur média HLS, tentative de récupération...');
               hls.recoverMediaError();
               break;
