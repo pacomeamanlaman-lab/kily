@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { Upload, X } from "lucide-react";
 import { showToast } from "@/lib/toast";
-import { createVideo } from "@/lib/videos";
-import { getUserDisplayName } from "@/lib/supabase/users.service";
+import { createVideo } from "@/lib/supabase/videos.service";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { createDirectUpload, uploadVideoToMux } from "@/lib/mux/mux.service";
 
 interface CreateVideoFormProps {
   onSuccess: () => void;
@@ -33,6 +33,8 @@ export default function CreateVideoForm({ onSuccess, onCancel }: CreateVideoForm
   const [videoThumbnail, setVideoThumbnail] = useState<string | null>(null);
   const [videoDuration, setVideoDuration] = useState<string>("0:00");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [muxUploadId, setMuxUploadId] = useState<string | null>(null);
 
   // Helper function to format duration (seconds to mm:ss)
   const formatDuration = (seconds: number): string => {
@@ -163,42 +165,101 @@ export default function CreateVideoForm({ onSuccess, onCancel }: CreateVideoForm
       return;
     }
 
-    setIsSubmitting(true);
-
-    // Mock API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
     // Check if user is connected
     if (!currentUser) {
       showToast("Vous devez être connecté pour publier", "error");
-      setIsSubmitting(false);
       return;
     }
 
-    // Save to localStorage
-    const newVideo = createVideo({
-      title,
-      description,
-      category,
-      videoUrl: videoPreview!,
-      thumbnail: videoThumbnail || videoPreview || undefined,
-      duration: videoDuration,
-      author: {
-        id: currentUser.id,
-        name: getUserDisplayName(currentUser),
-        avatar: currentUser.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
-        verified: currentUser.verified,
-      },
-    });
+    setIsSubmitting(true);
+    setUploadProgress(0);
 
-    console.log("New video created:", newVideo);
+    try {
+      // Étape 1: Créer un direct upload vers Mux
+      showToast("Préparation de l'upload...", "info");
+      const directUpload = await createDirectUpload();
+      setMuxUploadId(directUpload.id);
 
-    // Dispatch custom event to refresh feed
-    window.dispatchEvent(new Event('videoCreated'));
+      // Étape 2: Uploader la vidéo vers Mux
+      setUploadProgress(10);
+      showToast("Upload de la vidéo en cours...", "info");
+      
+      await uploadVideoToMux(videoFile, directUpload.url, (progress) => {
+        // Progress de 10% à 90% pour l'upload
+        setUploadProgress(10 + (progress * 0.8));
+      });
 
-    showToast("Vidéo publiée avec succès !", "success");
-    setIsSubmitting(false);
-    onSuccess();
+      setUploadProgress(90);
+      showToast("Traitement de la vidéo par Mux...", "info");
+
+      // Étape 3: Attendre que Mux traite la vidéo et récupérer le playback_id
+      // On va poller l'API pour récupérer le playback_id
+      let playbackId: string | null = null;
+      let attempts = 0;
+      const maxAttempts = 60; // 60 tentatives max (environ 2 minutes)
+
+      while (!playbackId && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Attendre 2 secondes
+        
+        try {
+          // Récupérer les infos du direct upload pour obtenir le playback_id
+          const response = await fetch(`/api/videos/mux-upload/${directUpload.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.playback_id && data.asset_status === 'ready') {
+              playbackId = data.playback_id;
+              break;
+            }
+          }
+        } catch (error) {
+          console.error('Erreur récupération playback_id:', error);
+        }
+        
+        attempts++;
+        setUploadProgress(90 + Math.min((attempts / maxAttempts) * 5, 5)); // Progress de 90% à 95%
+      }
+
+      if (!playbackId) {
+        throw new Error("Impossible de récupérer le playback_id. La vidéo est peut-être encore en cours de traitement.");
+      }
+
+      setUploadProgress(95);
+
+      // Étape 4: Construire l'URL de la vidéo Mux
+      // Format: https://stream.mux.com/{playback_id}.m3u8 (HLS)
+      const videoUrl = `https://stream.mux.com/${playbackId}.m3u8`;
+      const thumbnailUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
+
+      // Étape 5: Sauvegarder dans Supabase
+      const newVideo = await createVideo({
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        video_url: videoUrl,
+        thumbnail: thumbnailUrl,
+        duration: videoDuration,
+        author_id: currentUser.id,
+      });
+
+      if (!newVideo) {
+        throw new Error("Erreur lors de la sauvegarde de la vidéo");
+      }
+
+      setUploadProgress(100);
+      
+      // Dispatch custom event to refresh feed
+      window.dispatchEvent(new Event('videoCreated'));
+
+      showToast("Vidéo publiée avec succès !", "success");
+      onSuccess();
+    } catch (error: any) {
+      console.error('Erreur upload vidéo:', error);
+      showToast(error?.message || "Erreur lors de l'upload de la vidéo", "error");
+    } finally {
+      setIsSubmitting(false);
+      setUploadProgress(0);
+      setMuxUploadId(null);
+    }
   };
 
   return (
@@ -305,9 +366,21 @@ export default function CreateVideoForm({ onSuccess, onCancel }: CreateVideoForm
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex-1 py-3 bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 rounded-xl text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 py-3 bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 rounded-xl text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
         >
-          {isSubmitting ? "Publication..." : "Publier"}
+          {isSubmitting ? (
+            <span className="relative z-10">
+              {uploadProgress > 0 ? `Upload ${Math.round(uploadProgress)}%` : "Publication..."}
+            </span>
+          ) : (
+            "Publier"
+          )}
+          {isSubmitting && uploadProgress > 0 && (
+            <div
+              className="absolute inset-0 bg-violet-700 transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          )}
         </button>
       </div>
     </form>
