@@ -218,3 +218,4 @@ Après le déploiement :
 
 **🎯 Note** : Les critères pour certains badges (Fiable, Spécialiste, Talent Multidisciplinaire) utilisent des proxies basés sur `completed_projects` car il n'y a pas encore de table de projets détaillée. Quand cette table sera créée, vous pourrez affiner ces critères.
 
+

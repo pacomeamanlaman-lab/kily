@@ -142,3 +142,4 @@ SELECT
 FROM public.badges
 ORDER BY name;
 
+

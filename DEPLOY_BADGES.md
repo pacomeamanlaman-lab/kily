@@ -56,3 +56,4 @@ Une fois les tables créées :
 - Les RLS Policies permettent à tous de lire les badges, mais seuls les admins peuvent les modifier
 - La table `user_badges` sera vide au début, c'est normal
 
+

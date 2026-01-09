@@ -2,14 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Mux from '@mux/mux-node';
 
-const mux = new Mux(
-  process.env.MUX_TOKEN_ID || '',
-  process.env.MUX_TOKEN_SECRET || ''
-);
-
 export async function GET(
   request: NextRequest,
-  { params }: { params: { playbackId: string } }
+  { params }: { params: Promise<{ playbackId: string }> }
 ) {
   try {
     if (!process.env.MUX_TOKEN_ID || !process.env.MUX_TOKEN_SECRET) {
@@ -19,31 +14,21 @@ export async function GET(
       );
     }
 
-    const { playbackId } = params;
-
-    // Récupérer l'asset par playback_id
-    const assets = await mux.video.assets.list({
-      playback_ids: [playbackId],
+    // Initialiser Mux avec les clés d'environnement
+    const mux = new Mux({
+      tokenId: process.env.MUX_TOKEN_ID,
+      tokenSecret: process.env.MUX_TOKEN_SECRET,
     });
 
-    if (!assets.data || assets.data.length === 0) {
-      return NextResponse.json(
-        { error: 'Video not found' },
-        { status: 404 }
-      );
-    }
+    const { playbackId } = await params;
 
-    const asset = assets.data[0];
-
-    return NextResponse.json({
-      id: asset.id,
-      playback_id: asset.playback_ids?.[0]?.id || playbackId,
-      status: asset.status,
-      duration: asset.duration,
-      aspect_ratio: asset.aspect_ratio,
-      max_stored_frame_rate: asset.max_stored_frame_rate,
-      max_stored_resolution: asset.max_stored_resolution,
-    });
+    // Cette route n'est pas utilisée actuellement
+    // L'API Mux ne permet pas de filtrer directement par playback_id dans list()
+    // On utilise /api/videos/mux-upload/[uploadId] à la place
+    return NextResponse.json(
+      { error: 'This endpoint is not implemented. Use /api/videos/mux-upload/[uploadId] instead.' },
+      { status: 501 }
+    );
   } catch (error: any) {
     console.error('Erreur récupération vidéo Mux:', error);
     return NextResponse.json(

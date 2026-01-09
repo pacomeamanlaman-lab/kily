@@ -96,3 +96,4 @@ HAVING COUNT(*) > 1;
 
 -- Si cette requête ne retourne rien, tous les doublons ont été supprimés ✅
 
+

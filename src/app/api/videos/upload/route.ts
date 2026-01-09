@@ -2,12 +2,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Mux from '@mux/mux-node';
 
-// Initialiser Mux avec les clés d'environnement
-const mux = new Mux(
-  process.env.MUX_TOKEN_ID || '',
-  process.env.MUX_TOKEN_SECRET || ''
-);
-
 export async function POST(request: NextRequest) {
   try {
     // Vérifier que les clés Mux sont configurées
@@ -18,8 +12,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Créer un direct upload
-    const upload = await mux.video.directUploads.create({
+    // Initialiser Mux avec les clés d'environnement
+    const mux = new Mux({
+      tokenId: process.env.MUX_TOKEN_ID,
+      tokenSecret: process.env.MUX_TOKEN_SECRET,
+    });
+
+    // Vérifier que mux.video.uploads existe
+    if (!mux.video || !mux.video.uploads) {
+      console.error('Mux API structure error:', {
+        hasVideo: !!mux.video,
+        hasUploads: !!(mux.video?.uploads),
+      });
+      return NextResponse.json(
+        { error: 'Mux API structure error' },
+        { status: 500 }
+      );
+    }
+
+    // Créer un direct upload (utiliser uploads au lieu de directUploads)
+    const uploadResponse = await mux.video.uploads.create({
       // Options de configuration
       new_asset_settings: {
         playback_policy: ['public'], // Vidéo accessible publiquement
@@ -30,6 +42,9 @@ export async function POST(request: NextRequest) {
       // CORS settings pour permettre l'upload depuis le navigateur
       cors_origin: '*',
     });
+
+    // La réponse Mux est directement l'objet upload
+    const upload = uploadResponse as any;
 
     return NextResponse.json({
       id: upload.id,

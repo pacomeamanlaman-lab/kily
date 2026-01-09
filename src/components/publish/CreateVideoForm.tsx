@@ -196,27 +196,40 @@ export default function CreateVideoForm({ onSuccess, onCancel }: CreateVideoForm
       // On va poller l'API pour récupérer le playback_id
       let playbackId: string | null = null;
       let attempts = 0;
-      const maxAttempts = 60; // 60 tentatives max (environ 2 minutes)
+      const maxAttempts = 90; // 90 tentatives max (environ 3 minutes pour le transcoding)
 
       while (!playbackId && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Attendre 2 secondes
+        // Attendre 2 secondes entre chaque tentative
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         try {
           // Récupérer les infos du direct upload pour obtenir le playback_id
           const response = await fetch(`/api/videos/mux-upload/${directUpload.id}`);
           if (response.ok) {
             const data = await response.json();
-            if (data.playback_id && data.asset_status === 'ready') {
+            
+            // Vérifier si l'asset est prêt et a un playback_id
+            if (data.playback_id) {
               playbackId = data.playback_id;
               break;
+            }
+            
+            // Si l'asset est en cours de traitement, continuer à attendre
+            if (data.asset_status === 'preparing' || data.asset_status === 'encoding') {
+              // Continuer le polling
+            } else if (data.asset_status === 'errored') {
+              throw new Error("Erreur lors du traitement de la vidéo par Mux");
             }
           }
         } catch (error) {
           console.error('Erreur récupération playback_id:', error);
+          // Continuer à essayer même en cas d'erreur temporaire
         }
         
         attempts++;
-        setUploadProgress(90 + Math.min((attempts / maxAttempts) * 5, 5)); // Progress de 90% à 95%
+        // Progress de 90% à 98% (on garde 2% pour la sauvegarde)
+        const progressPercent = 90 + Math.min((attempts / maxAttempts) * 8, 8);
+        setUploadProgress(progressPercent);
       }
 
       if (!playbackId) {

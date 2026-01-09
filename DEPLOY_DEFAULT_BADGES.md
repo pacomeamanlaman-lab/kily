@@ -137,3 +137,4 @@ SELECT COUNT(*) as total_badges FROM public.badges;
 
 **🎯 Résultat attendu** : 14 badges prédéfinis disponibles dans l'interface admin pour attribution aux talents.
 
+

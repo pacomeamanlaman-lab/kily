@@ -89,9 +89,10 @@ export const getOrCreateConversation = async (
         )
       `)
       .or(`and(participant_1_id.eq.${userId1},participant_2_id.eq.${userId2}),and(participant_1_id.eq.${userId2},participant_2_id.eq.${userId1})`)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
-    if (searchError && searchError.code !== 'PGRST116') throw searchError;
+    if (searchError) throw searchError;
     if (existing) return existing;
 
     // Créer une nouvelle conversation

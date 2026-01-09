@@ -70,3 +70,4 @@ INSERT INTO public.badges (name, description, icon, color, criteria) VALUES
   ('Talent de l''Année', 'Meilleur talent de l''année', 'Star', '#fbbf24', 'Attribution manuelle')
 ON CONFLICT DO NOTHING;
 
+

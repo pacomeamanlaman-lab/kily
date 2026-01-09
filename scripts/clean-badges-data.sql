@@ -20,3 +20,4 @@ ORDER BY count DESC;
 -- 4. Vérifier après nettoyage
 -- SELECT COUNT(*) as remaining_attributions FROM public.user_badges;
 
+

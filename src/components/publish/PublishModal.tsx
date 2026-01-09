@@ -39,6 +39,7 @@ export default function PublishModal({ isOpen, onClose, initialType = null }: Pu
     return (
       <AnimatePresence>
         <motion.div
+          key="error-backdrop"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -46,6 +47,7 @@ export default function PublishModal({ isOpen, onClose, initialType = null }: Pu
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
         />
         <motion.div
+          key="error-modal"
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -81,6 +83,7 @@ export default function PublishModal({ isOpen, onClose, initialType = null }: Pu
         <>
           {/* Backdrop */}
           <motion.div
+            key="backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -90,6 +93,7 @@ export default function PublishModal({ isOpen, onClose, initialType = null }: Pu
 
           {/* Modal */}
           <motion.div
+            key="modal"
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}

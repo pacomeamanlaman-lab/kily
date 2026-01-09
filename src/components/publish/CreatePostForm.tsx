@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { Image as ImageIcon, X } from "lucide-react";
 import { showToast } from "@/lib/toast";
-import { createPost } from "@/lib/posts";
+import { createPost } from "@/lib/supabase/posts.service";
 import { getUserDisplayName } from "@/lib/supabase/users.service";
+import { uploadPortfolioImage } from "@/lib/supabase/storage.service";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface CreatePostFormProps {
@@ -120,9 +121,6 @@ export default function CreatePostForm({ onSuccess, onCancel }: CreatePostFormPr
 
     setIsSubmitting(true);
 
-    // Mock API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
     // Check if user is connected
     if (!currentUser) {
       showToast("Vous devez être connecté pour publier", "error");
@@ -130,27 +128,58 @@ export default function CreatePostForm({ onSuccess, onCancel }: CreatePostFormPr
       return;
     }
 
-    // Save to localStorage
-    const newPost = createPost({
-      content,
-      category,
-      images: imagePreviews.length > 0 ? imagePreviews : undefined,
-      author: {
-        id: currentUser.id,
-        name: getUserDisplayName(currentUser),
-        username: `@${currentUser.first_name?.toLowerCase() || ''}${currentUser.last_name?.toLowerCase() || ''}`,
-        avatar: currentUser.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
-      },
-    });
+    try {
+      // Upload images to Supabase Storage if any
+      let uploadedImageUrls: string[] = [];
+      
+      if (imageFiles.length > 0) {
+        // Upload each image
+        for (const file of imageFiles) {
+          try {
+            const result = await uploadPortfolioImage(currentUser.id, file);
+            if (result.error) {
+              console.error('Erreur upload image:', result.error);
+              showToast(`Erreur lors de l'upload d'une image: ${result.error}`, "error");
+              setIsSubmitting(false);
+              return;
+            }
+            if (result.url) {
+              uploadedImageUrls.push(result.url);
+            }
+          } catch (error) {
+            console.error('Erreur upload image:', error);
+            showToast("Erreur lors de l'upload des images", "error");
+            setIsSubmitting(false);
+            return;
+          }
+        }
+      }
 
-    console.log("New post created:", newPost);
+      // Create post in Supabase
+      const newPost = await createPost({
+        content,
+        category: category.toLowerCase(),
+        images: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
+        author_id: currentUser.id,
+      });
 
-    // Dispatch custom event to refresh feed
-    window.dispatchEvent(new Event('postCreated'));
+      if (!newPost) {
+        throw new Error("Erreur lors de la création du post");
+      }
 
-    showToast("Post publié avec succès !", "success");
-    setIsSubmitting(false);
-    onSuccess();
+      console.log("New post created:", newPost);
+
+      // Dispatch custom event to refresh feed
+      window.dispatchEvent(new Event('postCreated'));
+
+      showToast("Post publié avec succès !", "success");
+      setIsSubmitting(false);
+      onSuccess();
+    } catch (error: any) {
+      console.error('Erreur création post:', error);
+      showToast(error?.message || "Erreur lors de la publication du post", "error");
+      setIsSubmitting(false);
+    }
   };
 
   return (

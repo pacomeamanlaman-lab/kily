@@ -56,3 +56,4 @@ WHERE b.is_automatic = TRUE
 GROUP BY b.id, b.name
 ORDER BY total_attributions DESC, b.name;
 
+

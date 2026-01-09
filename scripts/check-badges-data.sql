@@ -39,3 +39,4 @@ SELECT COUNT(*) as total_users FROM public.users;
 -- 5. Vérifier le nombre total d'attributions
 SELECT COUNT(*) as total_attributions FROM public.user_badges;
 
+

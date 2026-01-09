@@ -32,8 +32,8 @@ import PostCard from "@/components/feed/PostCard";
 import StoryCarousel from "@/components/feed/StoryCarousel";
 import CreatePostButton from "@/components/feed/CreatePostButton";
 import { mockStories } from "@/lib/feedData";
-import { loadPosts } from "@/lib/posts";
-import { loadVideos } from "@/lib/videos";
+import { loadPosts as loadPostsFromSupabase, type Post as SupabasePost } from "@/lib/supabase/posts.service";
+import { loadVideos as loadVideosFromSupabase, type Video as SupabaseVideo } from "@/lib/supabase/videos.service";
 import { getHiddenPosts, getHiddenVideos } from "@/lib/hiddenContent";
 import VideoCard from "@/components/video/VideoCard";
 import VideoCardFeed from "@/components/video/VideoCardFeed";
@@ -65,6 +65,8 @@ function FeedPageContent() {
   });
   const [posts, setPosts] = useState<any[]>([]);
   const [videos, setVideos] = useState<any[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [loadingVideos, setLoadingVideos] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info"; visible: boolean }>({
     message: "",
     type: "success",
@@ -75,78 +77,222 @@ function FeedPageContent() {
   const { user: currentUser, loading: userLoading } = useCurrentUser();
   const canPublish = currentUser?.user_type === "talent";
 
-  // Load posts and videos from localStorage on mount and when window gets focus
+  // Helper function to transform Supabase post to feed format
+  const transformSupabasePost = (supabasePost: SupabasePost): any => {
+    return {
+      id: supabasePost.id,
+      content: supabasePost.content,
+      images: supabasePost.images || [],
+      category: supabasePost.category,
+      likes: supabasePost.likes_count,
+      comments: supabasePost.comments_count,
+      timestamp: supabasePost.created_at,
+      createdAt: supabasePost.created_at,
+      author: {
+        id: supabasePost.author?.id || supabasePost.author_id,
+        name: supabasePost.author 
+          ? `${supabasePost.author.first_name} ${supabasePost.author.last_name}`
+          : 'Utilisateur',
+        username: supabasePost.author 
+          ? `@${supabasePost.author.first_name?.toLowerCase() || ''}${supabasePost.author.last_name?.toLowerCase() || ''}`
+          : '@utilisateur',
+        avatar: supabasePost.author?.avatar || '',
+      },
+      likedBy: [], // Will be loaded separately if needed
+    };
+  };
+
+  // Helper function to transform Supabase video to feed format
+  const transformSupabaseVideo = (supabaseVideo: SupabaseVideo): any => {
+    return {
+      id: supabaseVideo.id,
+      title: supabaseVideo.title,
+      description: supabaseVideo.description,
+      thumbnail: supabaseVideo.thumbnail,
+      videoUrl: supabaseVideo.video_url,
+      duration: supabaseVideo.duration,
+      views: supabaseVideo.views_count,
+      likes: supabaseVideo.likes_count,
+      comments: supabaseVideo.comments_count,
+      shares: supabaseVideo.shares_count,
+      author: {
+        id: supabaseVideo.author?.id || supabaseVideo.author_id,
+        name: supabaseVideo.author 
+          ? `${supabaseVideo.author.first_name} ${supabaseVideo.author.last_name}`
+          : 'Utilisateur',
+        avatar: supabaseVideo.author?.avatar || '',
+        verified: false, // TODO: Add verified field to users table
+      },
+      category: supabaseVideo.category,
+      createdAt: supabaseVideo.created_at,
+      isPremium: supabaseVideo.is_premium,
+    };
+  };
+
+  // Load posts and videos from Supabase on mount
   useEffect(() => {
-    const loadedPosts = loadPosts();
-    const loadedVideos = loadVideos();
-    setPosts(loadedPosts);
-    setVideos(loadedVideos);
+    const loadData = async () => {
+      // Load posts from Supabase
+      try {
+        setLoadingPosts(true);
+        const supabasePosts = await loadPostsFromSupabase();
+        const transformedPosts = supabasePosts.map(transformSupabasePost);
+        setPosts(transformedPosts);
+      } catch (error) {
+        console.error('Erreur chargement posts:', error);
+        setToast({
+          message: "Erreur lors du chargement des posts",
+          type: "error",
+          visible: true,
+        });
+      } finally {
+        setLoadingPosts(false);
+      }
+
+      // Load videos from Supabase
+      try {
+        setLoadingVideos(true);
+        const supabaseVideos = await loadVideosFromSupabase();
+        const transformedVideos = supabaseVideos.map(transformSupabaseVideo);
+        setVideos(transformedVideos);
+      } catch (error) {
+        console.error('Erreur chargement vidéos:', error);
+        setToast({
+          message: "Erreur lors du chargement des vidéos",
+          type: "error",
+          visible: true,
+        });
+      } finally {
+        setLoadingVideos(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   // Refresh posts and videos when window gains focus (after creating a post/video)
   useEffect(() => {
-    const handleFocus = () => {
-      const loadedPosts = loadPosts();
-      const loadedVideos = loadVideos();
-      setPosts(loadedPosts);
-      setVideos(loadedVideos);
+    const handleFocus = async () => {
+      // Reload posts from Supabase
+      try {
+        const supabasePosts = await loadPostsFromSupabase();
+        const transformedPosts = supabasePosts.map(transformSupabasePost);
+        setPosts(transformedPosts);
+      } catch (error) {
+        console.error('Erreur rechargement posts:', error);
+      }
+
+      // Reload videos from Supabase
+      try {
+        const supabaseVideos = await loadVideosFromSupabase();
+        const transformedVideos = supabaseVideos.map(transformSupabaseVideo);
+        setVideos(transformedVideos);
+      } catch (error) {
+        console.error('Erreur rechargement vidéos:', error);
+      }
     };
 
     window.addEventListener('focus', handleFocus);
 
     // Listen for custom events from the modals
-    const handlePostCreated = () => {
-      const loadedPosts = loadPosts();
-      setPosts(loadedPosts);
+    const handlePostCreated = async () => {
+      // Reload posts from Supabase when a new post is created
+      try {
+        const supabasePosts = await loadPostsFromSupabase();
+        const transformedPosts = supabasePosts.map(transformSupabasePost);
+        setPosts(transformedPosts);
+      } catch (error) {
+        console.error('Erreur rechargement posts:', error);
+      }
     };
 
-    const handleVideoCreated = () => {
-      const loadedVideos = loadVideos();
-      setVideos(loadedVideos);
+    const handleVideoCreated = async () => {
+      // Reload videos from Supabase when a new video is created
+      try {
+        const supabaseVideos = await loadVideosFromSupabase();
+        const transformedVideos = supabaseVideos.map(transformSupabaseVideo);
+        setVideos(transformedVideos);
+      } catch (error) {
+        console.error('Erreur rechargement vidéos:', error);
+      }
     };
 
-    const handlePostDeleted = () => {
-      const loadedPosts = loadPosts();
-      const loadedVideos = loadVideos();
-      setPosts(loadedPosts);
-      setVideos(loadedVideos);
+    const handlePostDeleted = async () => {
+      // Reload posts from Supabase
+      try {
+        const supabasePosts = await loadPostsFromSupabase();
+        const transformedPosts = supabasePosts.map(transformSupabasePost);
+        setPosts(transformedPosts);
+      } catch (error) {
+        console.error('Erreur rechargement posts:', error);
+      }
+      
+      // Reload videos from Supabase
+      try {
+        const supabaseVideos = await loadVideosFromSupabase();
+        const transformedVideos = supabaseVideos.map(transformSupabaseVideo);
+        setVideos(transformedVideos);
+      } catch (error) {
+        console.error('Erreur rechargement vidéos:', error);
+      }
     };
 
-    const handleVideoDeleted = () => {
-      const loadedPosts = loadPosts();
-      const loadedVideos = loadVideos();
-      setPosts(loadedPosts);
-      setVideos(loadedVideos);
+    const handleVideoDeleted = async () => {
+      // Reload posts from Supabase
+      try {
+        const supabasePosts = await loadPostsFromSupabase();
+        const transformedPosts = supabasePosts.map(transformSupabasePost);
+        setPosts(transformedPosts);
+      } catch (error) {
+        console.error('Erreur rechargement posts:', error);
+      }
+      
+      // Reload videos from Supabase
+      try {
+        const supabaseVideos = await loadVideosFromSupabase();
+        const transformedVideos = supabaseVideos.map(transformSupabaseVideo);
+        setVideos(transformedVideos);
+      } catch (error) {
+        console.error('Erreur rechargement vidéos:', error);
+      }
     };
 
     const handlePostHidden = () => {
-      const loadedPosts = loadPosts();
-      setPosts(loadedPosts);
+      // Posts are filtered by hiddenPosts in useMemo, no need to reload
     };
 
     const handleVideoHidden = () => {
-      const loadedVideos = loadVideos();
-      setVideos(loadedVideos);
+      // Videos are filtered by hiddenVideos in useMemo, no need to reload
     };
 
     const handlePostReported = () => {
-      const loadedPosts = loadPosts();
-      setPosts(loadedPosts);
+      // Posts are filtered by hiddenPosts in useMemo, no need to reload
     };
 
     const handleVideoReported = () => {
-      const loadedVideos = loadVideos();
-      setVideos(loadedVideos);
+      // Videos are filtered by hiddenVideos in useMemo, no need to reload
     };
 
-    const handlePostUpdated = () => {
-      const loadedPosts = loadPosts();
-      setPosts(loadedPosts);
+    const handlePostUpdated = async () => {
+      // Reload posts from Supabase
+      try {
+        const supabasePosts = await loadPostsFromSupabase();
+        const transformedPosts = supabasePosts.map(transformSupabasePost);
+        setPosts(transformedPosts);
+      } catch (error) {
+        console.error('Erreur rechargement posts:', error);
+      }
     };
 
-    const handleVideoUpdated = () => {
-      const loadedVideos = loadVideos();
-      setVideos(loadedVideos);
+    const handleVideoUpdated = async () => {
+      // Reload videos from Supabase
+      try {
+        const supabaseVideos = await loadVideosFromSupabase();
+        const transformedVideos = supabaseVideos.map(transformSupabaseVideo);
+        setVideos(transformedVideos);
+      } catch (error) {
+        console.error('Erreur rechargement vidéos:', error);
+      }
     };
 
     window.addEventListener('postCreated', handlePostCreated);
@@ -263,7 +409,7 @@ function FeedPageContent() {
           type: "post",
           data: post,
           id: `post-${post.id}`,
-          timestamp: new Date(post.timestamp || post.createdAt || 0).getTime(),
+          timestamp: new Date(post.timestamp || post.createdAt || post.created_at || 0).getTime(),
         });
       });
 
@@ -275,7 +421,7 @@ function FeedPageContent() {
           type: "video",
           data: video,
           id: `video-${video.id}`,
-          timestamp: new Date(video.createdAt || 0).getTime(),
+          timestamp: new Date(video.createdAt || video.created_at || 0).getTime(),
         });
       });
 

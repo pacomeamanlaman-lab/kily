@@ -13,3 +13,4 @@ WHERE table_schema = 'public'
   AND table_name = 'user_badges'
   AND constraint_type = 'UNIQUE';
 
+

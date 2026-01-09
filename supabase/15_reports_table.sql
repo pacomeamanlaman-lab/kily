@@ -87,3 +87,4 @@ COMMENT ON COLUMN public.reports.reason IS 'Raison du signalement';
 COMMENT ON COLUMN public.reports.description IS 'Description détaillée du signalement';
 COMMENT ON COLUMN public.reports.status IS 'Statut du signalement: pending (en attente), approved (approuvé), rejected (rejeté)';
 
+

@@ -4,7 +4,7 @@ import { MessageCircle, Search, Send, ArrowLeft } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { loadConversations } from "@/lib/messages";
+import { loadConversations, type Conversation } from "@/lib/supabase/messages.service";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -16,40 +16,79 @@ function MessagesPageContent() {
   const currentUserId = currentUser?.id || null;
   const [searchQuery, setSearchQuery] = useState("");
   const [conversations, setConversations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load conversations from localStorage
+  // Load conversations from Supabase
   useEffect(() => {
-    if (!currentUserId) return;
-    const loadedConversations = loadConversations(currentUserId);
-    // Transform to match UI format
-    const formattedConversations = loadedConversations.map(conv => {
-      const otherUserId = conv.participants.find(id => id !== currentUserId) || "";
-      // Mock user data - in real app, you'd fetch from users database
-      const userData = {
-        id: otherUserId,
-        name: otherUserId === "1" ? "Amina Koné" :
-              otherUserId === "2" ? "Kofi Mensah" :
-              otherUserId === "3" ? "Sarah Mensah" : "Utilisateur",
-        avatar: otherUserId === "1" ? "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400" :
-                otherUserId === "2" ? "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400" :
-                otherUserId === "3" ? "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400" :
-                "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
-        online: false,
-      };
+    if (!currentUserId) {
+      setLoading(false);
+      return;
+    }
 
-      return {
-        id: conv.id,
-        participant: userData,
-        lastMessage: {
-          content: conv.lastMessage,
-          timestamp: conv.lastMessageAt,
-          unread: conv.unreadBy === currentUserId && conv.unreadCount > 0,
-          isOwn: false,
-        },
-      };
-    });
-    setConversations(formattedConversations);
-  }, []);
+    const fetchConversations = async () => {
+      try {
+        setLoading(true);
+        const loadedConversations = await loadConversations(currentUserId);
+        
+        // Charger les messages non lus pour chaque conversation
+        const { supabase } = await import("@/lib/supabase");
+        const unreadCountsPromises = loadedConversations.map(async (conv) => {
+          const { count } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('conversation_id', conv.id)
+            .eq('receiver_id', currentUserId)
+            .eq('read', false);
+          return { convId: conv.id, count: count || 0 };
+        });
+        const unreadCounts = await Promise.all(unreadCountsPromises);
+        const unreadCountMap = new Map(unreadCounts.map(item => [item.convId, item.count]));
+
+        // Transform to match UI format
+        const formattedConversations = loadedConversations.map((conv: Conversation) => {
+          // Déterminer l'autre participant
+          const otherParticipant = conv.participant_1_id === currentUserId 
+            ? conv.participant_2 
+            : conv.participant_1;
+          
+          const otherParticipantId = conv.participant_1_id === currentUserId 
+            ? conv.participant_2_id 
+            : conv.participant_1_id;
+
+          // Compter les messages non lus pour cette conversation
+          const unreadCount = unreadCountMap.get(conv.id) || 0;
+
+          return {
+            id: conv.id,
+            conversationId: conv.id,
+            participant: {
+              id: otherParticipantId,
+              name: otherParticipant 
+                ? `${otherParticipant.first_name} ${otherParticipant.last_name}`.trim()
+                : "Utilisateur",
+              avatar: otherParticipant?.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=user",
+              online: false,
+            },
+            lastMessage: {
+              content: conv.last_message || "",
+              timestamp: conv.last_message_at || conv.created_at,
+              unread: unreadCount > 0,
+              isOwn: false,
+            },
+          };
+        });
+        
+        setConversations(formattedConversations);
+      } catch (error) {
+        console.error('Erreur lors du chargement des conversations:', error);
+        setConversations([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConversations();
+  }, [currentUserId]);
 
   const filteredConversations = useMemo(() => {
     if (!searchQuery) return conversations;
@@ -59,9 +98,8 @@ function MessagesPageContent() {
   }, [searchQuery, conversations]);
 
   const handleConversationClick = (conversationId: string, participantId: string) => {
-    // Marquer comme lu (on mark in conversation page directly)
-    // Naviguer vers la conversation
-    router.push(`/messages/${participantId}`);
+    // Naviguer vers la conversation en utilisant l'ID de conversation
+    router.push(`/messages/${conversationId}`);
   };
 
   const formatTime = (timestamp: string) => {
@@ -110,7 +148,14 @@ function MessagesPageContent() {
 
       {/* Conversations List */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {filteredConversations.length === 0 ? (
+        {loading ? (
+          <div className="py-20 text-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-violet-500/10 rounded-full mb-6">
+              <div className="w-10 h-10 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
+            </div>
+            <p className="text-white/60">Chargement des conversations...</p>
+          </div>
+        ) : filteredConversations.length === 0 ? (
           /* Empty State */
           <div className="py-20 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-violet-500/10 rounded-full mb-6">
@@ -138,7 +183,7 @@ function MessagesPageContent() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                onClick={() => handleConversationClick(conversation.id, conversation.participant.id)}
+                onClick={() => handleConversationClick(conversation.conversationId || conversation.id, conversation.participant.id)}
                 className="flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl cursor-pointer transition-all group"
               >
                 {/* Avatar */}

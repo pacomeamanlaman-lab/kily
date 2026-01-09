@@ -82,3 +82,4 @@ COMMENT ON FUNCTION demote_from_admin IS 'Fonction pour retirer les droits admin
 
 
 
+

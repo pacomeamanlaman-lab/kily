@@ -71,3 +71,4 @@ L'inscription fonctionne maintenant correctement :
 - Le code met à jour le profil avec les vraies données de l'utilisateur
 - Plus de conflit 409 !
 
+

@@ -64,3 +64,4 @@ WHERE b.is_automatic = TRUE
 GROUP BY b.id, b.name, b.is_automatic
 ORDER BY COUNT(ub.id) DESC;
 
+

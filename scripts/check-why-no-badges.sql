@@ -65,3 +65,4 @@ SELECT
 FROM public.users
 WHERE user_type = 'talent';
 
+
