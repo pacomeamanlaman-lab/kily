@@ -64,7 +64,7 @@ function ProfilePageContent() {
     joinedDate: string;
   } | null>(null);
 
-  // Load user on mount
+  // Load user on mount (une seule fois)
   useEffect(() => {
     const loadUser = async () => {
       const loggedIn = await isLoggedIn();
@@ -114,7 +114,8 @@ function ProfilePageContent() {
       setLoading(false);
     };
     loadUser();
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Charger une seule fois au montage
 
   // Load user's posts and videos
   const userPosts = useMemo(() => {
@@ -347,16 +348,38 @@ function ProfilePageContent() {
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('image/') || !user) return;
 
+    // Afficher un preview immédiatement (sans attendre l'upload)
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (!user) return;
+      // Mettre à jour l'état local immédiatement avec le preview
+      setUser((prevUser) => {
+        if (!prevUser) return prevUser;
+        return {
+          ...prevUser,
+          avatar: reader.result as string,
+        };
+      });
+    };
+    reader.readAsDataURL(file);
+
+    // Réinitialiser l'input pour permettre de sélectionner le même fichier à nouveau
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = '';
+    }
+
     try {
-      setLoading(true);
-      
-      // Upload vers Supabase Storage
+      // Upload vers Supabase Storage en arrière-plan (sans bloquer l'UI)
       const result = await uploadAvatar(user.id, file);
       
       if (result.error) {
+        // En cas d'erreur, on garde le preview mais on affiche l'erreur
         setToast({
           message: result.error,
           type: "error",
@@ -365,23 +388,30 @@ function ProfilePageContent() {
         return;
       }
 
-      // Mettre à jour l'utilisateur dans Supabase avec la nouvelle URL
-      const updatedUser = await updateUser(user.id, {
+      // Ajouter un timestamp pour forcer le rechargement de l'image (cache-busting)
+      const urlWithCacheBust = `${result.url}?t=${Date.now()}`;
+
+      // Mettre à jour l'utilisateur dans Supabase avec la nouvelle URL (en arrière-plan)
+      updateUser(user.id, {
         avatar: result.url,
+      }).catch(error => {
+        console.error('Erreur mise à jour DB:', error);
       });
 
-      if (updatedUser) {
-        // Mettre à jour l'état local
-        setUser({
-          ...user,
-          avatar: result.url,
-        });
-        setToast({
-          message: "Photo de profil mise à jour !",
-          type: "success",
-          isVisible: true,
-        });
-      }
+      // Mettre à jour l'état local avec l'URL Supabase (remplace le preview)
+      setUser((prevUser) => {
+        if (!prevUser) return prevUser;
+        return {
+          ...prevUser,
+          avatar: urlWithCacheBust,
+        };
+      });
+      
+      setToast({
+        message: "Photo de profil mise à jour !",
+        type: "success",
+        isVisible: true,
+      });
     } catch (error) {
       console.error('Erreur upload avatar:', error);
       setToast({
@@ -389,22 +419,42 @@ function ProfilePageContent() {
         type: "error",
         isVisible: true,
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('image/') || !user) return;
 
+    // Afficher un preview immédiatement (sans attendre l'upload)
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (!user) return;
+      // Mettre à jour l'état local immédiatement avec le preview
+      setUser((prevUser) => {
+        if (!prevUser) return prevUser;
+        return {
+          ...prevUser,
+          coverImage: reader.result as string,
+        };
+      });
+    };
+    reader.readAsDataURL(file);
+
+    // Réinitialiser l'input pour permettre de sélectionner le même fichier à nouveau
+    if (coverInputRef.current) {
+      coverInputRef.current.value = '';
+    }
+
     try {
-      setLoading(true);
-      
-      // Upload vers Supabase Storage
+      // Upload vers Supabase Storage en arrière-plan (sans bloquer l'UI)
       const result = await uploadCoverImage(user.id, file);
       
       if (result.error) {
+        // En cas d'erreur, on garde le preview mais on affiche l'erreur
         setToast({
           message: result.error,
           type: "error",
@@ -413,23 +463,30 @@ function ProfilePageContent() {
         return;
       }
 
-      // Mettre à jour l'utilisateur dans Supabase avec la nouvelle URL
-      const updatedUser = await updateUser(user.id, {
+      // Ajouter un timestamp pour forcer le rechargement de l'image (cache-busting)
+      const urlWithCacheBust = `${result.url}?t=${Date.now()}`;
+
+      // Mettre à jour l'utilisateur dans Supabase avec la nouvelle URL (en arrière-plan)
+      updateUser(user.id, {
         cover_image: result.url,
+      }).catch(error => {
+        console.error('Erreur mise à jour DB:', error);
       });
 
-      if (updatedUser) {
-        // Mettre à jour l'état local
-        setUser({
-          ...user,
-          coverImage: result.url,
-        });
-        setToast({
-          message: "Photo de couverture mise à jour !",
-          type: "success",
-          isVisible: true,
-        });
-      }
+      // Mettre à jour l'état local avec l'URL Supabase (remplace le preview)
+      setUser((prevUser) => {
+        if (!prevUser) return prevUser;
+        return {
+          ...prevUser,
+          coverImage: urlWithCacheBust,
+        };
+      });
+      
+      setToast({
+        message: "Photo de couverture mise à jour !",
+        type: "success",
+        isVisible: true,
+      });
     } catch (error) {
       console.error('Erreur upload cover:', error);
       setToast({
@@ -437,8 +494,6 @@ function ProfilePageContent() {
         type: "error",
         isVisible: true,
       });
-    } finally {
-      setLoading(false);
     }
   };
 
