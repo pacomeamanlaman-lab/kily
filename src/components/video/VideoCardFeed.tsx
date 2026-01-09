@@ -669,18 +669,22 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
                     className="flex gap-3"
                   >
                     <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                      <Image
-                        src={comment.avatar}
-                        alt={comment.author}
-                        fill
-                        className="object-cover"
-                        sizes="40px"
-                        onError={(e) => {
-                          // Fallback vers un avatar par défaut si l'image ne charge pas
-                          const target = e.target as HTMLImageElement;
-                          target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.author}`;
-                        }}
-                      />
+                      {comment.avatar?.includes('dicebear.com') ? (
+                        <img
+                          src={comment.avatar}
+                          alt={comment.author}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Image
+                          src={comment.avatar}
+                          alt={comment.author}
+                          fill
+                          className="object-cover"
+                          sizes="40px"
+                          unoptimized={comment.avatar?.endsWith('.svg')}
+                        />
+                      )}
                     </div>
                     <div className="flex-1 bg-white/5 rounded-xl p-3">
                       <div className="flex items-center justify-between mb-1">
@@ -700,18 +704,22 @@ export default function VideoCardFeed({ video, onClick }: VideoCardFeedProps) {
                 <div className="flex gap-3">
                   {currentUser ? (
                     <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
-                      <Image
-                        src={currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.first_name}${currentUser.last_name}`}
-                        alt={currentUser.first_name || "Vous"}
-                        fill
-                        className="object-cover"
-                        sizes="40px"
-                        onError={(e) => {
-                          // Fallback vers un avatar par défaut si l'image ne charge pas
-                          const target = e.target as HTMLImageElement;
-                          target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.first_name}${currentUser.last_name}`;
-                        }}
-                      />
+                      {(!currentUser.avatar || currentUser.avatar.includes('dicebear.com')) ? (
+                        <img
+                          src={currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.first_name}${currentUser.last_name}`}
+                          alt={currentUser.first_name || "Vous"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Image
+                          src={currentUser.avatar}
+                          alt={currentUser.first_name || "Vous"}
+                          fill
+                          className="object-cover"
+                          sizes="40px"
+                          unoptimized={currentUser.avatar?.endsWith('.svg')}
+                        />
+                      )}
                     </div>
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center flex-shrink-0">
