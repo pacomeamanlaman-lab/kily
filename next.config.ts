@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'api.dicebear.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
       // Ajouter le domaine Supabase Storage si disponible
       ...(supabaseHostname ? [{
         protocol: 'https' as const,
