@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import type HlsType from "hls.js";
+import Hls from "hls.js";
 
 // Hook pour détecter si on est sur mobile
 const useIsMobile = () => {
@@ -80,8 +80,7 @@ export default function VideoPlayer({
   });
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const hlsRef = useRef<HlsType | null>(null);
-  const [hlsModule, setHlsModule] = useState<{ default: typeof HlsType } | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
 
   const currentVideo = videos[currentVideoIndex];
   const isYouTubeVideo =
@@ -91,74 +90,40 @@ export default function VideoPlayer({
   // Détecter si c'est une vidéo HLS (Mux)
   const isHlsVideo = currentVideo?.videoUrl?.endsWith('.m3u8') || currentVideo?.videoUrl?.includes('.m3u8');
 
-  // Charger HLS.js dynamiquement
-  useEffect(() => {
-    if (typeof window !== 'undefined' && isHlsVideo) {
-      import('hls.js').then((HlsModule) => {
-        setHlsModule(HlsModule);
-      }).catch((error) => {
-        console.error('Erreur chargement HLS.js:', error);
-      });
-    }
-  }, [isHlsVideo]);
-
   // Initialiser HLS.js pour les vidéos HLS
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !isHlsVideo || !currentVideo?.videoUrl) {
-      console.log('HLS init skipped:', { hasVideo: !!video, isHlsVideo, videoUrl: currentVideo?.videoUrl });
-      return;
-    }
-
-    console.log('Initialisation HLS pour:', currentVideo.videoUrl);
+    if (!video || !isHlsVideo || !currentVideo?.videoUrl) return;
 
     // Nettoyer l'instance HLS précédente
     if (hlsRef.current) {
-      console.log('Nettoyage instance HLS précédente');
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
 
     // Vérifier si le navigateur supporte HLS nativement (Safari)
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      console.log('Support HLS natif détecté (Safari)');
       video.src = currentVideo.videoUrl;
-      video.load();
-      video.play().catch((error) => {
-        console.error('Erreur lecture vidéo native:', error);
-      });
       return;
     }
-
-    // Vérifier que HLS.js est disponible
-    if (!hlsModule || !hlsModule.default) {
-      console.log('HLS.js en cours de chargement...');
-      return;
-    }
-
-    const Hls = hlsModule.default;
 
     // Utiliser HLS.js pour les autres navigateurs
     if (Hls.isSupported()) {
-      console.log('HLS.js est supporté, initialisation...');
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
-        debug: false,
       });
       
       hls.loadSource(currentVideo.videoUrl);
       hls.attachMedia(video);
       
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log('Manifest HLS parsé, démarrage de la lecture...');
         video.play().catch((error) => {
           console.error('Erreur lecture vidéo:', error);
         });
       });
 
       hls.on(Hls.Events.ERROR, (event, data) => {
-        console.error('Erreur HLS:', data);
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
@@ -180,20 +145,16 @@ export default function VideoPlayer({
       hlsRef.current = hls;
     } else {
       console.error('HLS.js n\'est pas supporté par ce navigateur');
-      // Fallback: essayer de charger directement (peut fonctionner sur certains navigateurs)
-      video.src = currentVideo.videoUrl;
-      video.load();
     }
 
     // Nettoyage
     return () => {
       if (hlsRef.current) {
-        console.log('Nettoyage HLS lors du démontage');
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
     };
-  }, [currentVideoIndex, isHlsVideo, currentVideo?.videoUrl, hlsModule]);
+  }, [currentVideoIndex, isHlsVideo, currentVideo?.videoUrl]);
 
   // Navigation vidéo
   const navigateToVideo = (direction: "next" | "prev") => {
