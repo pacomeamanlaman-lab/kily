@@ -1,5 +1,6 @@
 // Service Supabase pour la gestion des utilisateurs
 import { supabase, handleSupabaseError } from '../supabase';
+import { Talent } from '@/types';
 
 export interface User {
   id: string;
@@ -305,6 +306,74 @@ export const getAllUsers = async (filters?: {
     return users || [];
   } catch (error: any) {
     console.error('Erreur getAllUsers:', error);
+    return [];
+  }
+};
+
+// Obtenir tous les talents avec leurs compétences (pour la page discover)
+export const getAllTalents = async (): Promise<Talent[]> => {
+  try {
+    // Récupérer tous les utilisateurs de type talent
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, avatar, bio, city, country, rating, review_count, verified, created_at')
+      .eq('user_type', 'talent')
+      .order('created_at', { ascending: false });
+
+    if (usersError) throw usersError;
+
+    if (!users || users.length === 0) {
+      return [];
+    }
+
+    const userIds = users.map(u => u.id);
+
+    // Récupérer toutes les compétences de ces talents
+    const { data: skills, error: skillsError } = await supabase
+      .from('skills')
+      .select('id, user_id, name, category, level, years_experience, verified')
+      .in('user_id', userIds);
+
+    if (skillsError) {
+      console.warn('Erreur lors de la récupération des compétences:', skillsError);
+    }
+
+    // Créer un map user_id -> skills[]
+    const skillsMap = new Map<string, typeof skills>();
+    skills?.forEach(skill => {
+      if (!skillsMap.has(skill.user_id)) {
+        skillsMap.set(skill.user_id, []);
+      }
+      skillsMap.get(skill.user_id)!.push(skill);
+    });
+
+    // Transformer les utilisateurs en format Talent
+    return users.map(user => ({
+      id: user.id,
+      name: `${user.first_name} ${user.last_name}`,
+      avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.first_name}${user.last_name}`,
+      bio: user.bio || '',
+      skills: (skillsMap.get(user.id) || []).map(skill => ({
+        id: skill.id,
+        name: skill.name,
+        category: skill.category as any,
+        level: skill.level as "beginner" | "intermediate" | "expert",
+        yearsExperience: skill.years_experience || undefined,
+        verified: skill.verified || false,
+      })),
+      location: {
+        city: user.city || 'Non spécifié',
+        country: user.country || 'Côte d\'Ivoire',
+      },
+      rating: user.rating || 0,
+      reviewCount: user.review_count || 0,
+      verified: user.verified || false,
+      portfolio: [], // Pour l'instant, on laisse vide - peut être rempli plus tard avec une table portfolio
+      joinedDate: user.created_at ? new Date(user.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      userType: "talent" as const,
+    }));
+  } catch (error: any) {
+    console.error('Erreur getAllTalents:', error);
     return [];
   }
 };

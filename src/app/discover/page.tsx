@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, X, Users, FileText, User, RefreshCw, Video, ChevronDown, MapPin } from "lucide-react";
-import { mockTalents, skillCategories, cities } from "@/lib/mockData";
+import { skillCategories, cities } from "@/lib/mockData";
 import { coteIvoireCities } from "@/lib/locationData";
 import { mockPosts } from "@/lib/feedData";
 import { mockVideos } from "@/lib/videoData";
@@ -18,6 +18,8 @@ import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { getAllTalents } from "@/lib/supabase/users.service";
+import { Talent } from "@/types";
 
 function DiscoverPageContent() {
   const router = useRouter();
@@ -32,6 +34,10 @@ function DiscoverPageContent() {
   const [citySearchQuery, setCitySearchQuery] = useState("");
   const [skillSearchQuery, setSkillSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"talents" | "posts" | "videos" | "users">("talents");
+  
+  // État pour les talents réels
+  const [talents, setTalents] = useState<Talent[]>([]);
+  const [loadingTalents, setLoadingTalents] = useState(true);
 
   // Liste de toutes les compétences depuis l'onboarding
   const allSkills = useMemo(() => {
@@ -87,6 +93,28 @@ function DiscoverPageContent() {
     });
   }, [activeTab, searchQuery, selectedSkill, selectedCity]);
 
+  // Charger les talents depuis Supabase
+  useEffect(() => {
+    const loadTalents = async () => {
+      try {
+        setLoadingTalents(true);
+        const talentsData = await getAllTalents();
+        setTalents(talentsData);
+      } catch (error) {
+        console.error('Erreur lors du chargement des talents:', error);
+        setToast({
+          message: "Erreur lors du chargement des talents",
+          type: "error",
+          visible: true,
+        });
+      } finally {
+        setLoadingTalents(false);
+      }
+    };
+
+    loadTalents();
+  }, []);
+
   // Lire le paramètre skill depuis l'URL (pour compatibilité, on garde "category" mais on le mappe vers skill)
   useEffect(() => {
     const categoryParam = searchParams.get("category");
@@ -118,7 +146,7 @@ function DiscoverPageContent() {
 
   // Filtrage des talents
   const filteredTalents = useMemo(() => {
-    return mockTalents.filter((talent) => {
+    return talents.filter((talent) => {
       // Filtre par recherche
       const matchesSearch =
         searchQuery === "" ||
@@ -137,7 +165,7 @@ function DiscoverPageContent() {
 
       return matchesSearch && matchesSkill && matchesCity;
     });
-  }, [searchQuery, selectedSkill, selectedCity]);
+  }, [talents, searchQuery, selectedSkill, selectedCity]);
 
   // Filtrage des posts
   const filteredPosts = useMemo(() => {
@@ -154,7 +182,7 @@ function DiscoverPageContent() {
   // Filtrage des utilisateurs (tous les auteurs de posts + talents)
   const filteredUsers = useMemo(() => {
     const users = [
-      ...mockTalents.map(t => ({
+      ...talents.map(t => ({
         id: t.id,
         name: t.name,
         avatar: t.avatar,
@@ -184,7 +212,7 @@ function DiscoverPageContent() {
 
       return matchesSearch;
     });
-  }, [searchQuery]);
+  }, [talents, searchQuery]);
 
   // Filtrage des vidéos
   const filteredVideos = useMemo(() => {
@@ -239,13 +267,26 @@ function DiscoverPageContent() {
     }
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = async () => {
     if (isPulling) {
       setToast({
         message: "Actualisation en cours...",
         type: "info",
         visible: true,
       });
+
+      // Recharger les talents si on est sur l'onglet talents
+      if (activeTab === "talents") {
+        try {
+          setLoadingTalents(true);
+          const talentsData = await getAllTalents();
+          setTalents(talentsData);
+        } catch (error) {
+          console.error('Erreur lors du rechargement des talents:', error);
+        } finally {
+          setLoadingTalents(false);
+        }
+      }
 
       setTimeout(() => {
         setToast({
@@ -944,7 +985,20 @@ function DiscoverPageContent() {
         {/* Tab Talents */}
         {activeTab === "talents" && (
           <>
-            {filteredTalents.length > 0 ? (
+            {loadingTalents ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-20"
+              >
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse" />
+                  <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-75" />
+                  <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse delay-150" />
+                </div>
+                <p className="text-gray-400">Chargement des talents...</p>
+              </motion.div>
+            ) : filteredTalents.length > 0 ? (
               <>
                 <motion.div
                   layout
